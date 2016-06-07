@@ -2,39 +2,32 @@ package merkletree
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/sha256"
 	"testing"
 )
 
 var treeNonce = []byte("TREE NONCE")
 var salt = []byte("salt")
-var hashSuite = HashSuite{Hash: sha256.New(), HashSizeByte: 32}
+var hashFunc = HashFunction{Hash: sha256.New(), HashSizeByte: 32, HashId: crypto.SHA256}
 
 func TestOneEntry(t *testing.T) {
-	m := InitMerkleTree(treeNonce, salt, hashSuite)
-	pubKeyBytes := append([]byte(nil), "key"...)
-	ops := Operation{
-		Key:   "tester",
-		Value: pubKeyBytes,
-	}
-	m.Set(ops)
+	m := InitMerkleTree(treeNonce, salt, hashFunc, scheme)
+	m.InitHistory(nil, 1, 1)
+
+	key := "key"
+	val := []byte("value")
+
+	m.Set(key, val)
 	m.RecomputeHash()
 
-	h := sha256.New()
-	index := m.computePrivateIndex(ops.Key)
-	stringBytes := append([]byte(nil), ops.Key...)
-	h.Write(stringBytes)
-	expect := h.Sum(nil)
-
-	if !bytes.Equal(expect, index) {
-		t.Error("Wrong username to index hash")
-	}
+	index := m.computePrivateIndex(key)
 
 	// Check leaf node hash
-	h = sha256.New()
+	h := sha256.New()
 	h.Write(salt)
-	h.Write(append([]byte(nil), ops.Key...))
-	h.Write(append([]byte(nil), ops.Value...))
+	h.Write([]byte(key))
+	h.Write(val)
 	commit := h.Sum(nil)
 
 	h = sha256.New()
@@ -43,96 +36,150 @@ func TestOneEntry(t *testing.T) {
 	h.Write(index)
 	h.Write(intToBytes(1))
 	h.Write(commit)
-	expect = h.Sum(nil)
+	expect := h.Sum(nil)
 
-	if !bytes.Equal(m.root.rightHash, expect) {
-		t.Error("Wrong right hash!",
-			"expected", expect,
-			"get", m.root.rightHash)
-	}
-
-	// Check empty node hash
-	h = sha256.New()
-	h.Write([]byte{EmptyBranchIdentifier})
-	h.Write(treeNonce)
-	h.Write([]byte{0})
-	h.Write(intToBytes(1))
-	expect = h.Sum(nil)
 	if !bytes.Equal(m.root.leftHash, expect) {
 		t.Error("Wrong left hash!",
 			"expected", expect,
 			"get", m.root.leftHash)
 	}
 
-	r := m.LookUp(ops.Key)
+	// Check empty node hash
+	h = sha256.New()
+	h.Write([]byte{EmptyBranchIdentifier})
+	h.Write(treeNonce)
+	h.Write(toBytes([]bool{true}))
+	h.Write(intToBytes(1))
+	expect = h.Sum(nil)
+	if !bytes.Equal(m.root.rightHash, expect) {
+		t.Error("Wrong righ hash!",
+			"expected", expect,
+			"get", m.root.rightHash)
+	}
+
+	r := m.LookUp(key)
 	if r == nil {
-		t.Error("Cannot find username: ", ops.Key)
+		t.Error("Cannot find value of key:", key)
+		return
 	}
 
 	v := r.Value()
-	if !bytes.Equal(v, pubKeyBytes) {
-		t.Errorf("Public key mismatch %v / %v", v, pubKeyBytes)
+	if !bytes.Equal(v, val) {
+		t.Errorf("Value mismatch %v / %v", v, val)
 	}
 }
 
 func TestTwoEntries(t *testing.T) {
-	m := InitMerkleTree(treeNonce, salt, hashSuite)
-	ops1 := Operation{
-		Key:   "tester1",
-		Value: append([]byte(nil), "key1"...),
-	}
+	currentSTR = nil
+	m := InitMerkleTree(treeNonce, salt, hashFunc, scheme)
+	m.InitHistory(nil, 1, 1)
 
-	ops2 := Operation{
-		Key:   "tester2",
-		Value: append([]byte(nil), "key2"...),
-	}
+	key1 := "key1"
+	val1 := []byte("value1")
+	key2 := "key2"
+	val2 := []byte("value2")
 
-	m.Set(ops1)
-	m.Set(ops2)
+	m.Set(key1, val1)
+	m.RecomputeHash()
+	m.Set(key2, val2)
 	m.RecomputeHash()
 
-	n1 := m.LookUp(ops1.Key)
+	n1 := m.LookUp(key1)
 	if n1 == nil {
-		t.Error("Cannot find username: ", ops1.Key)
+		t.Error("Cannot find key:", key1)
+		return
 	}
 
-	n2 := m.LookUp(ops2.Key)
+	n2 := m.LookUp(key2)
 	if n2 == nil {
-		t.Error("Cannot find username: ", ops2.Key)
+		t.Error("Cannot find key:", key2)
+		return
 	}
 
-	if !bytes.Equal(n1.Value(), append([]byte(nil), "key1"...)) {
-		t.Error(ops1.Key, "public key mismatch")
+	if !bytes.Equal(n1.Value(), []byte("value1")) {
+		t.Error(key1, "value mismatch")
 	}
-	if !bytes.Equal(n2.Value(), append([]byte(nil), "key2"...)) {
-		t.Error(ops2.Key, "public key mismatch")
+	if !bytes.Equal(n2.Value(), []byte("value2")) {
+		t.Error(key2, "value mismatch")
 	}
 }
 
 func TestInsertExistedKey(t *testing.T) {
-	m := InitMerkleTree(treeNonce, salt, hashSuite)
-	ops := Operation{
-		Key:   "tester",
-		Value: append([]byte(nil), "key1"...),
-	}
-	if m.Set(ops) != nil {
-		t.Error("cannot insert new binding to the tree")
+	currentSTR = nil
+	m := InitMerkleTree(treeNonce, salt, hashFunc, scheme)
+	m.InitHistory(nil, 1, 1)
+
+	key1 := "key"
+	val1 := append([]byte(nil), "value"...)
+
+	m.Set(key1, val1)
+
+	val2 := []byte("new value")
+	if m.Set(key1, val2) != nil {
+		t.Error("cannot insert new key-value to the tree")
 	}
 
-	ops = Operation{
-		Key:   "tester",
-		Value: append([]byte(nil), "key2"...),
-	}
-	if m.Set(ops) != nil {
-		t.Error("cannot insert new binding to the tree")
-	}
-
-	val := m.LookUp(ops.Key)
+	val := m.LookUp(key1)
 	if val == nil {
-		t.Error("Cannot find username: ", ops.Key)
+		t.Error("Cannot find key:", key1)
+		return
 	}
 
-	if !bytes.Equal(val.Value(), append([]byte(nil), "key2"...)) {
-		t.Error(ops.Key, "public key mismatch\n")
+	if !bytes.Equal(val.Value(), []byte("new value")) {
+		t.Error(key1, "value mismatch\n")
+	}
+}
+
+func TestTreeClone(t *testing.T) {
+	currentSTR = nil
+	key1 := "key1"
+	val1 := []byte("value1")
+	key2 := "key2"
+	val2 := []byte("value2")
+
+	m1 := InitMerkleTree(treeNonce, salt, hashFunc, scheme)
+	m1.InitHistory(nil, 1, 1)
+
+	m1.Set(key1, val1)
+
+	// clone new tree and insert new value
+	m2 := m1.clone()
+	m2.UpdateHistory(nil, 2) // update history chain
+	if err := m2.Set(key2, val2); err != nil {
+		t.Error(err)
+		return
+	}
+
+	// lookup
+	r := m1.LookUp(key1)
+	if r == nil {
+		t.Error("Cannot find key in tree 1:", key1)
+		return
+	}
+	if !bytes.Equal(r.Value(), []byte("value1")) {
+		t.Error(key1, "value mismatch\n")
+	}
+
+	r = m1.LookUp(key2)
+	if r != nil {
+		t.Error("Invalid tree")
+	}
+
+	r = m2.LookUp(key1)
+	if r == nil {
+		t.Error("Cannot find key in tree 2:", key1)
+		return
+	}
+	if !bytes.Equal(r.Value(), []byte("value1")) {
+		t.Error(key1, "value mismatch\n")
+	}
+
+	r = m2.LookUp(key2)
+	if r == nil {
+		t.Error("Cannot find key in tree 2:", key2)
+		return
+	}
+	if !bytes.Equal(r.Value(), []byte("value2")) {
+		t.Error(key2, "value mismatch\n")
 	}
 }

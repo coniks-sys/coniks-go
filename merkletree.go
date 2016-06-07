@@ -1,6 +1,7 @@
 package merkletree
 
 import (
+	"crypto"
 	"errors"
 	"hash"
 )
@@ -14,13 +15,20 @@ const (
 	LeafIdentifier        = 'L'
 )
 
-type HashSuite struct {
+type Scheme interface {
+	Sign([]byte) []byte
+	Verify(publicKey []byte, message, sig []byte) bool
+}
+
+type HashFunction struct {
 	HashSizeByte int
 	Hash         hash.Hash
+	HashId       crypto.Hash
 }
 
 type MerkleTree struct {
-	hash      HashSuite
+	hash      HashFunction
+	scheme    Scheme
 	treeNonce []byte
 	salt      []byte
 	root      *interiorNode
@@ -37,16 +45,17 @@ type interiorNode struct {
 
 type userLeafNode struct {
 	interiorNode
-	key   string
-	value []byte
-	index []byte
+	key        string
+	value      []byte
+	index      []byte
+	commitment []byte
 }
 
 type MerkleNode interface {
 	Value() []byte
 }
 
-func InitMerkleTree(treeNonce, salt []byte, hashFunc HashSuite) *MerkleTree {
+func InitMerkleTree(treeNonce, salt []byte, hashFunc HashFunction, scheme Scheme) *MerkleTree {
 	root := &interiorNode{
 		parent:     nil,
 		leftChild:  nil,
@@ -60,6 +69,7 @@ func InitMerkleTree(treeNonce, salt []byte, hashFunc HashSuite) *MerkleTree {
 		treeNonce: treeNonce,
 		salt:      salt,
 		hash:      hashFunc,
+		scheme:    scheme,
 		root:      root,
 	}
 	return m
@@ -93,12 +103,13 @@ func (m *MerkleTree) LookUp(key string) MerkleNode {
 	return nil
 }
 
-func (m *MerkleTree) Set(ops Operation) error {
-	index := m.computePrivateIndex(ops.Key)
+func (m *MerkleTree) Set(key string, value []byte) error {
+	index := m.computePrivateIndex(key)
 	toAdd := userLeafNode{
-		key:   ops.Key,
-		value: ops.Value,
-		index: index,
+		key:        key,
+		value:      value,
+		index:      index,
+		commitment: leafNodeCommitment(m, key, value),
 	}
 
 	return m.insertNode(index, &toAdd)
@@ -237,25 +248,36 @@ func (m *MerkleTree) digest(input []byte) []byte {
 
 // Node manipulation functions
 
-func hashInteriorNode(m *MerkleTree, node *interiorNode) []byte {
+var _ MerkleNode = (*userLeafNode)(nil)
+
+func (node *userLeafNode) Value() []byte {
+	return node.value
+}
+
+func (node *interiorNode) serialize() []byte {
 	var input []byte
 	input = append(input, node.leftHash...)
 	input = append(input, node.rightHash...)
-	return m.digest(input)
+	return input
+}
+
+func leafNodeCommitment(m *MerkleTree, key string, value []byte) []byte {
+	commit := append([]byte{}, m.salt...)
+	commit = append(commit, key...)
+	commit = append(commit, value...)
+	return m.digest(commit)
+}
+
+func hashInteriorNode(m *MerkleTree, node *interiorNode) []byte {
+	return m.digest(node.serialize())
 }
 
 func hashLeafNode(m *MerkleTree, node *userLeafNode) []byte {
-	commit := append([]byte{}, m.salt...)
-	commit = append(commit, node.key...)
-	commit = append(commit, node.value...)
-	commit = m.digest(commit)
-
 	input := []byte{LeafIdentifier}                  // K_leaf
 	input = append(input, m.treeNonce...)            // K_n
 	input = append(input, node.index...)             // i
 	input = append(input, intToBytes(node.level)...) // l
-	input = append(input, commit...)                 // commit(key|| value)
-
+	input = append(input, node.commitment...)        // commit(key|| value)
 	return m.digest(input)
 }
 
@@ -264,12 +286,59 @@ func hashEmptyNode(m *MerkleTree, prefixBits []bool) []byte {
 	input = append(input, m.treeNonce...)                 // K_n
 	input = append(input, toBytes(prefixBits)...)         // i
 	input = append(input, intToBytes(len(prefixBits))...) // l
-
 	return m.digest(input)
 }
 
-var _ MerkleNode = (*userLeafNode)(nil)
+// tree clone methods
 
-func (node *userLeafNode) Value() []byte {
-	return node.value
+func (m *MerkleTree) clone() *MerkleTree {
+	return &MerkleTree{
+		treeNonce: m.treeNonce,
+		salt:      m.salt,
+		hash:      m.hash,
+		scheme:    m.scheme,
+		root:      m.root.clone(nil),
+	}
+}
+
+func (node *interiorNode) clone(parent *interiorNode) *interiorNode {
+	newNode := &interiorNode{
+		parent:    parent,
+		level:     node.level,
+		leftHash:  node.leftHash,
+		rightHash: node.rightHash,
+	}
+
+	if node.leftChild != nil {
+		switch node.leftChild.(type) {
+		case *interiorNode:
+			newNode.leftChild = node.leftChild.(*interiorNode).clone(newNode)
+		case *userLeafNode:
+			newNode.leftChild = node.leftChild.(*userLeafNode).clone(newNode)
+		}
+	}
+
+	if node.rightChild != nil {
+		switch node.rightChild.(type) {
+		case *interiorNode:
+			newNode.rightChild = node.rightChild.(*interiorNode).clone(newNode)
+		case *userLeafNode:
+			newNode.rightChild = node.rightChild.(*userLeafNode).clone(newNode)
+		}
+	}
+
+	return newNode
+}
+
+func (node *userLeafNode) clone(parent *interiorNode) *userLeafNode {
+	newNode := &userLeafNode{
+		key:        node.key,
+		value:      node.value,
+		index:      append([]byte{}, node.index...), // make a copy of index
+		commitment: node.commitment,
+	}
+	newNode.parent = parent
+	newNode.level = node.level
+
+	return newNode
 }
