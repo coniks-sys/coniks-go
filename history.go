@@ -31,12 +31,7 @@ func (m *MerkleTree) UpdateHistory(db DB, nextEp int64) error {
 	return err
 }
 
-func (m *MerkleTree) GetSTR(ep int64) *SignedTreeRoot {
-	// TODO: should we convert the return STR to another MerkleTree?
-	// since we would use return value for lookup
-	// also need to write test more accuracy
-	// i.e.: in each epoch, add new user and then test lookup on the return str
-
+func GetSTR(ep int64) *SignedTreeRoot {
 	pointer := getCurrentSTR()
 	for pointer.epoch > ep && pointer != nil {
 		if pointer.prev == nil {

@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"testing"
 
+	"reflect"
+
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -42,14 +44,12 @@ func TestGenerateSTR(t *testing.T) {
 // 2nd: epoch = 3
 // 3nd: epoch = 5 (latest STR)
 func TestHistoryHashChain(t *testing.T) {
+	currentSTR = nil
 	var startupTime int64
 	var epochInterval int64
 
 	startupTime = 1
 	epochInterval = 2
-
-	m := InitMerkleTree(treeNonce, salt, hashFunc, scheme)
-	m.InitHistory(nil, startupTime, epochInterval)
 
 	key1 := "key"
 	val1 := []byte("value")
@@ -60,19 +60,23 @@ func TestHistoryHashChain(t *testing.T) {
 	key3 := "key3"
 	val3 := []byte("value3")
 
-	m.Set(key1, val1)
-	m.RecomputeHash()
+	m1 := InitMerkleTree(treeNonce, salt, hashFunc, scheme)
+	m1.InitHistory(nil, startupTime, epochInterval)
+	m1.Set(key1, val1)
+	m1.RecomputeHash()
 
-	m.UpdateHistory(nil, startupTime+epochInterval)
-	m.Set(key2, val2)
-	m.RecomputeHash()
+	m2 := m1.clone()
+	m2.UpdateHistory(nil, startupTime+epochInterval)
+	m2.Set(key2, val2)
+	m2.RecomputeHash()
 
-	m.UpdateHistory(nil, startupTime+2*epochInterval)
-	m.Set(key3, val3)
-	m.RecomputeHash()
+	m3 := m2.clone()
+	m3.UpdateHistory(nil, startupTime+2*epochInterval)
+	m3.Set(key3, val3)
+	m3.RecomputeHash()
 
 	for i := 0; i < 2; i++ {
-		str := m.GetSTR(startupTime + int64(i)*epochInterval)
+		str := GetSTR(startupTime + int64(i)*epochInterval)
 		if str == nil {
 			t.Error("Cannot get STR having epoch", startupTime+int64(i)*epochInterval)
 			return
@@ -84,7 +88,7 @@ func TestHistoryHashChain(t *testing.T) {
 		}
 	}
 
-	str := m.GetSTR(6)
+	str := GetSTR(6)
 	if str == nil {
 		t.Error("Cannot get STR")
 		return
@@ -94,11 +98,14 @@ func TestHistoryHashChain(t *testing.T) {
 		t.Error("Got invalid STR")
 	}
 
-	// if m.LookUpInEpoch(key1, 6) == nil {
-	// 	t.Error("cannot find key1")
-	// }
-
-	// if m.LookUpInEpoch(key3, 3) == nil {
-	// 	t.Error("cannot find key: ", key2)
-	// }
+	// check tree root of each STR is valid
+	if reflect.ValueOf(m1.root).Pointer() != reflect.ValueOf(GetSTR(1).treeRoot).Pointer() {
+		t.Error("Invalid root pointer")
+	}
+	if reflect.ValueOf(m2.root).Pointer() != reflect.ValueOf(GetSTR(3).treeRoot).Pointer() {
+		t.Error("Invalid root pointer")
+	}
+	if reflect.ValueOf(m3.root).Pointer() != reflect.ValueOf(GetSTR(5).treeRoot).Pointer() {
+		t.Error("Invalid root pointer")
+	}
 }

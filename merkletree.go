@@ -118,8 +118,7 @@ func (m *MerkleTree) Set(key string, value []byte) error {
 // Private Index calculation function
 // would be replaced with Ismail's VRF implementation
 func (m *MerkleTree) computePrivateIndex(key string) []byte {
-	stringBytes := append([]byte(nil), key...)
-	return m.digest(stringBytes)
+	return m.digest([]byte(key))
 }
 
 func (m *MerkleTree) insertNode(key []byte, node *userLeafNode) error {
@@ -201,10 +200,7 @@ insertLoop:
 }
 
 func (m *MerkleTree) RecomputeHash() {
-	m.computeHash([]bool{})
-}
-
-func (m *MerkleTree) computeHash(prefixBits []bool) {
+	var prefixBits []bool
 	if m.root.leftHash == nil {
 		m.root.leftHash = m.hashNode(
 			append(prefixBits, false), m.root.leftChild)
@@ -239,10 +235,12 @@ func (m *MerkleTree) hashNode(prefixBits []bool, node interface{}) []byte {
 	return nil
 }
 
-func (m *MerkleTree) digest(input []byte) []byte {
+func (m *MerkleTree) digest(ms ...[]byte) []byte {
 	h := m.hash.Hash
 	defer h.Reset()
-	h.Write(input)
+	for _, m := range ms {
+		h.Write(m)
+	}
 	return h.Sum(nil)
 }
 
@@ -255,17 +253,17 @@ func (node *userLeafNode) Value() []byte {
 }
 
 func (node *interiorNode) serialize() []byte {
-	var input []byte
+	input := make([]byte, 0, len(node.leftHash)+len(node.rightHash))
 	input = append(input, node.leftHash...)
 	input = append(input, node.rightHash...)
 	return input
 }
 
 func leafNodeCommitment(m *MerkleTree, key string, value []byte) []byte {
-	commit := append([]byte{}, m.salt...)
-	commit = append(commit, key...)
-	commit = append(commit, value...)
-	return m.digest(commit)
+	return m.digest(
+		[]byte(m.salt),
+		[]byte(key),
+		[]byte(value))
 }
 
 func hashInteriorNode(m *MerkleTree, node *interiorNode) []byte {
@@ -273,20 +271,22 @@ func hashInteriorNode(m *MerkleTree, node *interiorNode) []byte {
 }
 
 func hashLeafNode(m *MerkleTree, node *userLeafNode) []byte {
-	input := []byte{LeafIdentifier}                  // K_leaf
-	input = append(input, m.treeNonce...)            // K_n
-	input = append(input, node.index...)             // i
-	input = append(input, intToBytes(node.level)...) // l
-	input = append(input, node.commitment...)        // commit(key|| value)
-	return m.digest(input)
+	return m.digest(
+		[]byte{LeafIdentifier},         // K_leaf
+		[]byte(m.treeNonce),            // K_n
+		[]byte(node.index),             // i
+		[]byte(intToBytes(node.level)), // l
+		[]byte(node.commitment),        // commit(key|| value)
+	)
 }
 
 func hashEmptyNode(m *MerkleTree, prefixBits []bool) []byte {
-	input := []byte{EmptyBranchIdentifier}                // K_empty
-	input = append(input, m.treeNonce...)                 // K_n
-	input = append(input, toBytes(prefixBits)...)         // i
-	input = append(input, intToBytes(len(prefixBits))...) // l
-	return m.digest(input)
+	return m.digest(
+		[]byte{EmptyBranchIdentifier},       // K_empty
+		[]byte(m.treeNonce),                 // K_n
+		[]byte(toBytes(prefixBits)),         // i
+		[]byte(intToBytes(len(prefixBits))), // l
+	)
 }
 
 // tree clone methods

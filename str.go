@@ -20,7 +20,7 @@ func (m *MerkleTree) generateSTR(ep int64, prevEp int64, prevHash []byte) *Signe
 	sig := m.scheme.Sign(bytesPreSig)
 
 	return &SignedTreeRoot{
-		treeRoot:    &(*m.root),
+		treeRoot:    m.root,
 		epoch:       ep,
 		prevEpoch:   prevEp,
 		prevStrHash: prevHash,
@@ -37,13 +37,17 @@ func (m *MerkleTree) generateNextSTR(ep int64) *SignedTreeRoot {
 
 	sig := m.scheme.Sign(bytesPreSig)
 	return &SignedTreeRoot{
-		treeRoot:    &(*m.root),
+		treeRoot:    m.root,
 		epoch:       ep,
 		prevEpoch:   prevEpoch,
 		prevStrHash: prevStrHash,
 		sig:         sig,
 		prev:        currentSTR,
 	}
+}
+
+func generateAuthPath(m *MerkleTree, node *userLeafNode) {
+	
 }
 
 func getSTRBytesForSig(m *MerkleTree, ep int64, prevEp int64, prevHash []byte) []byte {
