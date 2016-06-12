@@ -10,25 +10,23 @@ var (
 var currentSTR *SignedTreeRoot
 var epochInterval int64
 
-func (m *MerkleTree) InitHistory(db DB, startEp, epInterval int64) error {
+func (m *MerkleTree) InitHistory(startEp, epInterval int64) error {
 	if currentSTR != nil {
 		return ErrHistoryExisted
 	}
 	epochInterval = epInterval
-	currentSTR = m.generateSTR(startEp, 0, make([]byte, m.hash.HashSizeByte))
-	err := saveSTR(db, currentSTR)
-	return err
+	currentSTR = m.generateSTR(startEp, 0, make([]byte, HashSizeByte))
+	return nil
 }
 
-func (m *MerkleTree) UpdateHistory(db DB, nextEp int64) error {
+func (m *MerkleTree) UpdateHistory(nextEp int64) error {
 	if nextEp < nextEpoch() {
 		return ErrBadEpoch
 	}
 	nextStr := m.generateNextSTR(nextEp)
 
 	currentSTR = nextStr
-	err := saveSTR(db, currentSTR)
-	return err
+	return nil
 }
 
 func GetSTR(ep int64) *SignedTreeRoot {

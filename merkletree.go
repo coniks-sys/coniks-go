@@ -1,10 +1,6 @@
 package merkletree
 
-import (
-	"crypto"
-	"errors"
-	"hash"
-)
+import "errors"
 
 var (
 	ErrInvalidTree = errors.New("[merkletree] invalid tree")
@@ -15,51 +11,19 @@ const (
 	LeafIdentifier        = 'L'
 )
 
-type Scheme interface {
-	Sign([]byte) []byte
-	Verify(publicKey []byte, message, sig []byte) bool
-}
-
-type HashFunction struct {
-	HashSizeByte int
-	Hash         hash.Hash
-	HashId       crypto.Hash
-}
-
 type MerkleTree struct {
-	hash      HashFunction
-	scheme    Scheme
 	treeNonce []byte
 	salt      []byte
+	privKey   []byte
+	pubKey    []byte
 	root      *interiorNode
 }
 
-type interiorNode struct {
-	parent     *interiorNode
-	leftChild  interface{}
-	rightChild interface{}
-	leftHash   []byte
-	rightHash  []byte
-	level      int
-}
-
-type userLeafNode struct {
-	interiorNode
-	key        string
-	value      []byte
-	index      []byte
-	commitment []byte
-}
-
-type MerkleNode interface {
-	Value() []byte
-}
-
-func InitMerkleTree(treeNonce, salt []byte, hashFunc HashFunction, scheme Scheme) *MerkleTree {
+func InitMerkleTree(treeNonce, salt, pubKey, privKey []byte) *MerkleTree {
 	root := &interiorNode{
 		parent:     nil,
-		leftChild:  nil,
-		rightChild: nil,
+		leftChild:  new(emptyNode),
+		rightChild: new(emptyNode),
 		leftHash:   nil,
 		rightHash:  nil,
 		level:      0,
@@ -68,24 +32,40 @@ func InitMerkleTree(treeNonce, salt []byte, hashFunc HashFunction, scheme Scheme
 	m := &MerkleTree{
 		treeNonce: treeNonce,
 		salt:      salt,
-		hash:      hashFunc,
-		scheme:    scheme,
 		root:      root,
+		privKey:   privKey,
+		pubKey:    pubKey,
 	}
 	return m
 }
 
-func (m *MerkleTree) LookUp(key string) MerkleNode {
-	lookupIndex := m.computePrivateIndex(key)
+func LookUp(key string) (MerkleNode, []MerkleNode, error) {
+	str := getCurrentSTR()
+	return lookUp(key, str)
+}
+
+func LookUpInEpoch(key string, ep int64) (MerkleNode, []MerkleNode, error) {
+	str := GetSTR(ep)
+	return lookUp(key, str)
+}
+
+func lookUp(key string, str *SignedTreeRoot) (MerkleNode, []MerkleNode, error) {
+	lookupIndex := computePrivateIndex(key)
 	position := 0
 	var nodePointer interface{}
-	nodePointer = m.root
+	nodePointer = str.treeRoot
+	var proof []MerkleNode
 
-	for nodePointer != nil {
+	for {
 		if _, ok := nodePointer.(*userLeafNode); ok {
 			// reached to a leaf node
 			break
 		}
+		if _, ok := nodePointer.(*emptyNode); ok {
+			// reached to an empty branch
+			break
+		}
+		proof = append(proof, nodePointer.(*interiorNode))
 		direction := getNthBit(lookupIndex, position)
 		if direction {
 			nodePointer = nodePointer.(*interiorNode).rightChild
@@ -95,21 +75,31 @@ func (m *MerkleTree) LookUp(key string) MerkleNode {
 		position++
 	}
 
-	if _, ok := nodePointer.(*userLeafNode); ok && nodePointer != nil {
-		if nodePointer.(*userLeafNode).key == key {
-			return nodePointer.(*userLeafNode)
-		}
+	if nodePointer == nil {
+		return nil, nil, ErrInvalidTree
 	}
-	return nil
+	switch nodePointer.(type) {
+	case *userLeafNode:
+		if nodePointer.(*userLeafNode).key == key {
+			proof = append(proof, nodePointer.(*userLeafNode))
+			return nodePointer.(*userLeafNode), proof, nil
+		} else {
+			// TODO: what should we return here?
+		}
+	case *emptyNode:
+		proof = append(proof, nodePointer.(*emptyNode))
+		return nil, proof, nil
+	}
+	return nil, nil, ErrInvalidTree
 }
 
 func (m *MerkleTree) Set(key string, value []byte) error {
-	index := m.computePrivateIndex(key)
+	index := computePrivateIndex(key)
 	toAdd := userLeafNode{
 		key:        key,
 		value:      value,
 		index:      index,
-		commitment: leafNodeCommitment(m, key, value),
+		commitment: commit(m, key, value),
 	}
 
 	return m.insertNode(index, &toAdd)
@@ -117,8 +107,8 @@ func (m *MerkleTree) Set(key string, value []byte) error {
 
 // Private Index calculation function
 // would be replaced with Ismail's VRF implementation
-func (m *MerkleTree) computePrivateIndex(key string) []byte {
-	return m.digest([]byte(key))
+func computePrivateIndex(key string) []byte {
+	return Digest([]byte(key))
 }
 
 func (m *MerkleTree) insertNode(key []byte, node *userLeafNode) error {
@@ -139,8 +129,10 @@ insertLoop:
 				return ErrInvalidTree
 			}
 			newInteriorNode := interiorNode{
-				parent: currentNodeUL.parent,
-				level:  currentNodeUL.level,
+				parent:     currentNodeUL.parent,
+				level:      currentNodeUL.level,
+				leftChild:  new(emptyNode),
+				rightChild: new(emptyNode),
 			}
 
 			if currentNodeUL.key == node.key {
@@ -149,7 +141,7 @@ insertLoop:
 				return nil
 			}
 
-			currentNodeKey := m.computePrivateIndex(currentNodeUL.key)
+			currentNodeKey := computePrivateIndex(currentNodeUL.key)
 
 			currentNodeUL.index = currentNodeKey
 
@@ -174,7 +166,7 @@ insertLoop:
 
 			if direction { // go right
 				currentNodeI.rightHash = nil
-				if currentNodeI.rightChild == nil {
+				if currentNodeI.rightChild.IsEmpty() {
 					currentNodeI.rightChild = node
 					node.parent = currentNodeI
 					break insertLoop
@@ -183,7 +175,7 @@ insertLoop:
 				}
 			} else { // go left
 				currentNodeI.leftHash = nil
-				if currentNodeI.leftChild == nil {
+				if currentNodeI.leftChild.IsEmpty() {
 					currentNodeI.leftChild = node
 					node.parent = currentNodeI
 					break insertLoop
@@ -211,12 +203,7 @@ func (m *MerkleTree) RecomputeHash() {
 	}
 }
 
-func (m *MerkleTree) hashNode(prefixBits []bool, node interface{}) []byte {
-	if node == nil {
-		// empty node
-		return hashEmptyNode(m, prefixBits)
-	}
-
+func (m *MerkleTree) hashNode(prefixBits []bool, node MerkleNode) []byte {
 	switch node.(type) {
 	case *interiorNode:
 		currentNodeI := node.(*interiorNode)
@@ -228,117 +215,28 @@ func (m *MerkleTree) hashNode(prefixBits []bool, node interface{}) []byte {
 			currentNodeI.rightHash = m.hashNode(
 				append(prefixBits, true), currentNodeI.rightChild)
 		}
-		return hashInteriorNode(m, currentNodeI)
+		return currentNodeI.hash(m)
 	case *userLeafNode:
-		return hashLeafNode(m, node.(*userLeafNode))
+		return node.(*userLeafNode).hash(m)
+	case *emptyNode:
+		return node.(*emptyNode).hash(m, prefixBits)
 	}
 	return nil
 }
 
-func (m *MerkleTree) digest(ms ...[]byte) []byte {
-	h := m.hash.Hash
-	defer h.Reset()
-	for _, m := range ms {
-		h.Write(m)
-	}
-	return h.Sum(nil)
-}
-
-// Node manipulation functions
-
-var _ MerkleNode = (*userLeafNode)(nil)
-
-func (node *userLeafNode) Value() []byte {
-	return node.value
-}
-
-func (node *interiorNode) serialize() []byte {
-	input := make([]byte, 0, len(node.leftHash)+len(node.rightHash))
-	input = append(input, node.leftHash...)
-	input = append(input, node.rightHash...)
-	return input
-}
-
-func leafNodeCommitment(m *MerkleTree, key string, value []byte) []byte {
-	return m.digest(
+func commit(m *MerkleTree, key string, value []byte) []byte {
+	return Digest(
 		[]byte(m.salt),
 		[]byte(key),
 		[]byte(value))
 }
 
-func hashInteriorNode(m *MerkleTree, node *interiorNode) []byte {
-	return m.digest(node.serialize())
-}
-
-func hashLeafNode(m *MerkleTree, node *userLeafNode) []byte {
-	return m.digest(
-		[]byte{LeafIdentifier},         // K_leaf
-		[]byte(m.treeNonce),            // K_n
-		[]byte(node.index),             // i
-		[]byte(intToBytes(node.level)), // l
-		[]byte(node.commitment),        // commit(key|| value)
-	)
-}
-
-func hashEmptyNode(m *MerkleTree, prefixBits []bool) []byte {
-	return m.digest(
-		[]byte{EmptyBranchIdentifier},       // K_empty
-		[]byte(m.treeNonce),                 // K_n
-		[]byte(toBytes(prefixBits)),         // i
-		[]byte(intToBytes(len(prefixBits))), // l
-	)
-}
-
-// tree clone methods
-
-func (m *MerkleTree) clone() *MerkleTree {
+func (m *MerkleTree) Clone() *MerkleTree {
 	return &MerkleTree{
 		treeNonce: m.treeNonce,
 		salt:      m.salt,
-		hash:      m.hash,
-		scheme:    m.scheme,
 		root:      m.root.clone(nil),
+		privKey:   m.privKey,
+		pubKey:    m.pubKey,
 	}
-}
-
-func (node *interiorNode) clone(parent *interiorNode) *interiorNode {
-	newNode := &interiorNode{
-		parent:    parent,
-		level:     node.level,
-		leftHash:  node.leftHash,
-		rightHash: node.rightHash,
-	}
-
-	if node.leftChild != nil {
-		switch node.leftChild.(type) {
-		case *interiorNode:
-			newNode.leftChild = node.leftChild.(*interiorNode).clone(newNode)
-		case *userLeafNode:
-			newNode.leftChild = node.leftChild.(*userLeafNode).clone(newNode)
-		}
-	}
-
-	if node.rightChild != nil {
-		switch node.rightChild.(type) {
-		case *interiorNode:
-			newNode.rightChild = node.rightChild.(*interiorNode).clone(newNode)
-		case *userLeafNode:
-			newNode.rightChild = node.rightChild.(*userLeafNode).clone(newNode)
-		}
-	}
-
-	return newNode
-}
-
-func (node *userLeafNode) clone(parent *interiorNode) *userLeafNode {
-	newNode := &userLeafNode{
-		key:        node.key,
-		value:      node.value,
-		index:      append([]byte{}, node.index...), // make a copy of index
-		commitment: node.commitment,
-	}
-	newNode.parent = parent
-	newNode.level = node.level
-
-	return newNode
 }

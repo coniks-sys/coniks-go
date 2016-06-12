@@ -12,12 +12,13 @@ type SignedTreeRoot struct {
 	prevEpoch   int64
 	prevStrHash []byte
 	sig         []byte
+	policies    []byte
 	prev        *SignedTreeRoot
 }
 
 func (m *MerkleTree) generateSTR(ep int64, prevEp int64, prevHash []byte) *SignedTreeRoot {
 	bytesPreSig := getSTRBytesForSig(m, ep, prevEp, prevHash)
-	sig := m.scheme.Sign(bytesPreSig)
+	sig := Sign(m.privKey, bytesPreSig)
 
 	return &SignedTreeRoot{
 		treeRoot:    m.root,
@@ -25,6 +26,7 @@ func (m *MerkleTree) generateSTR(ep int64, prevEp int64, prevHash []byte) *Signe
 		prevEpoch:   prevEp,
 		prevStrHash: prevHash,
 		sig:         sig,
+		policies:    serializePolicies(),
 		prev:        nil,
 	}
 }
@@ -32,32 +34,29 @@ func (m *MerkleTree) generateSTR(ep int64, prevEp int64, prevHash []byte) *Signe
 func (m *MerkleTree) generateNextSTR(ep int64) *SignedTreeRoot {
 	currentSTR := getCurrentSTR()
 	prevEpoch := currentSTR.epoch
-	prevStrHash := m.digest(serializeSTR(*currentSTR))
+	prevStrHash := Digest(serializeSTR(*currentSTR))
 	bytesPreSig := getSTRBytesForSig(m, ep, prevEpoch, prevStrHash)
 
-	sig := m.scheme.Sign(bytesPreSig)
+	sig := Sign(m.privKey, bytesPreSig)
 	return &SignedTreeRoot{
 		treeRoot:    m.root,
 		epoch:       ep,
 		prevEpoch:   prevEpoch,
 		prevStrHash: prevStrHash,
 		sig:         sig,
+		policies:    serializePolicies(),
 		prev:        currentSTR,
 	}
-}
-
-func generateAuthPath(m *MerkleTree, node *userLeafNode) {
-	
 }
 
 func getSTRBytesForSig(m *MerkleTree, ep int64, prevEp int64, prevHash []byte) []byte {
 	var strBytes []byte
 
-	strBytes = append(strBytes, longToBytes(ep)...)      // t - epoch number
-	strBytes = append(strBytes, longToBytes(prevEp)...)  // t_prev - previous epoch number
-	strBytes = append(strBytes, m.root.serialize()...)   // root
-	strBytes = append(strBytes, prevHash...)             // previous STR hash
-	strBytes = append(strBytes, serializePolicies(m)...) // P
+	strBytes = append(strBytes, longToBytes(ep)...)     // t - epoch number
+	strBytes = append(strBytes, longToBytes(prevEp)...) // t_prev - previous epoch number
+	strBytes = append(strBytes, m.root.serialize()...)  // root
+	strBytes = append(strBytes, prevHash...)            // previous STR hash
+	strBytes = append(strBytes, serializePolicies()...) // P
 	return strBytes
 }
 
@@ -73,19 +72,10 @@ func serializeSTR(str SignedTreeRoot) []byte {
 	return strBytes
 }
 
-func serializePolicies(m *MerkleTree) []byte {
+func serializePolicies() []byte {
 	var bs []byte
-	bs = append(bs, []byte(Version)...)                // lib Version
-	bs = append(bs, intToBytes(int(m.hash.HashId))...) // cryptographic algorithms in use
-	bs = append(bs, longToBytes(nextEpoch())...)       // expected time of next epoch
+	bs = append(bs, []byte(Version)...)          // lib Version
+	bs = append(bs, []byte(HashID)...)           // cryptographic algorithms in use
+	bs = append(bs, longToBytes(nextEpoch())...) // expected time of next epoch
 	return bs
-}
-
-// save the str to the key-value db as (epoch, strBytes)
-func saveSTR(db DB, str *SignedTreeRoot) error {
-	if db == nil {
-		return nil
-	}
-	err := db.Put(longToBytes(str.epoch), serializeSTR(*str))
-	return err
 }
