@@ -18,11 +18,16 @@ type userLeafNode struct {
 }
 
 type emptyNode struct {
+	interiorNode
 }
 
 type MerkleNode interface {
 	Value() []byte
-	IsEmpty() bool
+	isEmpty() bool
+}
+
+type LookUpProofNode interface {
+	GetHash() []byte
 }
 
 var _ MerkleNode = (*userLeafNode)(nil)
@@ -33,7 +38,7 @@ func (node *userLeafNode) Value() []byte {
 	return node.value
 }
 
-func (node *userLeafNode) IsEmpty() bool {
+func (node *userLeafNode) isEmpty() bool {
 	return false
 }
 
@@ -41,7 +46,7 @@ func (node *interiorNode) Value() []byte {
 	return nil
 }
 
-func (node *interiorNode) IsEmpty() bool {
+func (node *interiorNode) isEmpty() bool {
 	return false
 }
 
@@ -49,8 +54,33 @@ func (node *emptyNode) Value() []byte {
 	return nil
 }
 
-func (node *emptyNode) IsEmpty() bool {
+func (node *emptyNode) isEmpty() bool {
 	return true
+}
+
+var _ LookUpProofNode = (*userLeafNode)(nil)
+var _ LookUpProofNode = (*interiorNode)(nil)
+var _ LookUpProofNode = (*emptyNode)(nil)
+
+func (node *userLeafNode) GetHash() []byte {
+	if node.parent.leftChild == node {
+		return node.parent.leftHash
+	}
+	return node.parent.rightHash
+}
+
+func (node *interiorNode) GetHash() []byte {
+	if node.parent.leftChild == node {
+		return node.parent.leftHash
+	}
+	return node.parent.rightHash
+}
+
+func (node *emptyNode) GetHash() []byte {
+	if node.parent.leftChild == node {
+		return node.parent.leftHash
+	}
+	return node.parent.rightHash
 }
 
 func (node *interiorNode) serialize() []byte {
@@ -98,7 +128,7 @@ func (node *interiorNode) clone(parent *interiorNode) *interiorNode {
 		case *userLeafNode:
 			newNode.leftChild = node.leftChild.(*userLeafNode).clone(newNode)
 		case *emptyNode:
-			newNode.leftChild = new(emptyNode)
+			newNode.leftChild = node.leftChild.(*emptyNode).clone(newNode)
 		}
 	}
 
@@ -109,7 +139,7 @@ func (node *interiorNode) clone(parent *interiorNode) *interiorNode {
 		case *userLeafNode:
 			newNode.rightChild = node.rightChild.(*userLeafNode).clone(newNode)
 		case *emptyNode:
-			newNode.rightChild = new(emptyNode)
+			newNode.rightChild = node.rightChild.(*emptyNode).clone(newNode)
 		}
 	}
 
@@ -125,6 +155,17 @@ func (node *userLeafNode) clone(parent *interiorNode) *userLeafNode {
 	}
 	newNode.parent = parent
 	newNode.level = node.level
+
+	return newNode
+}
+
+func (node *emptyNode) clone(parent *interiorNode) *emptyNode {
+	newNode := &emptyNode{
+		interiorNode: interiorNode{
+			parent: parent,
+			level:  node.level,
+		},
+	}
 
 	return newNode
 }

@@ -30,3 +30,10 @@ func Sign(privateKey []byte, message []byte) []byte {
 func Verify(publicKey []byte, message, sig []byte) bool {
 	return ed25519.Verify(publicKey, message, sig)
 }
+
+func commitment(salt []byte, key string, value []byte) []byte {
+	return Digest(
+		[]byte(salt),
+		[]byte(key),
+		[]byte(value))
+}

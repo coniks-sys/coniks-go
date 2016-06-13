@@ -261,7 +261,7 @@ func TestHistoryHashChain(t *testing.T) {
 
 	// lookup
 	r, _, _ := LookUp(key1)
-	if r == nil || r.IsEmpty() {
+	if r == nil {
 		t.Error("Cannot find key:", key1)
 		return
 	}
@@ -270,7 +270,7 @@ func TestHistoryHashChain(t *testing.T) {
 	}
 
 	r, _, _ = LookUp(key2)
-	if r == nil || r.IsEmpty() {
+	if r == nil {
 		t.Error("Cannot find key:", key2)
 		return
 	}
@@ -279,7 +279,7 @@ func TestHistoryHashChain(t *testing.T) {
 	}
 
 	r, _, _ = LookUp(key3)
-	if r == nil || r.IsEmpty() {
+	if r == nil {
 		t.Error("Cannot find key:", key3)
 		return
 	}
@@ -288,17 +288,17 @@ func TestHistoryHashChain(t *testing.T) {
 	}
 
 	r, _, _ = LookUpInEpoch(key2, 1)
-	if r != nil && !r.IsEmpty() {
+	if r != nil {
 		t.Error("Found unexpected key", key2, "in epoch", 1)
 	}
 
 	r, _, _ = LookUpInEpoch(key3, 4)
-	if r != nil && !r.IsEmpty() {
+	if r != nil {
 		t.Error("Found unexpected key", key3, "in epoch", 4)
 	}
 
 	r, _, _ = LookUpInEpoch(key3, 5)
-	if r == nil || r.IsEmpty() {
+	if r == nil {
 		t.Error("Cannot find key", key3, "in epoch", 5)
 	}
 }

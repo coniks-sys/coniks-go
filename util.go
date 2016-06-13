@@ -5,6 +5,7 @@ import "encoding/binary"
 // Finds the byte in the byte array bs
 // at offset offset, and determines whether it is 1 or 0.
 // return true if the nth bit is 1, false otherwise.
+// from MSB to LSB order
 func getNthBit(bs []byte, offset int) bool {
 	arrayOffset := offset / 8
 	bitOfByte := offset % 8
@@ -34,4 +35,13 @@ func toBytes(bits []bool) []byte {
 		}
 	}
 	return bs
+}
+
+// copy from dename authors
+func toBits(bs []byte) []bool {
+	bits := make([]bool, len(bs)*8)
+	for i := 0; i < len(bits); i++ {
+		bits[i] = (bs[i/8]<<uint(i%8))&(1<<7) > 0
+	}
+	return bits
 }
