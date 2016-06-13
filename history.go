@@ -20,7 +20,7 @@ func (m *MerkleTree) InitHistory(startEp, epInterval int64) error {
 }
 
 func (m *MerkleTree) UpdateHistory(nextEp int64) error {
-	if nextEp < nextEpoch() {
+	if nextEp < NextEpoch() {
 		return ErrBadEpoch
 	}
 	nextStr := m.generateNextSTR(nextEp)
@@ -44,7 +44,7 @@ func getCurrentSTR() *SignedTreeRoot {
 	return currentSTR
 }
 
-func nextEpoch() int64 {
+func NextEpoch() int64 {
 	if currentSTR == nil {
 		return epochInterval
 	}

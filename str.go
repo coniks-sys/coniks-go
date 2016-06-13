@@ -26,7 +26,7 @@ func (m *MerkleTree) generateSTR(ep int64, prevEp int64, prevHash []byte) *Signe
 		prevEpoch:   prevEp,
 		prevStrHash: prevHash,
 		sig:         sig,
-		policies:    serializePolicies(),
+		policies:    m.policies.Serialize(),
 		prev:        nil,
 	}
 }
@@ -44,7 +44,7 @@ func (m *MerkleTree) generateNextSTR(ep int64) *SignedTreeRoot {
 		prevEpoch:   prevEpoch,
 		prevStrHash: prevStrHash,
 		sig:         sig,
-		policies:    serializePolicies(),
+		policies:    m.policies.Serialize(),
 		prev:        currentSTR,
 	}
 }
@@ -52,11 +52,11 @@ func (m *MerkleTree) generateNextSTR(ep int64) *SignedTreeRoot {
 func getSTRBytesForSig(m *MerkleTree, ep int64, prevEp int64, prevHash []byte) []byte {
 	var strBytes []byte
 
-	strBytes = append(strBytes, longToBytes(ep)...)     // t - epoch number
-	strBytes = append(strBytes, longToBytes(prevEp)...) // t_prev - previous epoch number
-	strBytes = append(strBytes, m.root.serialize()...)  // root
-	strBytes = append(strBytes, prevHash...)            // previous STR hash
-	strBytes = append(strBytes, serializePolicies()...) // P
+	strBytes = append(strBytes, LongToBytes(ep)...)        // t - epoch number
+	strBytes = append(strBytes, LongToBytes(prevEp)...)    // t_prev - previous epoch number
+	strBytes = append(strBytes, m.root.serialize()...)     // root
+	strBytes = append(strBytes, prevHash...)               // previous STR hash
+	strBytes = append(strBytes, m.policies.Serialize()...) // P
 	return strBytes
 }
 
@@ -64,18 +64,10 @@ func serializeSTR(str SignedTreeRoot) []byte {
 	var strBytes []byte
 
 	strBytes = append(strBytes, str.treeRoot.serialize()...)   // root
-	strBytes = append(strBytes, longToBytes(str.epoch)...)     // epoch
-	strBytes = append(strBytes, longToBytes(str.prevEpoch)...) // previous epoch
+	strBytes = append(strBytes, LongToBytes(str.epoch)...)     // epoch
+	strBytes = append(strBytes, LongToBytes(str.prevEpoch)...) // previous epoch
 	strBytes = append(strBytes, str.prevStrHash...)            // previous hash
 	strBytes = append(strBytes, str.sig...)                    // signature
 
 	return strBytes
-}
-
-func serializePolicies() []byte {
-	var bs []byte
-	bs = append(bs, []byte(Version)...)          // lib Version
-	bs = append(bs, []byte(HashID)...)           // cryptographic algorithms in use
-	bs = append(bs, longToBytes(nextEpoch())...) // expected time of next epoch
-	return bs
 }

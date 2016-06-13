@@ -14,20 +14,20 @@ func getNthBit(bs []byte, offset int) bool {
 	return masked != 0
 }
 
-func longToBytes(num int64) []byte {
+func LongToBytes(num int64) []byte {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, uint64(num))
 	return buf
 }
 
-func intToBytes(num int) []byte {
+func IntToBytes(num int) []byte {
 	buf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(buf, uint32(num))
 	return buf
 }
 
 // In each byte, the bits are ordered MSB to LSB
-func toBytes(bits []bool) []byte {
+func ToBytes(bits []bool) []byte {
 	bs := make([]byte, (len(bits)+7)/8)
 	for i := 0; i < len(bits); i++ {
 		if bits[i] {
@@ -38,7 +38,7 @@ func toBytes(bits []bool) []byte {
 }
 
 // copy from dename authors
-func toBits(bs []byte) []bool {
+func ToBits(bs []byte) []bool {
 	bits := make([]bool, len(bs)*8)
 	for i := 0; i < len(bits); i++ {
 		bits[i] = (bs[i/8]<<uint(i%8))&(1<<7) > 0

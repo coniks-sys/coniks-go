@@ -99,7 +99,7 @@ func (node *userLeafNode) hash(m *MerkleTree) []byte {
 		[]byte{LeafIdentifier},         // K_leaf
 		[]byte(m.treeNonce),            // K_n
 		[]byte(node.index),             // i
-		[]byte(intToBytes(node.level)), // l
+		[]byte(IntToBytes(node.level)), // l
 		[]byte(node.commitment),        // commit(key|| value)
 	)
 }
@@ -108,8 +108,8 @@ func (node *emptyNode) hash(m *MerkleTree, prefixBits []bool) []byte {
 	return Digest(
 		[]byte{EmptyBranchIdentifier},       // K_empty
 		[]byte(m.treeNonce),                 // K_n
-		[]byte(toBytes(prefixBits)),         // i
-		[]byte(intToBytes(len(prefixBits))), // l
+		[]byte(ToBytes(prefixBits)),         // i
+		[]byte(IntToBytes(len(prefixBits))), // l
 	)
 }
 

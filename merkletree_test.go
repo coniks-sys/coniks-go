@@ -23,7 +23,7 @@ func init() {
 
 func TestOneEntry(t *testing.T) {
 	currentSTR = nil
-	m := InitMerkleTree(treeNonce, salt, pk, sk)
+	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt, pk, sk)
 
 	m.InitHistory(1, 1)
 	var commit [32]byte
@@ -48,7 +48,7 @@ func TestOneEntry(t *testing.T) {
 	h.Write([]byte{LeafIdentifier})
 	h.Write(treeNonce)
 	h.Write(index)
-	h.Write(intToBytes(1))
+	h.Write(IntToBytes(1))
 	h.Write(commit[:])
 	h.Read(expect[:])
 
@@ -62,8 +62,8 @@ func TestOneEntry(t *testing.T) {
 	h = sha3.NewShake256()
 	h.Write([]byte{EmptyBranchIdentifier})
 	h.Write(treeNonce)
-	h.Write(toBytes([]bool{true}))
-	h.Write(intToBytes(1))
+	h.Write(ToBytes([]bool{true}))
+	h.Write(IntToBytes(1))
 	h.Read(expect[:])
 	if !bytes.Equal(m.root.rightHash, expect[:]) {
 		t.Error("Wrong righ hash!",
@@ -90,7 +90,7 @@ func TestOneEntry(t *testing.T) {
 
 func TestTwoEntries(t *testing.T) {
 	currentSTR = nil
-	m := InitMerkleTree(treeNonce, salt, pk, sk)
+	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt, pk, sk)
 	m.InitHistory(1, 1)
 
 	key1 := "key1"
@@ -125,7 +125,7 @@ func TestTwoEntries(t *testing.T) {
 
 func TestInsertExistedKey(t *testing.T) {
 	currentSTR = nil
-	m := InitMerkleTree(treeNonce, salt, pk, sk)
+	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt, pk, sk)
 	m.InitHistory(1, 1)
 
 	key1 := "key"
@@ -156,7 +156,7 @@ func TestTreeClone(t *testing.T) {
 	key2 := "key2"
 	val2 := []byte("value2")
 
-	m1 := InitMerkleTree(treeNonce, salt, pk, sk)
+	m1 := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt, pk, sk)
 	m1.InitHistory(1, 1)
 
 	m1.Set(key1, val1)
@@ -210,7 +210,7 @@ func TestHistoryHashChain(t *testing.T) {
 	key3 := "key3"
 	val3 := []byte("value3")
 
-	m1 := InitMerkleTree(treeNonce, salt, pk, sk)
+	m1 := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt, pk, sk)
 	m1.InitHistory(startupTime, epochInterval)
 	m1.Set(key1, val1)
 	m1.RecomputeHash()

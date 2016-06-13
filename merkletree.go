@@ -16,10 +16,11 @@ type MerkleTree struct {
 	salt      []byte
 	privKey   []byte
 	pubKey    []byte
+	policies  Policies
 	root      *interiorNode
 }
 
-func InitMerkleTree(treeNonce, salt, pubKey, privKey []byte) *MerkleTree {
+func InitMerkleTree(policies Policies, treeNonce, salt, pubKey, privKey []byte) *MerkleTree {
 	leftBranch := &emptyNode{
 		interiorNode: interiorNode{
 			level: 1,
@@ -45,9 +46,10 @@ func InitMerkleTree(treeNonce, salt, pubKey, privKey []byte) *MerkleTree {
 	m := &MerkleTree{
 		treeNonce: treeNonce,
 		salt:      salt,
-		root:      root,
 		privKey:   privKey,
 		pubKey:    pubKey,
+		policies:  policies,
+		root:      root,
 	}
 	return m
 }
@@ -255,8 +257,9 @@ func (m *MerkleTree) Clone() *MerkleTree {
 	return &MerkleTree{
 		treeNonce: m.treeNonce,
 		salt:      m.salt,
-		root:      m.root.clone(nil),
 		privKey:   m.privKey,
 		pubKey:    m.pubKey,
+		policies:  m.policies,
+		root:      m.root.clone(nil),
 	}
 }
