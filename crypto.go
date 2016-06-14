@@ -6,11 +6,8 @@ import (
 )
 
 const (
-	HashSizeByte   = 32
-	HashID         = "SHAKE128"
-	PrivateKeySize = ed25519.PrivateKeySize
-	PublicKeySize  = ed25519.PublicKeySize
-	SignatureSize  = ed25519.SignatureSize
+	HashSizeByte = 32
+	HashID       = "SHAKE128"
 )
 
 func Digest(ms ...[]byte) []byte {
