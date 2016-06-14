@@ -1,6 +1,11 @@
 package merkletree
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
+	"github.com/coniks-sys/libmerkleprefixtree-go/internal"
+)
 
 var (
 	ErrInvalidTree = errors.New("[merkletree] invalid tree")
@@ -81,7 +86,7 @@ func lookUp(key string, str *SignedTreeRoot) (MerkleNode, []LookUpProofNode, err
 			break
 		}
 		proof = append(proof, nodePointer.(*interiorNode))
-		direction := getNthBit(lookupIndex, position)
+		direction := util.GetNthBit(lookupIndex, position)
 		if direction {
 			nodePointer = nodePointer.(*interiorNode).rightChild
 		} else {
@@ -115,7 +120,7 @@ func (m *MerkleTree) Set(key string, value []byte) error {
 		key:        key,
 		value:      value,
 		index:      index,
-		commitment: commitment(m.salt, key, value),
+		commitment: crypto.Commitment(m.salt, key, value),
 	}
 
 	return m.insertNode(index, &toAdd)
@@ -124,7 +129,7 @@ func (m *MerkleTree) Set(key string, value []byte) error {
 // Private Index calculation function
 // would be replaced with Ismail's VRF implementation
 func computePrivateIndex(key string) []byte {
-	return Digest([]byte(key))
+	return crypto.Digest([]byte(key))
 }
 
 func (m *MerkleTree) insertNode(key []byte, node *userLeafNode) error {
@@ -174,7 +179,7 @@ insertLoop:
 
 			currentNodeUL.index = currentNodeKey
 
-			direction := getNthBit(currentNodeKey, position)
+			direction := util.GetNthBit(currentNodeKey, position)
 			if direction {
 				newInteriorNode.rightChild = currentNodeUL
 			} else {
@@ -191,7 +196,7 @@ insertLoop:
 			node.level--
 		case *interiorNode:
 			currentNodeI := nodePointer.(*interiorNode)
-			direction := getNthBit(key, position)
+			direction := util.GetNthBit(key, position)
 
 			if direction { // go right
 				currentNodeI.rightHash = nil

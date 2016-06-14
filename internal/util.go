@@ -1,4 +1,4 @@
-package merkletree
+package util
 
 import "encoding/binary"
 
@@ -6,7 +6,7 @@ import "encoding/binary"
 // at offset offset, and determines whether it is 1 or 0.
 // return true if the nth bit is 1, false otherwise.
 // from MSB to LSB order
-func getNthBit(bs []byte, offset int) bool {
+func GetNthBit(bs []byte, offset int) bool {
 	arrayOffset := offset / 8
 	bitOfByte := offset % 8
 

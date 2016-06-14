@@ -1,6 +1,10 @@
 package merkletree
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
+)
 
 var (
 	ErrHistoryExisted = errors.New("[merkletree] trying to override existing history")
@@ -15,7 +19,7 @@ func (m *MerkleTree) InitHistory(startEp, epInterval int64) error {
 		return ErrHistoryExisted
 	}
 	epochInterval = epInterval
-	currentSTR = m.generateSTR(startEp, 0, make([]byte, HashSizeByte))
+	currentSTR = m.generateSTR(startEp, 0, make([]byte, crypto.HashSizeByte))
 	return nil
 }
 

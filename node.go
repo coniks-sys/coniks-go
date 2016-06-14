@@ -1,5 +1,10 @@
 package merkletree
 
+import (
+	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
+	"github.com/coniks-sys/libmerkleprefixtree-go/internal"
+)
+
 type interiorNode struct {
 	parent     *interiorNode
 	leftChild  MerkleNode
@@ -91,25 +96,25 @@ func (node *interiorNode) serialize() []byte {
 }
 
 func (node *interiorNode) hash(m *MerkleTree) []byte {
-	return Digest(node.serialize())
+	return crypto.Digest(node.serialize())
 }
 
 func (node *userLeafNode) hash(m *MerkleTree) []byte {
-	return Digest(
-		[]byte{LeafIdentifier},         // K_leaf
-		[]byte(m.treeNonce),            // K_n
-		[]byte(node.index),             // i
-		[]byte(IntToBytes(node.level)), // l
-		[]byte(node.commitment),        // commit(key|| value)
+	return crypto.Digest(
+		[]byte{LeafIdentifier},              // K_leaf
+		[]byte(m.treeNonce),                 // K_n
+		[]byte(node.index),                  // i
+		[]byte(util.IntToBytes(node.level)), // l
+		[]byte(node.commitment),             // commit(key|| value)
 	)
 }
 
 func (node *emptyNode) hash(m *MerkleTree, prefixBits []bool) []byte {
-	return Digest(
-		[]byte{EmptyBranchIdentifier},       // K_empty
-		[]byte(m.treeNonce),                 // K_n
-		[]byte(ToBytes(prefixBits)),         // i
-		[]byte(IntToBytes(len(prefixBits))), // l
+	return crypto.Digest(
+		[]byte{EmptyBranchIdentifier},            // K_empty
+		[]byte(m.treeNonce),                      // K_n
+		[]byte(util.ToBytes(prefixBits)),         // i
+		[]byte(util.IntToBytes(len(prefixBits))), // l
 	)
 }
 

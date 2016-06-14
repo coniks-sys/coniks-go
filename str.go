@@ -1,5 +1,10 @@
 package merkletree
 
+import (
+	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
+	"github.com/coniks-sys/libmerkleprefixtree-go/internal"
+)
+
 // SignedTreeRoot represents a signed tree root, which is generated
 // at the beginning of every epoch.
 // Signed tree roots contain the current root node,
@@ -18,7 +23,7 @@ type SignedTreeRoot struct {
 
 func (m *MerkleTree) generateSTR(ep int64, prevEp int64, prevHash []byte) *SignedTreeRoot {
 	bytesPreSig := getSTRBytesForSig(m, ep, prevEp, prevHash)
-	sig := Sign(m.privKey, bytesPreSig)
+	sig := crypto.Sign(m.privKey, bytesPreSig)
 
 	return &SignedTreeRoot{
 		treeRoot:    m.root,
@@ -34,10 +39,10 @@ func (m *MerkleTree) generateSTR(ep int64, prevEp int64, prevHash []byte) *Signe
 func (m *MerkleTree) generateNextSTR(ep int64) *SignedTreeRoot {
 	currentSTR := getCurrentSTR()
 	prevEpoch := currentSTR.epoch
-	prevStrHash := Digest(serializeSTR(*currentSTR))
+	prevStrHash := crypto.Digest(serializeSTR(*currentSTR))
 	bytesPreSig := getSTRBytesForSig(m, ep, prevEpoch, prevStrHash)
 
-	sig := Sign(m.privKey, bytesPreSig)
+	sig := crypto.Sign(m.privKey, bytesPreSig)
 	return &SignedTreeRoot{
 		treeRoot:    m.root,
 		epoch:       ep,
@@ -52,22 +57,22 @@ func (m *MerkleTree) generateNextSTR(ep int64) *SignedTreeRoot {
 func getSTRBytesForSig(m *MerkleTree, ep int64, prevEp int64, prevHash []byte) []byte {
 	var strBytes []byte
 
-	strBytes = append(strBytes, LongToBytes(ep)...)        // t - epoch number
-	strBytes = append(strBytes, LongToBytes(prevEp)...)    // t_prev - previous epoch number
-	strBytes = append(strBytes, m.root.serialize()...)     // root
-	strBytes = append(strBytes, prevHash...)               // previous STR hash
-	strBytes = append(strBytes, m.policies.Serialize()...) // P
+	strBytes = append(strBytes, util.LongToBytes(ep)...)     // t - epoch number
+	strBytes = append(strBytes, util.LongToBytes(prevEp)...) // t_prev - previous epoch number
+	strBytes = append(strBytes, m.root.serialize()...)       // root
+	strBytes = append(strBytes, prevHash...)                 // previous STR hash
+	strBytes = append(strBytes, m.policies.Serialize()...)   // P
 	return strBytes
 }
 
 func serializeSTR(str SignedTreeRoot) []byte {
 	var strBytes []byte
 
-	strBytes = append(strBytes, str.treeRoot.serialize()...)   // root
-	strBytes = append(strBytes, LongToBytes(str.epoch)...)     // epoch
-	strBytes = append(strBytes, LongToBytes(str.prevEpoch)...) // previous epoch
-	strBytes = append(strBytes, str.prevStrHash...)            // previous hash
-	strBytes = append(strBytes, str.sig...)                    // signature
+	strBytes = append(strBytes, str.treeRoot.serialize()...)        // root
+	strBytes = append(strBytes, util.LongToBytes(str.epoch)...)     // epoch
+	strBytes = append(strBytes, util.LongToBytes(str.prevEpoch)...) // previous epoch
+	strBytes = append(strBytes, str.prevStrHash...)                 // previous hash
+	strBytes = append(strBytes, str.sig...)                         // signature
 
 	return strBytes
 }

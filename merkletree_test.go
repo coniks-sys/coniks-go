@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/coniks-sys/libmerkleprefixtree-go/internal"
+
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/crypto/sha3"
 )
@@ -48,7 +50,7 @@ func TestOneEntry(t *testing.T) {
 	h.Write([]byte{LeafIdentifier})
 	h.Write(treeNonce)
 	h.Write(index)
-	h.Write(IntToBytes(1))
+	h.Write(util.IntToBytes(1))
 	h.Write(commit[:])
 	h.Read(expect[:])
 
@@ -62,8 +64,8 @@ func TestOneEntry(t *testing.T) {
 	h = sha3.NewShake256()
 	h.Write([]byte{EmptyBranchIdentifier})
 	h.Write(treeNonce)
-	h.Write(ToBytes([]bool{true}))
-	h.Write(IntToBytes(1))
+	h.Write(util.ToBytes([]bool{true}))
+	h.Write(util.IntToBytes(1))
 	h.Read(expect[:])
 	if !bytes.Equal(m.root.rightHash, expect[:]) {
 		t.Error("Wrong righ hash!",

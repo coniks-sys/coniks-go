@@ -1,4 +1,4 @@
-package merkletree
+package crypto
 
 import (
 	"golang.org/x/crypto/ed25519"
@@ -28,7 +28,7 @@ func Verify(publicKey []byte, message, sig []byte) bool {
 	return ed25519.Verify(publicKey, message, sig)
 }
 
-func commitment(salt []byte, key string, value []byte) []byte {
+func Commitment(salt []byte, key string, value []byte) []byte {
 	return Digest(
 		[]byte(salt),
 		[]byte(key),
