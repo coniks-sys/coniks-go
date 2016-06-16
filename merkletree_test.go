@@ -40,13 +40,13 @@ func TestOneEntry(t *testing.T) {
 	index := computePrivateIndex(key)
 
 	// Check leaf node hash
-	h := sha3.NewShake256()
+	h := sha3.NewShake128()
 	h.Write(salt)
 	h.Write([]byte(key))
 	h.Write(val)
 	h.Read(commit[:])
 
-	h = sha3.NewShake256()
+	h = sha3.NewShake128()
 	h.Write([]byte{LeafIdentifier})
 	h.Write(treeNonce)
 	h.Write(index)
@@ -61,7 +61,7 @@ func TestOneEntry(t *testing.T) {
 	}
 
 	// Check empty node hash
-	h = sha3.NewShake256()
+	h = sha3.NewShake128()
 	h.Write([]byte{EmptyBranchIdentifier})
 	h.Write(treeNonce)
 	h.Write(util.ToBytes([]bool{true}))

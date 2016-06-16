@@ -120,7 +120,7 @@ func (m *MerkleTree) Set(key string, value []byte) error {
 		key:        key,
 		value:      value,
 		index:      index,
-		commitment: crypto.Commitment(m.salt, key, value),
+		commitment: crypto.Digest(m.salt, []byte(key), value),
 	}
 
 	return m.insertNode(index, &toAdd)

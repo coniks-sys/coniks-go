@@ -11,13 +11,13 @@ const (
 )
 
 func Digest(ms ...[]byte) []byte {
-	h := sha3.NewShake256()
+	h := sha3.NewShake128()
 	for _, m := range ms {
 		h.Write(m)
 	}
-	var ret [HashSizeByte]byte
-	h.Read(ret[:])
-	return ret[:]
+	ret := make([]byte, HashSizeByte)
+	h.Read(ret)
+	return ret
 }
 
 func Sign(privateKey []byte, message []byte) []byte {
@@ -26,11 +26,4 @@ func Sign(privateKey []byte, message []byte) []byte {
 
 func Verify(publicKey []byte, message, sig []byte) bool {
 	return ed25519.Verify(publicKey, message, sig)
-}
-
-func Commitment(salt []byte, key string, value []byte) []byte {
-	return Digest(
-		[]byte(salt),
-		[]byte(key),
-		[]byte(value))
 }
