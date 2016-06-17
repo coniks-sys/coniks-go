@@ -73,7 +73,7 @@ func TestOneEntry(t *testing.T) {
 			"get", m.root.rightHash)
 	}
 
-	r, _, _ := LookUp(key)
+	r, proof, _ := LookUp(key)
 	if r == nil {
 		t.Error("Cannot find value of key:", key)
 		return
@@ -81,6 +81,14 @@ func TestOneEntry(t *testing.T) {
 	v := r.Value()
 	if !bytes.Equal(v, val) {
 		t.Errorf("Value mismatch %v / %v", v, val)
+	}
+
+	if !bytes.Equal(m.root.hash(), proof[0].GetHash()) {
+		t.Error("Invalid proof of inclusion")
+	}
+
+	if !bytes.Equal(m.root.leftHash, proof[1].GetHash()) {
+		t.Error("Invalid proof of inclusion")
 	}
 
 	r, _, _ = LookUp("abc")

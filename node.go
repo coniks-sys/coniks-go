@@ -5,17 +5,21 @@ import (
 	"github.com/coniks-sys/libmerkleprefixtree-go/internal"
 )
 
+type node struct {
+	parent MerkleNode
+	level  int
+}
+
 type interiorNode struct {
-	parent     *interiorNode
+	node
 	leftChild  MerkleNode
 	rightChild MerkleNode
 	leftHash   []byte
 	rightHash  []byte
-	level      int
 }
 
 type userLeafNode struct {
-	interiorNode
+	node
 	key        string
 	value      []byte
 	index      []byte
@@ -23,7 +27,7 @@ type userLeafNode struct {
 }
 
 type emptyNode struct {
-	interiorNode
+	node
 }
 
 type MerkleNode interface {
@@ -63,29 +67,31 @@ func (node *emptyNode) isEmpty() bool {
 	return true
 }
 
-var _ LookUpProofNode = (*userLeafNode)(nil)
-var _ LookUpProofNode = (*interiorNode)(nil)
-var _ LookUpProofNode = (*emptyNode)(nil)
+var _ LookUpProofNode = (*node)(nil)
 
-func (node *userLeafNode) GetHash() []byte {
-	if node.parent.leftChild == node {
-		return node.parent.leftHash
+func (node *node) GetHash() []byte {
+	parent, ok := node.parent.(*interiorNode)
+	if !ok {
+		return nil
 	}
-	return node.parent.rightHash
+	switch parent.leftChild.(type) {
+	case *emptyNode:
+		if &parent.leftChild.(*emptyNode).node == node {
+			return parent.leftHash
+		}
+	case *userLeafNode:
+		if &parent.leftChild.(*userLeafNode).node == node {
+			return parent.leftHash
+		}
+	default:
+		return nil
+	}
+
+	return parent.rightHash
 }
 
 func (node *interiorNode) GetHash() []byte {
-	if node.parent.leftChild == node {
-		return node.parent.leftHash
-	}
-	return node.parent.rightHash
-}
-
-func (node *emptyNode) GetHash() []byte {
-	if node.parent.leftChild == node {
-		return node.parent.leftHash
-	}
-	return node.parent.rightHash
+	return node.hash()
 }
 
 func (node *interiorNode) serialize() []byte {
@@ -95,7 +101,7 @@ func (node *interiorNode) serialize() []byte {
 	return input
 }
 
-func (node *interiorNode) hash(m *MerkleTree) []byte {
+func (node *interiorNode) hash() []byte {
 	return crypto.Digest(node.serialize())
 }
 
@@ -118,57 +124,59 @@ func (node *emptyNode) hash(m *MerkleTree, prefixBits []bool) []byte {
 	)
 }
 
-func (node *interiorNode) clone(parent *interiorNode) *interiorNode {
+func (n *interiorNode) clone(parent *interiorNode) *interiorNode {
 	newNode := &interiorNode{
-		parent:    parent,
-		level:     node.level,
-		leftHash:  node.leftHash,
-		rightHash: node.rightHash,
+		node: node{
+			parent: parent,
+			level:  n.level,
+		},
+		leftHash:  n.leftHash,
+		rightHash: n.rightHash,
 	}
 
-	if node.leftChild != nil {
-		switch node.leftChild.(type) {
+	if n.leftChild != nil {
+		switch n.leftChild.(type) {
 		case *interiorNode:
-			newNode.leftChild = node.leftChild.(*interiorNode).clone(newNode)
+			newNode.leftChild = n.leftChild.(*interiorNode).clone(newNode)
 		case *userLeafNode:
-			newNode.leftChild = node.leftChild.(*userLeafNode).clone(newNode)
+			newNode.leftChild = n.leftChild.(*userLeafNode).clone(newNode)
 		case *emptyNode:
-			newNode.leftChild = node.leftChild.(*emptyNode).clone(newNode)
+			newNode.leftChild = n.leftChild.(*emptyNode).clone(newNode)
 		}
 	}
 
-	if node.rightChild != nil {
-		switch node.rightChild.(type) {
+	if n.rightChild != nil {
+		switch n.rightChild.(type) {
 		case *interiorNode:
-			newNode.rightChild = node.rightChild.(*interiorNode).clone(newNode)
+			newNode.rightChild = n.rightChild.(*interiorNode).clone(newNode)
 		case *userLeafNode:
-			newNode.rightChild = node.rightChild.(*userLeafNode).clone(newNode)
+			newNode.rightChild = n.rightChild.(*userLeafNode).clone(newNode)
 		case *emptyNode:
-			newNode.rightChild = node.rightChild.(*emptyNode).clone(newNode)
+			newNode.rightChild = n.rightChild.(*emptyNode).clone(newNode)
 		}
 	}
 
 	return newNode
 }
 
-func (node *userLeafNode) clone(parent *interiorNode) *userLeafNode {
+func (n *userLeafNode) clone(parent *interiorNode) *userLeafNode {
 	newNode := &userLeafNode{
-		key:        node.key,
-		value:      node.value,
-		index:      append([]byte{}, node.index...), // make a copy of index
-		commitment: node.commitment,
+		key:        n.key,
+		value:      n.value,
+		index:      append([]byte{}, n.index...), // make a copy of index
+		commitment: n.commitment,
 	}
 	newNode.parent = parent
-	newNode.level = node.level
+	newNode.level = n.level
 
 	return newNode
 }
 
-func (node *emptyNode) clone(parent *interiorNode) *emptyNode {
+func (n *emptyNode) clone(parent *interiorNode) *emptyNode {
 	newNode := &emptyNode{
-		interiorNode: interiorNode{
+		node: node{
 			parent: parent,
-			level:  node.level,
+			level:  n.level,
 		},
 	}
 

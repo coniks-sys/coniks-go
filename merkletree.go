@@ -27,23 +27,25 @@ type MerkleTree struct {
 
 func InitMerkleTree(policies Policies, treeNonce, salt, pubKey, privKey []byte) *MerkleTree {
 	leftBranch := &emptyNode{
-		interiorNode: interiorNode{
+		node: node{
 			level: 1,
 		},
 	}
 
 	rightBranch := &emptyNode{
-		interiorNode: interiorNode{
+		node: node{
 			level: 1,
 		},
 	}
 	root := &interiorNode{
-		parent:     nil,
+		node: node{
+			parent: nil,
+			level:  0,
+		},
 		leftChild:  leftBranch,
 		rightChild: rightBranch,
 		leftHash:   nil,
 		rightHash:  nil,
-		level:      0,
 	}
 	leftBranch.parent = root
 	rightBranch.parent = root
@@ -132,14 +134,14 @@ func computePrivateIndex(key string) []byte {
 	return crypto.Digest([]byte(key))
 }
 
-func (m *MerkleTree) insertNode(key []byte, node *userLeafNode) error {
+func (m *MerkleTree) insertNode(key []byte, toAdd *userLeafNode) error {
 	position := 0
 	var nodePointer interface{}
 	nodePointer = m.root
 
 insertLoop:
 	for {
-		node.level++
+		toAdd.level++
 		switch nodePointer.(type) {
 		case *userLeafNode:
 			// reached a "bottom" of the tree.
@@ -151,27 +153,29 @@ insertLoop:
 			}
 
 			leftBranch := &emptyNode{
-				interiorNode: interiorNode{
+				node: node{
 					level: currentNodeUL.level + 1,
 				},
 			}
 			rightBranch := &emptyNode{
-				interiorNode: interiorNode{
+				node: node{
 					level: currentNodeUL.level + 1,
 				},
 			}
 			newInteriorNode := interiorNode{
-				parent:     currentNodeUL.parent,
-				level:      currentNodeUL.level,
+				node: node{
+					parent: currentNodeUL.parent,
+					level:  currentNodeUL.level,
+				},
 				leftChild:  leftBranch,
 				rightChild: rightBranch,
 			}
 			leftBranch.parent = &newInteriorNode
 			rightBranch.parent = &newInteriorNode
 
-			if currentNodeUL.key == node.key {
+			if currentNodeUL.key == toAdd.key {
 				// replace the value
-				currentNodeUL.value = node.value
+				currentNodeUL.value = toAdd.value
 				return nil
 			}
 
@@ -187,13 +191,13 @@ insertLoop:
 			}
 			currentNodeUL.level++
 			currentNodeUL.parent = &newInteriorNode
-			if newInteriorNode.parent.leftChild == nodePointer {
-				newInteriorNode.parent.leftChild = &newInteriorNode
+			if newInteriorNode.parent.(*interiorNode).leftChild == nodePointer {
+				newInteriorNode.parent.(*interiorNode).leftChild = &newInteriorNode
 			} else {
-				newInteriorNode.parent.rightChild = &newInteriorNode
+				newInteriorNode.parent.(*interiorNode).rightChild = &newInteriorNode
 			}
 			nodePointer = &newInteriorNode
-			node.level--
+			toAdd.level--
 		case *interiorNode:
 			currentNodeI := nodePointer.(*interiorNode)
 			direction := util.GetNthBit(key, position)
@@ -201,8 +205,8 @@ insertLoop:
 			if direction { // go right
 				currentNodeI.rightHash = nil
 				if currentNodeI.rightChild.isEmpty() {
-					currentNodeI.rightChild = node
-					node.parent = currentNodeI
+					currentNodeI.rightChild = toAdd
+					toAdd.parent = currentNodeI
 					break insertLoop
 				} else {
 					nodePointer = currentNodeI.rightChild
@@ -210,8 +214,8 @@ insertLoop:
 			} else { // go left
 				currentNodeI.leftHash = nil
 				if currentNodeI.leftChild.isEmpty() {
-					currentNodeI.leftChild = node
-					node.parent = currentNodeI
+					currentNodeI.leftChild = toAdd
+					toAdd.parent = currentNodeI
 					break insertLoop
 				} else {
 					nodePointer = currentNodeI.leftChild
@@ -249,7 +253,7 @@ func (m *MerkleTree) hashNode(prefixBits []bool, node MerkleNode) []byte {
 			currentNodeI.rightHash = m.hashNode(
 				append(prefixBits, true), currentNodeI.rightChild)
 		}
-		return currentNodeI.hash(m)
+		return currentNodeI.hash()
 	case *userLeafNode:
 		return node.(*userLeafNode).hash(m)
 	case *emptyNode:
