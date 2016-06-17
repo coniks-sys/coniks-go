@@ -24,10 +24,9 @@ func init() {
 }
 
 func TestOneEntry(t *testing.T) {
-	currentSTR = nil
 	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt, pk, sk)
 
-	m.InitHistory(1, 1)
+	history := NewHistory(m, 1, 1)
 	var commit [32]byte
 	var expect [32]byte
 
@@ -73,7 +72,7 @@ func TestOneEntry(t *testing.T) {
 			"get", m.root.rightHash)
 	}
 
-	r, proof, _ := LookUp(key)
+	r, proof, _ := history.LookUp(key)
 	if r == nil {
 		t.Error("Cannot find value of key:", key)
 		return
@@ -91,7 +90,7 @@ func TestOneEntry(t *testing.T) {
 		t.Error("Invalid proof of inclusion")
 	}
 
-	r, _, _ = LookUp("abc")
+	r, _, _ = history.LookUp("abc")
 	if r != nil {
 		t.Error("Invalid look-up operation:", key)
 		return
@@ -99,9 +98,8 @@ func TestOneEntry(t *testing.T) {
 }
 
 func TestTwoEntries(t *testing.T) {
-	currentSTR = nil
 	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt, pk, sk)
-	m.InitHistory(1, 1)
+	history := NewHistory(m, 1, 1)
 
 	key1 := "key1"
 	val1 := []byte("value1")
@@ -113,13 +111,13 @@ func TestTwoEntries(t *testing.T) {
 	m.Set(key2, val2)
 	m.RecomputeHash()
 
-	n1, _, _ := LookUp(key1)
+	n1, _, _ := history.LookUp(key1)
 	if n1 == nil {
 		t.Error("Cannot find key:", key1)
 		return
 	}
 
-	n2, _, _ := LookUp(key2)
+	n2, _, _ := history.LookUp(key2)
 	if n2 == nil {
 		t.Error("Cannot find key:", key2)
 		return
@@ -134,9 +132,8 @@ func TestTwoEntries(t *testing.T) {
 }
 
 func TestInsertExistedKey(t *testing.T) {
-	currentSTR = nil
 	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt, pk, sk)
-	m.InitHistory(1, 1)
+	history := NewHistory(m, 1, 1)
 
 	key1 := "key"
 	val1 := append([]byte(nil), "value"...)
@@ -148,7 +145,7 @@ func TestInsertExistedKey(t *testing.T) {
 		t.Error("cannot insert new key-value to the tree")
 	}
 
-	val, _, _ := LookUp(key1)
+	val, _, _ := history.LookUp(key1)
 	if val == nil {
 		t.Error("Cannot find key:", key1)
 		return
@@ -160,27 +157,26 @@ func TestInsertExistedKey(t *testing.T) {
 }
 
 func TestTreeClone(t *testing.T) {
-	currentSTR = nil
 	key1 := "key1"
 	val1 := []byte("value1")
 	key2 := "key2"
 	val2 := []byte("value2")
 
 	m1 := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt, pk, sk)
-	m1.InitHistory(1, 1)
+	history := NewHistory(m1, 1, 1)
 
 	m1.Set(key1, val1)
 
 	// clone new tree and insert new value
 	m1 = m1.Clone()
-	m1.UpdateHistory(2) // update history chain
+	history.UpdateHistory(m1, 2) // update history chain
 	if err := m1.Set(key2, val2); err != nil {
 		t.Error(err)
 		return
 	}
 
 	// lookup
-	r, _, _ := LookUp(key1)
+	r, _, _ := history.LookUp(key1)
 	if r == nil {
 		t.Error("Cannot find key:", key1)
 		return
@@ -189,7 +185,7 @@ func TestTreeClone(t *testing.T) {
 		t.Error(key1, "value mismatch\n")
 	}
 
-	r, _, _ = LookUp(key2)
+	r, _, _ = history.LookUp(key2)
 	if r == nil {
 		t.Error("Cannot find key:", key2)
 		return
@@ -204,7 +200,6 @@ func TestTreeClone(t *testing.T) {
 // 2nd: epoch = 3
 // 3nd: epoch = 5 (latest STR)
 func TestHistoryHashChain(t *testing.T) {
-	currentSTR = nil
 	var startupTime int64
 	var epochInterval int64
 
@@ -221,22 +216,22 @@ func TestHistoryHashChain(t *testing.T) {
 	val3 := []byte("value3")
 
 	m1 := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt, pk, sk)
-	m1.InitHistory(startupTime, epochInterval)
+	history := NewHistory(m1, startupTime, epochInterval)
 	m1.Set(key1, val1)
 	m1.RecomputeHash()
 
 	m2 := m1.Clone()
 	m2.Set(key2, val2)
 	m2.RecomputeHash()
-	m2.UpdateHistory(startupTime + epochInterval)
+	history.UpdateHistory(m2, startupTime+epochInterval)
 
 	m3 := m2.Clone()
 	m3.Set(key3, val3)
 	m3.RecomputeHash()
-	m3.UpdateHistory(startupTime + 2*epochInterval)
+	history.UpdateHistory(m3, startupTime+2*epochInterval)
 
 	for i := 0; i < 2; i++ {
-		str := GetSTR(startupTime + int64(i)*epochInterval)
+		str := history.GetSTR(startupTime + int64(i)*epochInterval)
 		if str == nil {
 			t.Error("Cannot get STR having epoch", startupTime+int64(i)*epochInterval)
 			return
@@ -248,7 +243,7 @@ func TestHistoryHashChain(t *testing.T) {
 		}
 	}
 
-	str := GetSTR(6)
+	str := history.GetSTR(6)
 	if str == nil {
 		t.Error("Cannot get STR")
 		return
@@ -259,18 +254,21 @@ func TestHistoryHashChain(t *testing.T) {
 	}
 
 	// check tree root of each STR is valid
-	if reflect.ValueOf(m1.root).Pointer() != reflect.ValueOf(GetSTR(1).treeRoot).Pointer() {
+	if reflect.ValueOf(m1.root).Pointer() !=
+		reflect.ValueOf(history.GetSTR(1).treeRoot).Pointer() {
 		t.Error("Invalid root pointer")
 	}
-	if reflect.ValueOf(m2.root).Pointer() != reflect.ValueOf(GetSTR(3).treeRoot).Pointer() {
+	if reflect.ValueOf(m2.root).Pointer() !=
+		reflect.ValueOf(history.GetSTR(3).treeRoot).Pointer() {
 		t.Error("Invalid root pointer")
 	}
-	if reflect.ValueOf(m3.root).Pointer() != reflect.ValueOf(GetSTR(5).treeRoot).Pointer() {
+	if reflect.ValueOf(m3.root).Pointer() !=
+		reflect.ValueOf(history.GetSTR(5).treeRoot).Pointer() {
 		t.Error("Invalid root pointer")
 	}
 
 	// lookup
-	r, _, _ := LookUp(key1)
+	r, _, _ := history.LookUp(key1)
 	if r == nil {
 		t.Error("Cannot find key:", key1)
 		return
@@ -279,7 +277,7 @@ func TestHistoryHashChain(t *testing.T) {
 		t.Error(key1, "value mismatch")
 	}
 
-	r, _, _ = LookUp(key2)
+	r, _, _ = history.LookUp(key2)
 	if r == nil {
 		t.Error("Cannot find key:", key2)
 		return
@@ -288,7 +286,7 @@ func TestHistoryHashChain(t *testing.T) {
 		t.Error(key2, "value mismatch")
 	}
 
-	r, _, _ = LookUp(key3)
+	r, _, _ = history.LookUp(key3)
 	if r == nil {
 		t.Error("Cannot find key:", key3)
 		return
@@ -297,17 +295,17 @@ func TestHistoryHashChain(t *testing.T) {
 		t.Error(key3, "value mismatch")
 	}
 
-	r, _, _ = LookUpInEpoch(key2, 1)
+	r, _, _ = history.LookUpInEpoch(key2, 1)
 	if r != nil {
 		t.Error("Found unexpected key", key2, "in epoch", 1)
 	}
 
-	r, _, _ = LookUpInEpoch(key3, 4)
+	r, _, _ = history.LookUpInEpoch(key3, 4)
 	if r != nil {
 		t.Error("Found unexpected key", key3, "in epoch", 4)
 	}
 
-	r, _, _ = LookUpInEpoch(key3, 5)
+	r, _, _ = history.LookUpInEpoch(key3, 5)
 	if r == nil {
 		t.Error("Cannot find key", key3, "in epoch", 5)
 	}

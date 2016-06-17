@@ -11,30 +11,31 @@ var (
 	ErrBadEpoch       = errors.New("[merkletree] next epoch's STR has bad epoch ")
 )
 
-var currentSTR *SignedTreeRoot
-var epochInterval int64
-
-func (m *MerkleTree) InitHistory(startEp, epInterval int64) error {
-	if currentSTR != nil {
-		return ErrHistoryExisted
-	}
-	epochInterval = epInterval
-	currentSTR = m.generateSTR(startEp, 0, make([]byte, crypto.HashSizeByte))
-	return nil
+type History struct {
+	tree          *MerkleTree
+	currentSTR    *SignedTreeRoot
+	epochInterval int64
 }
 
-func (m *MerkleTree) UpdateHistory(nextEp int64) error {
-	if nextEp < NextEpoch() {
+func NewHistory(m *MerkleTree, startEp, epInterval int64) *History {
+	h := new(History)
+	h.tree = m
+	h.epochInterval = epInterval
+	h.currentSTR = m.generateSTR(startEp, 0, make([]byte, crypto.HashSizeByte))
+	return h
+}
+
+func (h *History) UpdateHistory(m *MerkleTree, nextEp int64) error {
+	if nextEp < h.NextEpoch() {
 		return ErrBadEpoch
 	}
-	nextStr := m.generateNextSTR(nextEp)
-
-	currentSTR = nextStr
+	nextStr := m.generateNextSTR(h.currentSTR, nextEp)
+	h.currentSTR = nextStr
 	return nil
 }
 
-func GetSTR(ep int64) *SignedTreeRoot {
-	pointer := getCurrentSTR()
+func (h *History) GetSTR(ep int64) *SignedTreeRoot {
+	pointer := h.currentSTR
 	for pointer.epoch > ep && pointer != nil {
 		if pointer.prev == nil {
 			return nil
@@ -44,13 +45,9 @@ func GetSTR(ep int64) *SignedTreeRoot {
 	return pointer
 }
 
-func getCurrentSTR() *SignedTreeRoot {
-	return currentSTR
-}
-
-func NextEpoch() int64 {
-	if currentSTR == nil {
-		return epochInterval
+func (h *History) NextEpoch() int64 {
+	if h.currentSTR == nil {
+		return h.epochInterval
 	}
-	return epochInterval + currentSTR.epoch
+	return h.epochInterval + h.currentSTR.epoch
 }

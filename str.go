@@ -36,22 +36,13 @@ func (m *MerkleTree) generateSTR(ep int64, prevEp int64, prevHash []byte) *Signe
 	}
 }
 
-func (m *MerkleTree) generateNextSTR(ep int64) *SignedTreeRoot {
-	currentSTR := getCurrentSTR()
-	prevEpoch := currentSTR.epoch
-	prevStrHash := crypto.Digest(serializeSTR(*currentSTR))
-	bytesPreSig := getSTRBytesForSig(m, ep, prevEpoch, prevStrHash)
+func (m *MerkleTree) generateNextSTR(cur *SignedTreeRoot, ep int64) *SignedTreeRoot {
+	prevEpoch := cur.epoch
+	prevStrHash := crypto.Digest(serializeSTR(*cur))
 
-	sig := crypto.Sign(m.privKey, bytesPreSig)
-	return &SignedTreeRoot{
-		treeRoot:    m.root,
-		epoch:       ep,
-		prevEpoch:   prevEpoch,
-		prevStrHash: prevStrHash,
-		sig:         sig,
-		policies:    m.policies.Serialize(),
-		prev:        currentSTR,
-	}
+	nextStr := m.generateSTR(ep, prevEpoch, prevStrHash)
+	nextStr.prev = cur
+	return nextStr
 }
 
 func getSTRBytesForSig(m *MerkleTree, ep int64, prevEp int64, prevHash []byte) []byte {

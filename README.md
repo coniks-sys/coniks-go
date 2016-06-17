@@ -17,7 +17,7 @@ m.Set(key, value)
 // recompute tree hash
 m.RecomputeHash()
 // init STR history chain
-m.InitHistory(startupEpoch, epochInterval)
+history := NewHistory(m, startupEpoch, epochInterval)
 ```
 
 Update tree in each epoch
@@ -30,7 +30,7 @@ m.Set(key, value)
 // recompute tree hash
 m.RecomputeHash()
 // update STR history chain
-m.UpdateHistory(nextEpoch)
+history.UpdateHistory(m, nextEpoch)
 ```
 
 Look-up

@@ -61,13 +61,13 @@ func InitMerkleTree(policies Policies, treeNonce, salt, pubKey, privKey []byte) 
 	return m
 }
 
-func LookUp(key string) (MerkleNode, []LookUpProofNode, error) {
-	str := getCurrentSTR()
+func (h *History) LookUp(key string) (MerkleNode, []LookUpProofNode, error) {
+	str := h.currentSTR
 	return lookUp(key, str)
 }
 
-func LookUpInEpoch(key string, ep int64) (MerkleNode, []LookUpProofNode, error) {
-	str := GetSTR(ep)
+func (h *History) LookUpInEpoch(key string, ep int64) (MerkleNode, []LookUpProofNode, error) {
+	str := h.GetSTR(ep)
 	return lookUp(key, str)
 }
 
