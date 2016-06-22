@@ -1,3 +1,7 @@
+This license applies to all parts of the Merkle Prefix Tree Golang library except the following:
+- Coname utility functions, located in internal/coname.go
+This module is copyrighted by the Coname Authors.
+
 Copyright (c) 2016, Princeton University.
 Copyright (c) 2016, Ecole Polytechnique Federale de Lausanne (EPFL).
 Copyright (c) 2016, Vu Quoc Huy.
