@@ -25,14 +25,3 @@ func IntToBytes(num int) []byte {
 	binary.LittleEndian.PutUint32(buf, uint32(num))
 	return buf
 }
-
-// In each byte, the bits are ordered MSB to LSB
-func ToBytes(bits []bool) []byte {
-	bs := make([]byte, (len(bits)+7)/8)
-	for i := 0; i < len(bits); i++ {
-		if bits[i] {
-			bs[i/8] |= (1 << 7) >> uint(i%8)
-		}
-	}
-	return bs
-}
