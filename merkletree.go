@@ -1,6 +1,7 @@
 package merkletree
 
 import (
+	"bytes"
 	"errors"
 
 	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
@@ -19,64 +20,28 @@ const (
 type MerkleTree struct {
 	treeNonce []byte
 	salt      []byte
-	privKey   []byte
-	pubKey    []byte
 	policies  Policies
 	root      *interiorNode
 }
 
-func InitMerkleTree(policies Policies, treeNonce, salt, pubKey, privKey []byte) *MerkleTree {
-	leftBranch := &emptyNode{
-		node: node{
-			level: 1,
-		},
-	}
-
-	rightBranch := &emptyNode{
-		node: node{
-			level: 1,
-		},
-	}
-	root := &interiorNode{
-		node: node{
-			parent: nil,
-			level:  0,
-		},
-		leftChild:  leftBranch,
-		rightChild: rightBranch,
-		leftHash:   nil,
-		rightHash:  nil,
-	}
-	leftBranch.parent = root
-	rightBranch.parent = root
+func InitMerkleTree(policies Policies, treeNonce, salt []byte) *MerkleTree {
+	root := NewInteriorNode(nil, 0)
 
 	m := &MerkleTree{
 		treeNonce: treeNonce,
 		salt:      salt,
-		privKey:   privKey,
-		pubKey:    pubKey,
 		policies:  policies,
 		root:      root,
 	}
 	return m
 }
 
-func (h *History) LookUp(key string) (MerkleNode, []LookUpProofNode, error) {
-	str := h.currentSTR
-	return lookUp(key, str)
-}
-
-func (h *History) LookUpInEpoch(key string, ep int64) (MerkleNode, []LookUpProofNode, error) {
-	str := h.GetSTR(ep)
-	return lookUp(key, str)
-}
-
-func lookUp(key string, str *SignedTreeRoot) (MerkleNode, []LookUpProofNode, error) {
+func lookUp(key string, str *SignedTreeRoot) (MerkleNode, []ProofNode) {
 	lookupIndex := computePrivateIndex(key)
 	position := 0
 	var nodePointer interface{}
 	nodePointer = str.treeRoot
-	var proof []LookUpProofNode
+	var proof []ProofNode
 
 	for {
 		if _, ok := nodePointer.(*userLeafNode); ok {
@@ -98,22 +63,22 @@ func lookUp(key string, str *SignedTreeRoot) (MerkleNode, []LookUpProofNode, err
 	}
 
 	if nodePointer == nil {
-		return nil, nil, ErrInvalidTree
+		panic(ErrInvalidTree)
 	}
 	switch nodePointer.(type) {
 	case *userLeafNode:
 		proof = append(proof, nodePointer.(*userLeafNode))
 		if nodePointer.(*userLeafNode).key == key {
-			return nodePointer.(*userLeafNode), proof, nil
+			return nodePointer.(*userLeafNode), proof
 		}
 		// reached a different leaf with a matching prefix
 		// return nil and a auth path including the leaf node
-		return nil, proof, nil
+		return nil, proof
 	case *emptyNode:
 		proof = append(proof, nodePointer.(*emptyNode))
-		return nil, proof, nil
+		return nil, proof
 	}
-	return nil, nil, ErrInvalidTree
+	panic(ErrInvalidTree)
 }
 
 func (m *MerkleTree) Set(key string, value []byte) error {
@@ -149,54 +114,32 @@ insertLoop:
 			// then continue insertion
 			currentNodeUL := nodePointer.(*userLeafNode)
 			if currentNodeUL.parent == nil {
-				return ErrInvalidTree
+				panic(ErrInvalidTree)
 			}
 
-			leftBranch := &emptyNode{
-				node: node{
-					level: currentNodeUL.level + 1,
-				},
-			}
-			rightBranch := &emptyNode{
-				node: node{
-					level: currentNodeUL.level + 1,
-				},
-			}
-			newInteriorNode := interiorNode{
-				node: node{
-					parent: currentNodeUL.parent,
-					level:  currentNodeUL.level,
-				},
-				leftChild:  leftBranch,
-				rightChild: rightBranch,
-			}
-			leftBranch.parent = &newInteriorNode
-			rightBranch.parent = &newInteriorNode
-
-			if currentNodeUL.key == toAdd.key {
+			if bytes.Equal(currentNodeUL.index, toAdd.index) {
 				// replace the value
 				currentNodeUL.value = toAdd.value
+				currentNodeUL.commitment = toAdd.commitment
 				return nil
 			}
 
-			currentNodeKey := computePrivateIndex(currentNodeUL.key)
+			newInteriorNode := NewInteriorNode(currentNodeUL.parent, currentNodeUL.level)
 
-			currentNodeUL.index = currentNodeKey
-
-			direction := util.GetNthBit(currentNodeKey, position)
+			direction := util.GetNthBit(currentNodeUL.index, position)
 			if direction {
 				newInteriorNode.rightChild = currentNodeUL
 			} else {
 				newInteriorNode.leftChild = currentNodeUL
 			}
 			currentNodeUL.level++
-			currentNodeUL.parent = &newInteriorNode
+			currentNodeUL.parent = newInteriorNode
 			if newInteriorNode.parent.(*interiorNode).leftChild == nodePointer {
-				newInteriorNode.parent.(*interiorNode).leftChild = &newInteriorNode
+				newInteriorNode.parent.(*interiorNode).leftChild = newInteriorNode
 			} else {
-				newInteriorNode.parent.(*interiorNode).rightChild = &newInteriorNode
+				newInteriorNode.parent.(*interiorNode).rightChild = newInteriorNode
 			}
-			nodePointer = &newInteriorNode
+			nodePointer = newInteriorNode
 			toAdd.level--
 		case *interiorNode:
 			currentNodeI := nodePointer.(*interiorNode)
@@ -223,7 +166,7 @@ insertLoop:
 			}
 			position++
 		default:
-			return ErrInvalidTree
+			panic(ErrInvalidTree)
 		}
 	}
 	return nil
@@ -266,8 +209,6 @@ func (m *MerkleTree) Clone() *MerkleTree {
 	return &MerkleTree{
 		treeNonce: m.treeNonce,
 		salt:      m.salt,
-		privKey:   m.privKey,
-		pubKey:    m.pubKey,
 		policies:  m.policies,
 		root:      m.root.clone(nil),
 	}

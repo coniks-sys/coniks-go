@@ -30,12 +30,40 @@ type emptyNode struct {
 	node
 }
 
+func NewInteriorNode(parent MerkleNode, level int) *interiorNode {
+	leftBranch := &emptyNode{
+		node: node{
+			level: level + 1,
+		},
+	}
+
+	rightBranch := &emptyNode{
+		node: node{
+			level: level + 1,
+		},
+	}
+	newNode := &interiorNode{
+		node: node{
+			parent: parent,
+			level:  level,
+		},
+		leftChild:  leftBranch,
+		rightChild: rightBranch,
+		leftHash:   nil,
+		rightHash:  nil,
+	}
+	leftBranch.parent = newNode
+	rightBranch.parent = newNode
+
+	return newNode
+}
+
 type MerkleNode interface {
 	Value() []byte
 	isEmpty() bool
 }
 
-type LookUpProofNode interface {
+type ProofNode interface {
 	GetHash() []byte
 }
 
@@ -67,7 +95,7 @@ func (node *emptyNode) isEmpty() bool {
 	return true
 }
 
-var _ LookUpProofNode = (*node)(nil)
+var _ ProofNode = (*node)(nil)
 
 func (node *node) GetHash() []byte {
 	parent, ok := node.parent.(*interiorNode)

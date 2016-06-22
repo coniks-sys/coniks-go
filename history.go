@@ -17,11 +17,11 @@ type History struct {
 	epochInterval int64
 }
 
-func NewHistory(m *MerkleTree, startEp, epInterval int64) *History {
+func NewHistory(m *MerkleTree, key crypto.KeyPair, startEp, epInterval int64) *History {
 	h := new(History)
 	h.tree = m
 	h.epochInterval = epInterval
-	h.currentSTR = m.generateSTR(startEp, 0, make([]byte, crypto.HashSizeByte))
+	h.currentSTR = NewSTR(m, startEp, 0, make([]byte, crypto.HashSizeByte), key)
 	return h
 }
 
@@ -29,9 +29,19 @@ func (h *History) UpdateHistory(m *MerkleTree, nextEp int64) error {
 	if nextEp < h.NextEpoch() {
 		return ErrBadEpoch
 	}
-	nextStr := m.generateNextSTR(h.currentSTR, nextEp)
+	nextStr := h.currentSTR.generateNextSTR(m, nextEp)
 	h.currentSTR = nextStr
 	return nil
+}
+
+func (h *History) Get(key string) (MerkleNode, []ProofNode) {
+	str := h.currentSTR
+	return lookUp(key, str)
+}
+
+func (h *History) GetInEpoch(key string, ep int64) (MerkleNode, []ProofNode) {
+	str := h.GetSTR(ep)
+	return lookUp(key, str)
 }
 
 func (h *History) GetSTR(ep int64) *SignedTreeRoot {
