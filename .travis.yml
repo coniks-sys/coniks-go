@@ -2,10 +2,9 @@ sudo: false
 
 language: go
 
-go:
-        - 1.4
-        - 1.5
-        - 1.6
+branches:
+        only:
+                - merkle-tree
 
 notifications:
   # Email notifications are disabled to not annoy anybody.
@@ -13,4 +12,5 @@ notifications:
   # about configuring notification recipients and more.
   email: false
 
-    Status API Training Shop Blog About 
+script:
+    go test ./crypto ./internal . -v
