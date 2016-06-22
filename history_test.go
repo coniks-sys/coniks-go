@@ -4,7 +4,11 @@ import (
 	"bytes"
 	"reflect"
 	"testing"
+
+	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
 )
+
+var signKey = crypto.GenerateKey()
 
 // scenario:
 // 1st: epoch = 1

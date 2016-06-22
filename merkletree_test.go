@@ -5,20 +5,16 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
 	"github.com/coniks-sys/libmerkleprefixtree-go/internal"
-
 	"golang.org/x/crypto/sha3"
 )
 
 var treeNonce = []byte("TREE NONCE")
 var salt = []byte("salt")
-var signKey = crypto.GenerateKey()
 
 func TestOneEntry(t *testing.T) {
 	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
 
-	history := NewHistory(m, signKey, 1, 1)
 	var commit [32]byte
 	var expect [32]byte
 
@@ -64,7 +60,7 @@ func TestOneEntry(t *testing.T) {
 			"get", m.root.rightHash)
 	}
 
-	r, proof := history.LookUp(key)
+	r, proof := m.Get(key)
 	if r == nil {
 		t.Error("Cannot find value of key:", key)
 		return
@@ -82,7 +78,7 @@ func TestOneEntry(t *testing.T) {
 		t.Error("Invalid proof of inclusion")
 	}
 
-	r, _ = history.LookUp("abc")
+	r, _ = m.Get("abc")
 	if r != nil {
 		t.Error("Invalid look-up operation:", key)
 		return
@@ -91,7 +87,6 @@ func TestOneEntry(t *testing.T) {
 
 func TestTwoEntries(t *testing.T) {
 	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
-	history := NewHistory(m, signKey, 1, 1)
 
 	key1 := "key1"
 	val1 := []byte("value1")
@@ -102,13 +97,13 @@ func TestTwoEntries(t *testing.T) {
 	m.Set(key2, val2)
 	m.RecomputeHash()
 
-	n1, _ := history.LookUp(key1)
+	n1, _ := m.Get(key1)
 	if n1 == nil {
 		t.Error("Cannot find key:", key1)
 		return
 	}
 
-	n2, _ := history.LookUp(key2)
+	n2, _ := m.Get(key2)
 	if n2 == nil {
 		t.Error("Cannot find key:", key2)
 		return
@@ -124,7 +119,6 @@ func TestTwoEntries(t *testing.T) {
 
 func TestThreeEntries(t *testing.T) {
 	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
-	history := NewHistory(m, signKey, 1, 1)
 
 	key1 := "key1"
 	val1 := []byte("value1")
@@ -138,17 +132,17 @@ func TestThreeEntries(t *testing.T) {
 	m.Set(key3, val3)
 	m.RecomputeHash()
 
-	n1, _ := history.LookUp(key1)
+	n1, _ := m.Get(key1)
 	if n1 == nil {
 		t.Error("Cannot find key:", key1)
 		return
 	}
-	n2, _ := history.LookUp(key2)
+	n2, _ := m.Get(key2)
 	if n2 == nil {
 		t.Error("Cannot find key:", key2)
 		return
 	}
-	n3, _ := history.LookUp(key3)
+	n3, _ := m.Get(key3)
 	if n3 == nil {
 		t.Error("Cannot find key:", key3)
 		return
@@ -197,7 +191,6 @@ func TestThreeEntries(t *testing.T) {
 
 func TestInsertExistedKey(t *testing.T) {
 	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
-	history := NewHistory(m, signKey, 1, 1)
 
 	key1 := "key"
 	val1 := append([]byte(nil), "value"...)
@@ -207,7 +200,7 @@ func TestInsertExistedKey(t *testing.T) {
 	val2 := []byte("new value")
 	m.Set(key1, val2)
 
-	val, _ := history.LookUp(key1)
+	val, _ := m.Get(key1)
 	if val == nil {
 		t.Error("Cannot find key:", key1)
 		return
@@ -225,17 +218,15 @@ func TestTreeClone(t *testing.T) {
 	val2 := []byte("value2")
 
 	m1 := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
-	history := NewHistory(m1, signKey, 1, 1)
-
 	m1.Set(key1, val1)
 
 	// clone new tree and insert new value
-	m1 = m1.Clone()
-	history.UpdateHistory(m1, 2) // update history chain
-	m1.Set(key2, val2)
+	m2 := m1.Clone()
+
+	m2.Set(key2, val2)
 
 	// lookup
-	r, _ := history.LookUp(key1)
+	r, _ := m2.Get(key1)
 	if r == nil {
 		t.Error("Cannot find key:", key1)
 		return
@@ -244,7 +235,7 @@ func TestTreeClone(t *testing.T) {
 		t.Error(key1, "value mismatch\n")
 	}
 
-	r, _ = history.LookUp(key2)
+	r, _ = m2.Get(key2)
 	if r == nil {
 		t.Error("Cannot find key:", key2)
 		return
