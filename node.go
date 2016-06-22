@@ -1,5 +1,10 @@
 package merkletree
 
+import (
+	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
+	"github.com/coniks-sys/libmerkleprefixtree-go/internal"
+)
+
 type node struct {
 	parent MerkleNode
 	level  int
@@ -9,6 +14,8 @@ type interiorNode struct {
 	node
 	leftChild  MerkleNode
 	rightChild MerkleNode
+	leftHash   []byte
+	rightHash  []byte
 }
 
 type userLeafNode struct {
@@ -22,19 +29,26 @@ type userLeafNode struct {
 
 type emptyNode struct {
 	node
+	index []byte
 }
 
-func NewInteriorNode(parent MerkleNode, level int) *interiorNode {
+func NewInteriorNode(parent MerkleNode, level int, prefixBits []bool) *interiorNode {
+	prefixLeft := append([]bool(nil), prefixBits...)
+	prefixLeft = append(prefixLeft, false)
+	prefixRight := append([]bool(nil), prefixBits...)
+	prefixRight = append(prefixRight, true)
 	leftBranch := &emptyNode{
 		node: node{
 			level: level + 1,
 		},
+		index: util.ToBytes(prefixLeft),
 	}
 
 	rightBranch := &emptyNode{
 		node: node{
 			level: level + 1,
 		},
+		index: util.ToBytes(prefixRight),
 	}
 	newNode := &interiorNode{
 		node: node{
@@ -43,6 +57,8 @@ func NewInteriorNode(parent MerkleNode, level int) *interiorNode {
 		},
 		leftChild:  leftBranch,
 		rightChild: rightBranch,
+		leftHash:   nil,
+		rightHash:  nil,
 	}
 	leftBranch.parent = newNode
 	rightBranch.parent = newNode
@@ -53,75 +69,60 @@ func NewInteriorNode(parent MerkleNode, level int) *interiorNode {
 type MerkleNode interface {
 	Value() []byte
 	isEmpty() bool
-}
-
-type ProofNode interface {
+	Hash(*MerkleTree) []byte
+	Clone(*interiorNode) MerkleNode
 }
 
 var _ MerkleNode = (*userLeafNode)(nil)
 var _ MerkleNode = (*interiorNode)(nil)
 var _ MerkleNode = (*emptyNode)(nil)
 
-func (node *userLeafNode) Value() []byte {
-	return node.value
+func (n *interiorNode) Hash(m *MerkleTree) []byte {
+	if n.leftHash == nil {
+		n.leftHash = n.leftChild.Hash(m)
+	}
+	if n.rightHash == nil {
+		n.rightHash = n.rightChild.Hash(m)
+	}
+	return crypto.Digest(n.leftHash, n.rightHash)
 }
 
-func (node *userLeafNode) isEmpty() bool {
-	return false
+func (n *userLeafNode) Hash(m *MerkleTree) []byte {
+	return crypto.Digest(
+		[]byte{LeafIdentifier},           // K_leaf
+		[]byte(m.nonce),                  // K_n
+		[]byte(n.index),                  // i
+		[]byte(util.IntToBytes(n.level)), // l
+		[]byte(n.commitment),             // commit(key|| value)
+	)
 }
 
-func (node *interiorNode) Value() []byte {
-	return nil
+func (n *emptyNode) Hash(m *MerkleTree) []byte {
+	return crypto.Digest(
+		[]byte{EmptyBranchIdentifier},    // K_empty
+		[]byte(m.nonce),                  // K_n
+		[]byte(n.index),                  // i
+		[]byte(util.IntToBytes(n.level)), // l
+	)
 }
 
-func (node *interiorNode) isEmpty() bool {
-	return false
-}
-
-func (node *emptyNode) Value() []byte {
-	return nil
-}
-
-func (node *emptyNode) isEmpty() bool {
-	return true
-}
-
-var _ ProofNode = (*node)(nil)
-
-func (n *interiorNode) clone(parent *interiorNode) *interiorNode {
+func (n *interiorNode) Clone(parent *interiorNode) MerkleNode {
 	newNode := &interiorNode{
 		node: node{
 			parent: parent,
 			level:  n.level,
 		},
 	}
-
 	if n.leftChild != nil {
-		switch n.leftChild.(type) {
-		case *interiorNode:
-			newNode.leftChild = n.leftChild.(*interiorNode).clone(newNode)
-		case *userLeafNode:
-			newNode.leftChild = n.leftChild.(*userLeafNode).clone(newNode)
-		case *emptyNode:
-			newNode.leftChild = n.leftChild.(*emptyNode).clone(newNode)
-		}
+		newNode.leftChild = n.leftChild.Clone(newNode)
 	}
-
 	if n.rightChild != nil {
-		switch n.rightChild.(type) {
-		case *interiorNode:
-			newNode.rightChild = n.rightChild.(*interiorNode).clone(newNode)
-		case *userLeafNode:
-			newNode.rightChild = n.rightChild.(*userLeafNode).clone(newNode)
-		case *emptyNode:
-			newNode.rightChild = n.rightChild.(*emptyNode).clone(newNode)
-		}
+		newNode.rightChild = n.rightChild.Clone(newNode)
 	}
-
 	return newNode
 }
 
-func (n *userLeafNode) clone(parent *interiorNode) *userLeafNode {
+func (n *userLeafNode) Clone(parent *interiorNode) MerkleNode {
 	return &userLeafNode{
 		node: node{
 			parent: parent,
@@ -135,11 +136,60 @@ func (n *userLeafNode) clone(parent *interiorNode) *userLeafNode {
 	}
 }
 
-func (n *emptyNode) clone(parent *interiorNode) *emptyNode {
+func (n *emptyNode) Clone(parent *interiorNode) MerkleNode {
 	return &emptyNode{
 		node: node{
 			parent: parent,
 			level:  n.level,
 		},
+		index: append([]byte{}, n.index...), // make a copy of index
 	}
+}
+
+func (n *userLeafNode) Value() []byte {
+	return n.value
+}
+
+func (n *userLeafNode) isEmpty() bool {
+	return false
+}
+
+func (n *interiorNode) Value() []byte {
+	return nil
+}
+
+func (n *interiorNode) isEmpty() bool {
+	return false
+}
+
+func (n *emptyNode) Value() []byte {
+	return nil
+}
+
+func (n *emptyNode) isEmpty() bool {
+	return true
+}
+
+type ProofNode interface {
+	IsEmpty() bool
+	Commitment() []byte
+}
+
+var _ ProofNode = (*userLeafNode)(nil)
+var _ ProofNode = (*emptyNode)(nil)
+
+func (n *emptyNode) Commitment() []byte {
+	return nil
+}
+
+func (n *emptyNode) IsEmpty() bool {
+	return true
+}
+
+func (n *userLeafNode) Commitment() []byte {
+	return n.commitment
+}
+
+func (n *userLeafNode) IsEmpty() bool {
+	return false
 }
