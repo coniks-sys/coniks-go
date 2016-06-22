@@ -66,20 +66,20 @@ func TestHistoryHashChain(t *testing.T) {
 
 	// check tree root of each STR is valid
 	if reflect.ValueOf(m1.root).Pointer() !=
-		reflect.ValueOf(history.GetSTR(1).treeRoot).Pointer() {
+		reflect.ValueOf(history.GetSTR(1).tree.root).Pointer() {
 		t.Error("Invalid root pointer")
 	}
 	if reflect.ValueOf(m2.root).Pointer() !=
-		reflect.ValueOf(history.GetSTR(3).treeRoot).Pointer() {
+		reflect.ValueOf(history.GetSTR(3).tree.root).Pointer() {
 		t.Error("Invalid root pointer")
 	}
 	if reflect.ValueOf(m3.root).Pointer() !=
-		reflect.ValueOf(history.GetSTR(5).treeRoot).Pointer() {
+		reflect.ValueOf(history.GetSTR(5).tree.root).Pointer() {
 		t.Error("Invalid root pointer")
 	}
 
 	// lookup
-	r, _ := history.Get(key1)
+	r, _ := history.LookUp(key1)
 	if r == nil {
 		t.Error("Cannot find key:", key1)
 		return
@@ -88,7 +88,7 @@ func TestHistoryHashChain(t *testing.T) {
 		t.Error(key1, "value mismatch")
 	}
 
-	r, _ = history.Get(key2)
+	r, _ = history.LookUp(key2)
 	if r == nil {
 		t.Error("Cannot find key:", key2)
 		return
@@ -97,7 +97,7 @@ func TestHistoryHashChain(t *testing.T) {
 		t.Error(key2, "value mismatch")
 	}
 
-	r, _ = history.Get(key3)
+	r, _ = history.LookUp(key3)
 	if r == nil {
 		t.Error("Cannot find key:", key3)
 		return
@@ -106,17 +106,17 @@ func TestHistoryHashChain(t *testing.T) {
 		t.Error(key3, "value mismatch")
 	}
 
-	r, _ = history.GetInEpoch(key2, 1)
+	r, _ = history.LookUpInEpoch(key2, 1)
 	if r != nil {
 		t.Error("Found unexpected key", key2, "in epoch", 1)
 	}
 
-	r, _ = history.GetInEpoch(key3, 4)
+	r, _ = history.LookUpInEpoch(key3, 4)
 	if r != nil {
 		t.Error("Found unexpected key", key3, "in epoch", 4)
 	}
 
-	r, _ = history.GetInEpoch(key3, 5)
+	r, _ = history.LookUpInEpoch(key3, 5)
 	if r == nil {
 		t.Error("Cannot find key", key3, "in epoch", 5)
 	}

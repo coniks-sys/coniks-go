@@ -34,14 +34,14 @@ func (h *History) UpdateHistory(m *MerkleTree, nextEp int64) error {
 	return nil
 }
 
-func (h *History) Get(key string) (MerkleNode, []ProofNode) {
+func (h *History) LookUp(key string) (MerkleNode, []ProofNode) {
 	str := h.currentSTR
-	return lookUp(key, str)
+	return str.tree.Get(key)
 }
 
-func (h *History) GetInEpoch(key string, ep int64) (MerkleNode, []ProofNode) {
+func (h *History) LookUpInEpoch(key string, ep int64) (MerkleNode, []ProofNode) {
 	str := h.GetSTR(ep)
-	return lookUp(key, str)
+	return str.tree.Get(key)
 }
 
 func (h *History) GetSTR(ep int64) *SignedTreeRoot {

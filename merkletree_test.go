@@ -64,7 +64,7 @@ func TestOneEntry(t *testing.T) {
 			"get", m.root.rightHash)
 	}
 
-	r, proof := history.Get(key)
+	r, proof := history.LookUp(key)
 	if r == nil {
 		t.Error("Cannot find value of key:", key)
 		return
@@ -82,7 +82,7 @@ func TestOneEntry(t *testing.T) {
 		t.Error("Invalid proof of inclusion")
 	}
 
-	r, _ = history.Get("abc")
+	r, _ = history.LookUp("abc")
 	if r != nil {
 		t.Error("Invalid look-up operation:", key)
 		return
@@ -102,13 +102,13 @@ func TestTwoEntries(t *testing.T) {
 	m.Set(key2, val2)
 	m.RecomputeHash()
 
-	n1, _ := history.Get(key1)
+	n1, _ := history.LookUp(key1)
 	if n1 == nil {
 		t.Error("Cannot find key:", key1)
 		return
 	}
 
-	n2, _ := history.Get(key2)
+	n2, _ := history.LookUp(key2)
 	if n2 == nil {
 		t.Error("Cannot find key:", key2)
 		return
@@ -138,17 +138,17 @@ func TestThreeEntries(t *testing.T) {
 	m.Set(key3, val3)
 	m.RecomputeHash()
 
-	n1, _ := history.Get(key1)
+	n1, _ := history.LookUp(key1)
 	if n1 == nil {
 		t.Error("Cannot find key:", key1)
 		return
 	}
-	n2, _ := history.Get(key2)
+	n2, _ := history.LookUp(key2)
 	if n2 == nil {
 		t.Error("Cannot find key:", key2)
 		return
 	}
-	n3, _ := history.Get(key3)
+	n3, _ := history.LookUp(key3)
 	if n3 == nil {
 		t.Error("Cannot find key:", key3)
 		return
@@ -207,7 +207,7 @@ func TestInsertExistedKey(t *testing.T) {
 	val2 := []byte("new value")
 	m.Set(key1, val2)
 
-	val, _ := history.Get(key1)
+	val, _ := history.LookUp(key1)
 	if val == nil {
 		t.Error("Cannot find key:", key1)
 		return
@@ -235,7 +235,7 @@ func TestTreeClone(t *testing.T) {
 	m1.Set(key2, val2)
 
 	// lookup
-	r, _ := history.Get(key1)
+	r, _ := history.LookUp(key1)
 	if r == nil {
 		t.Error("Cannot find key:", key1)
 		return
@@ -244,7 +244,7 @@ func TestTreeClone(t *testing.T) {
 		t.Error(key1, "value mismatch\n")
 	}
 
-	r, _ = history.Get(key2)
+	r, _ = history.LookUp(key2)
 	if r == nil {
 		t.Error("Cannot find key:", key2)
 		return

@@ -12,7 +12,7 @@ import (
 // previous STR, and its signature.
 // STR should be final
 type SignedTreeRoot struct {
-	treeRoot    *interiorNode
+	tree        *MerkleTree
 	epoch       int64
 	prevEpoch   int64
 	prevStrHash []byte
@@ -28,7 +28,7 @@ func newSTR(m *MerkleTree, ep, prevEp int64, prevHash []byte,
 	sig := crypto.Sign(key, bytesPreSig)
 
 	return &SignedTreeRoot{
-		treeRoot:    m.root,
+		tree:        m,
 		epoch:       ep,
 		prevEpoch:   prevEp,
 		prevStrHash: prevHash,
@@ -62,7 +62,7 @@ func getSTRBytesForSig(m *MerkleTree, ep int64, prevEp int64, prevHash []byte) [
 func serializeSTR(str SignedTreeRoot) []byte {
 	var strBytes []byte
 
-	strBytes = append(strBytes, str.treeRoot.serialize()...)        // root
+	strBytes = append(strBytes, str.tree.root.serialize()...)       // root
 	strBytes = append(strBytes, util.LongToBytes(str.epoch)...)     // epoch
 	strBytes = append(strBytes, util.LongToBytes(str.prevEpoch)...) // previous epoch
 	strBytes = append(strBytes, str.prevStrHash...)                 // previous hash

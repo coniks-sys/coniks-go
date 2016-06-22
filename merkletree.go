@@ -36,11 +36,11 @@ func InitMerkleTree(policies Policies, treeNonce, salt []byte) *MerkleTree {
 	return m
 }
 
-func lookUp(key string, str *SignedTreeRoot) (MerkleNode, []ProofNode) {
+func (m *MerkleTree) Get(key string) (MerkleNode, []ProofNode) {
 	lookupIndex := computePrivateIndex(key)
 	depth := 0
 	var nodePointer interface{}
-	nodePointer = str.treeRoot
+	nodePointer = m.root
 	var proof []ProofNode
 
 	for {
