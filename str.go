@@ -22,7 +22,7 @@ type SignedTreeRoot struct {
 	key         crypto.KeyPair
 }
 
-func NewSTR(m *MerkleTree, ep, prevEp int64, prevHash []byte,
+func newSTR(m *MerkleTree, ep, prevEp int64, prevHash []byte,
 	key crypto.KeyPair) *SignedTreeRoot {
 	bytesPreSig := getSTRBytesForSig(m, ep, prevEp, prevHash)
 	sig := crypto.Sign(key, bytesPreSig)
@@ -43,7 +43,7 @@ func (cur *SignedTreeRoot) generateNextSTR(m *MerkleTree, ep int64) *SignedTreeR
 	prevEpoch := cur.epoch
 	prevStrHash := crypto.Digest(serializeSTR(*cur))
 
-	nextStr := NewSTR(m, ep, prevEpoch, prevStrHash, cur.key)
+	nextStr := newSTR(m, ep, prevEpoch, prevStrHash, cur.key)
 	nextStr.prev = cur
 	return nextStr
 }

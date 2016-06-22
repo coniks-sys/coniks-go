@@ -21,7 +21,7 @@ func NewHistory(m *MerkleTree, key crypto.KeyPair, startEp, epInterval int64) *H
 	h := new(History)
 	h.tree = m
 	h.epochInterval = epInterval
-	h.currentSTR = NewSTR(m, startEp, 0, make([]byte, crypto.HashSizeByte), key)
+	h.currentSTR = newSTR(m, startEp, 0, make([]byte, crypto.HashSizeByte), key)
 	return h
 }
 
