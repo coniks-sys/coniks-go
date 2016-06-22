@@ -2,15 +2,8 @@ sudo: false
 
 language: go
 
-go:
-        - 1.4
-        - 1.5
-        - 1.6
-
 notifications:
   # Email notifications are disabled to not annoy anybody.
   # See http://about.travis-ci.org/docs/user/build-configuration/ to learn more
   # about configuring notification recipients and more.
   email: false
-
-    Status API Training Shop Blog About 
