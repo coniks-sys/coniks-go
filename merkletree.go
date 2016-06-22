@@ -100,13 +100,12 @@ func computePrivateIndex(key string) []byte {
 }
 
 func (m *MerkleTree) insertNode(key []byte, toAdd *userLeafNode) {
-	position := 0
+	depth := 0
 	var nodePointer interface{}
 	nodePointer = m.root
 
 insertLoop:
 	for {
-		toAdd.level++
 		switch nodePointer.(type) {
 		case *userLeafNode:
 			// reached a "bottom" of the tree.
@@ -124,15 +123,15 @@ insertLoop:
 				return
 			}
 
-			newInteriorNode := NewInteriorNode(currentNodeUL.parent, currentNodeUL.level)
+			newInteriorNode := NewInteriorNode(currentNodeUL.parent, depth)
 
-			direction := util.GetNthBit(currentNodeUL.index, position)
+			direction := util.GetNthBit(currentNodeUL.index, depth)
 			if direction {
 				newInteriorNode.rightChild = currentNodeUL
 			} else {
 				newInteriorNode.leftChild = currentNodeUL
 			}
-			currentNodeUL.level++
+			currentNodeUL.level = depth + 1
 			currentNodeUL.parent = newInteriorNode
 			if newInteriorNode.parent.(*interiorNode).leftChild == nodePointer {
 				newInteriorNode.parent.(*interiorNode).leftChild = newInteriorNode
@@ -140,10 +139,9 @@ insertLoop:
 				newInteriorNode.parent.(*interiorNode).rightChild = newInteriorNode
 			}
 			nodePointer = newInteriorNode
-			toAdd.level--
 		case *interiorNode:
 			currentNodeI := nodePointer.(*interiorNode)
-			direction := util.GetNthBit(key, position)
+			direction := util.GetNthBit(key, depth)
 
 			if direction { // go right
 				currentNodeI.rightHash = nil
@@ -158,13 +156,14 @@ insertLoop:
 				currentNodeI.leftHash = nil
 				if currentNodeI.leftChild.isEmpty() {
 					currentNodeI.leftChild = toAdd
+					toAdd.level = depth + 1
 					toAdd.parent = currentNodeI
 					break insertLoop
 				} else {
 					nodePointer = currentNodeI.leftChild
 				}
 			}
-			position++
+			depth += 1
 		default:
 			panic(ErrInvalidTree)
 		}
