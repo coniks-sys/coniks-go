@@ -38,7 +38,7 @@ func InitMerkleTree(policies Policies, treeNonce, salt []byte) *MerkleTree {
 
 func lookUp(key string, str *SignedTreeRoot) (MerkleNode, []ProofNode) {
 	lookupIndex := computePrivateIndex(key)
-	position := 0
+	depth := 0
 	var nodePointer interface{}
 	nodePointer = str.treeRoot
 	var proof []ProofNode
@@ -53,13 +53,13 @@ func lookUp(key string, str *SignedTreeRoot) (MerkleNode, []ProofNode) {
 			break
 		}
 		proof = append(proof, nodePointer.(*interiorNode))
-		direction := util.GetNthBit(lookupIndex, position)
+		direction := util.GetNthBit(lookupIndex, depth)
 		if direction {
 			nodePointer = nodePointer.(*interiorNode).rightChild
 		} else {
 			nodePointer = nodePointer.(*interiorNode).leftChild
 		}
-		position++
+		depth++
 	}
 
 	if nodePointer == nil {

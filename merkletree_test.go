@@ -13,19 +13,12 @@ import (
 
 var treeNonce = []byte("TREE NONCE")
 var salt = []byte("salt")
-
-var (
-	key crypto.KeyPair
-)
-
-func init() {
-	key = crypto.GenerateKey()
-}
+var signKey = crypto.GenerateKey()
 
 func TestOneEntry(t *testing.T) {
 	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
 
-	history := NewHistory(m, key, 1, 1)
+	history := NewHistory(m, signKey, 1, 1)
 	var commit [32]byte
 	var expect [32]byte
 
@@ -98,7 +91,7 @@ func TestOneEntry(t *testing.T) {
 
 func TestTwoEntries(t *testing.T) {
 	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
-	history := NewHistory(m, key, 1, 1)
+	history := NewHistory(m, signKey, 1, 1)
 
 	key1 := "key1"
 	val1 := []byte("value1")
@@ -106,7 +99,6 @@ func TestTwoEntries(t *testing.T) {
 	val2 := []byte("value2")
 
 	m.Set(key1, val1)
-	m.RecomputeHash()
 	m.Set(key2, val2)
 	m.RecomputeHash()
 
@@ -130,9 +122,82 @@ func TestTwoEntries(t *testing.T) {
 	}
 }
 
+func TestThreeEntries(t *testing.T) {
+	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
+	history := NewHistory(m, signKey, 1, 1)
+
+	key1 := "key1"
+	val1 := []byte("value1")
+	key2 := "key2"
+	val2 := []byte("value2")
+	key3 := "key3"
+	val3 := []byte("value3")
+
+	m.Set(key1, val1)
+	m.Set(key2, val2)
+	m.Set(key3, val3)
+	m.RecomputeHash()
+
+	n1, _ := history.Get(key1)
+	if n1 == nil {
+		t.Error("Cannot find key:", key1)
+		return
+	}
+	n2, _ := history.Get(key2)
+	if n2 == nil {
+		t.Error("Cannot find key:", key2)
+		return
+	}
+	n3, _ := history.Get(key3)
+	if n3 == nil {
+		t.Error("Cannot find key:", key3)
+		return
+	}
+
+	// since the first bit of n2 index is false and the one of n1 & n3 are true
+	if reflect.ValueOf(m.root.leftChild).Pointer() !=
+		reflect.ValueOf(n2.(*userLeafNode)).Pointer() {
+		t.Error("Malformed tree insertion")
+	}
+	if n2.(*userLeafNode).level != 1 {
+		t.Error("Malformed tree insertion")
+	}
+
+	// since n1 and n3 share first 2 bits
+	if n1.(*userLeafNode).level != 3 {
+		t.Error("Malformed tree insertion")
+	}
+	if n3.(*userLeafNode).level != 3 {
+		t.Error("Malformed tree insertion")
+	}
+	// n1 and n3 should have same parent
+	if reflect.ValueOf(n1.(*userLeafNode).parent).Pointer() !=
+		reflect.ValueOf(n3.(*userLeafNode).parent).Pointer() {
+		t.Error("Malformed tree insertion")
+	}
+	if reflect.ValueOf(n1.(*userLeafNode).parent.(*interiorNode).leftChild).Pointer() !=
+		reflect.ValueOf(n3).Pointer() {
+		t.Error("Malformed tree insertion")
+	}
+	if reflect.ValueOf(n3.(*userLeafNode).parent.(*interiorNode).rightChild).Pointer() !=
+		reflect.ValueOf(n1).Pointer() {
+		t.Error("Malformed tree insertion")
+	}
+
+	if !bytes.Equal(n1.Value(), []byte("value1")) {
+		t.Error(key1, "value mismatch")
+	}
+	if !bytes.Equal(n2.Value(), []byte("value2")) {
+		t.Error(key2, "value mismatch")
+	}
+	if !bytes.Equal(n3.Value(), []byte("value3")) {
+		t.Error(key3, "value mismatch")
+	}
+}
+
 func TestInsertExistedKey(t *testing.T) {
 	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
-	history := NewHistory(m, key, 1, 1)
+	history := NewHistory(m, signKey, 1, 1)
 
 	key1 := "key"
 	val1 := append([]byte(nil), "value"...)
@@ -160,7 +225,7 @@ func TestTreeClone(t *testing.T) {
 	val2 := []byte("value2")
 
 	m1 := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
-	history := NewHistory(m1, key, 1, 1)
+	history := NewHistory(m1, signKey, 1, 1)
 
 	m1.Set(key1, val1)
 
@@ -186,121 +251,5 @@ func TestTreeClone(t *testing.T) {
 	}
 	if !bytes.Equal(r.Value(), []byte("value2")) {
 		t.Error(key2, "value mismatch\n")
-	}
-}
-
-// scenario:
-// 1st: epoch = 1
-// 2nd: epoch = 3
-// 3nd: epoch = 5 (latest STR)
-func TestHistoryHashChain(t *testing.T) {
-	var startupTime int64
-	var epochInterval int64
-
-	startupTime = 1
-	epochInterval = 2
-
-	key1 := "key"
-	val1 := []byte("value")
-
-	key2 := "key2"
-	val2 := []byte("value2")
-
-	key3 := "key3"
-	val3 := []byte("value3")
-
-	m1 := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
-	history := NewHistory(m1, key, startupTime, epochInterval)
-	m1.Set(key1, val1)
-	m1.RecomputeHash()
-
-	m2 := m1.Clone()
-	m2.Set(key2, val2)
-	m2.RecomputeHash()
-	history.UpdateHistory(m2, startupTime+epochInterval)
-
-	m3 := m2.Clone()
-	m3.Set(key3, val3)
-	m3.RecomputeHash()
-	history.UpdateHistory(m3, startupTime+2*epochInterval)
-
-	for i := 0; i < 2; i++ {
-		str := history.GetSTR(startupTime + int64(i)*epochInterval)
-		if str == nil {
-			t.Error("Cannot get STR having epoch", startupTime+int64(i)*epochInterval)
-			return
-		}
-
-		if str.epoch != startupTime+int64(i)*epochInterval {
-			t.Error("Got invalid STR")
-			return
-		}
-	}
-
-	str := history.GetSTR(6)
-	if str == nil {
-		t.Error("Cannot get STR")
-		return
-	}
-
-	if str.epoch != 5 {
-		t.Error("Got invalid STR")
-	}
-
-	// check tree root of each STR is valid
-	if reflect.ValueOf(m1.root).Pointer() !=
-		reflect.ValueOf(history.GetSTR(1).treeRoot).Pointer() {
-		t.Error("Invalid root pointer")
-	}
-	if reflect.ValueOf(m2.root).Pointer() !=
-		reflect.ValueOf(history.GetSTR(3).treeRoot).Pointer() {
-		t.Error("Invalid root pointer")
-	}
-	if reflect.ValueOf(m3.root).Pointer() !=
-		reflect.ValueOf(history.GetSTR(5).treeRoot).Pointer() {
-		t.Error("Invalid root pointer")
-	}
-
-	// lookup
-	r, _ := history.Get(key1)
-	if r == nil {
-		t.Error("Cannot find key:", key1)
-		return
-	}
-	if !bytes.Equal(r.Value(), val1) {
-		t.Error(key1, "value mismatch")
-	}
-
-	r, _ = history.Get(key2)
-	if r == nil {
-		t.Error("Cannot find key:", key2)
-		return
-	}
-	if !bytes.Equal(r.Value(), val2) {
-		t.Error(key2, "value mismatch")
-	}
-
-	r, _ = history.Get(key3)
-	if r == nil {
-		t.Error("Cannot find key:", key3)
-		return
-	}
-	if !bytes.Equal(r.Value(), val3) {
-		t.Error(key3, "value mismatch")
-	}
-
-	r, _ = history.GetInEpoch(key2, 1)
-	if r != nil {
-		t.Error("Found unexpected key", key2, "in epoch", 1)
-	}
-
-	r, _ = history.GetInEpoch(key3, 4)
-	if r != nil {
-		t.Error("Found unexpected key", key3, "in epoch", 4)
-	}
-
-	r, _ = history.GetInEpoch(key3, 5)
-	if r == nil {
-		t.Error("Cannot find key", key3, "in epoch", 5)
 	}
 }
