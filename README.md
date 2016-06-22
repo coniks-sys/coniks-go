@@ -10,14 +10,17 @@ The signature scheme is `Ed25519` signature algorithm.
 ### Usage
 Initiate the tree & history
 ```
-m := merkletree.InitMerkleTree(nonce, salt, publicKey, privateKey)
+// using DefaultPolicies as current policy of the tree
+m := merkletree.InitMerkleTree(&DefaultPolicies{}, "nonce", "salt")
 // insert existing data (e.g., from db)
 m.Set(key, value)
 ...
 // recompute tree hash
 m.RecomputeHash()
+// generate private key for STR signing
+signKey := crypto.GenerateKey()
 // init STR history chain
-history := NewHistory(m, startupEpoch, epochInterval)
+history := NewHistory(m, signKey, startupEpoch, epochInterval)
 ```
 
 Update tree in each epoch
@@ -35,8 +38,7 @@ history.UpdateHistory(m, nextEpoch)
 
 Look-up
 
-`LookUp(key)` and `LookUpInEpoch(key, epoch)` return a `MerkleNode` instance and an _authenticate path_ for proofs of inclusion/absence.
-`MerkleNode.IsEmpty()` is used to check whether the returned value is an empty leaf node or an user leaf node.
+`Get(key)` and `GetInEpoch(key, epoch)` return a `MerkleNode` instance and an _authenticate path_ for proofs of inclusion/absence.
 A proof of absence also includes an empty leaf node in the returned auth path.
 
 ### TODO
