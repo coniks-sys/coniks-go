@@ -24,3 +24,12 @@ func ToBytes(bits []bool) []byte {
 	}
 	return bs
 }
+
+// In each byte, the bits are ordered MSB to LSB
+func ToBits(bs []byte) []bool {
+	bits := make([]bool, len(bs)*8)
+	for i := 0; i < len(bits); i++ {
+		bits[i] = (bs[i/8]<<uint(i%8))&(1<<7) > 0
+	}
+	return bits
+}

@@ -8,14 +8,12 @@ import (
 )
 
 const (
-	HashSizeByte = 32
-	HashID       = "SHAKE128"
+	HashSizeByte   = 32
+	HashID         = "SHAKE128"
+	PrivateKeySize = 64
 )
 
-type KeyPair struct {
-	PrivateKey []byte
-	PublicKey  []byte
-}
+type SigningKey ed25519.PrivateKey
 
 func Digest(ms ...[]byte) []byte {
 	h := sha3.NewShake128()
@@ -27,18 +25,19 @@ func Digest(ms ...[]byte) []byte {
 	return ret
 }
 
-func GenerateKey() KeyPair {
-	pk, sk, _ := ed25519.GenerateKey(rand.Reader)
-	return KeyPair{
-		PrivateKey: sk,
-		PublicKey:  pk,
+func GenerateKey() (SigningKey, error) {
+	_, sk, err := ed25519.GenerateKey(rand.Reader)
+	return SigningKey(sk), err
+}
+
+func Sign(key SigningKey, message []byte) []byte {
+	return ed25519.Sign(ed25519.PrivateKey(key), message)
+}
+
+func Verify(key SigningKey, message, sig []byte) bool {
+	pk, ok := ed25519.PrivateKey(key).Public().(ed25519.PublicKey)
+	if !ok {
+		return false
 	}
-}
-
-func Sign(key KeyPair, message []byte) []byte {
-	return ed25519.Sign(key.PrivateKey, message)
-}
-
-func Verify(key KeyPair, message, sig []byte) bool {
-	return ed25519.Verify(key.PublicKey, message, sig)
+	return ed25519.Verify(pk, message, sig)
 }

@@ -1,6 +1,8 @@
 package util
 
-// Finds the bit in the byte array bs
+import "encoding/binary"
+
+// GetNthBit finds the bit in the byte array bs
 // at offset offset, and determines whether it is 1 or 0.
 // return true if the nth bit is 1, false otherwise.
 // from MSB to LSB order
@@ -10,4 +12,26 @@ func GetNthBit(bs []byte, offset int) bool {
 
 	masked := int(bs[arrayOffset] & (1 << uint(7-bitOfByte)))
 	return masked != 0
+}
+
+// LongToBytes converts an int64 variable to byte array
+// in litte endian format
+func LongToBytes(num int64) []byte {
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, uint64(num))
+	return buf
+}
+
+// ULongToBytes converts an uint64 variable to byte array
+// in litte endian format
+func ULongToBytes(num uint64) []byte {
+	return LongToBytes(int64(num))
+}
+
+// IntToBytes converts an int variable to byte array
+// in litte endian format
+func IntToBytes(num int) []byte {
+	buf := make([]byte, 4)
+	binary.LittleEndian.PutUint32(buf, uint32(num))
+	return buf
 }

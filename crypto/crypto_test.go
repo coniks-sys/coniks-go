@@ -4,7 +4,10 @@ import "testing"
 
 // copied from official crypto.ed25519 tests
 func TestSignVerify(t *testing.T) {
-	key := GenerateKey()
+	key, err := GenerateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	message := []byte("test message")
 	sig := Sign(key, message)
