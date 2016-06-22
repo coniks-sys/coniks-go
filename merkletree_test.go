@@ -140,9 +140,7 @@ func TestInsertExistedKey(t *testing.T) {
 	m.Set(key1, val1)
 
 	val2 := []byte("new value")
-	if m.Set(key1, val2) != nil {
-		t.Error("cannot insert new key-value to the tree")
-	}
+	m.Set(key1, val2)
 
 	val, _ := history.Get(key1)
 	if val == nil {
@@ -169,10 +167,7 @@ func TestTreeClone(t *testing.T) {
 	// clone new tree and insert new value
 	m1 = m1.Clone()
 	history.UpdateHistory(m1, 2) // update history chain
-	if err := m1.Set(key2, val2); err != nil {
-		t.Error(err)
-		return
-	}
+	m1.Set(key2, val2)
 
 	// lookup
 	r, _ := history.Get(key1)

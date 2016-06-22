@@ -81,7 +81,7 @@ func lookUp(key string, str *SignedTreeRoot) (MerkleNode, []ProofNode) {
 	panic(ErrInvalidTree)
 }
 
-func (m *MerkleTree) Set(key string, value []byte) error {
+func (m *MerkleTree) Set(key string, value []byte) {
 	index := computePrivateIndex(key)
 	toAdd := userLeafNode{
 		key:        key,
@@ -90,7 +90,7 @@ func (m *MerkleTree) Set(key string, value []byte) error {
 		commitment: crypto.Digest(m.salt, []byte(key), value),
 	}
 
-	return m.insertNode(index, &toAdd)
+	m.insertNode(index, &toAdd)
 }
 
 // Private Index calculation function
@@ -99,7 +99,7 @@ func computePrivateIndex(key string) []byte {
 	return crypto.Digest([]byte(key))
 }
 
-func (m *MerkleTree) insertNode(key []byte, toAdd *userLeafNode) error {
+func (m *MerkleTree) insertNode(key []byte, toAdd *userLeafNode) {
 	position := 0
 	var nodePointer interface{}
 	nodePointer = m.root
@@ -121,7 +121,7 @@ insertLoop:
 				// replace the value
 				currentNodeUL.value = toAdd.value
 				currentNodeUL.commitment = toAdd.commitment
-				return nil
+				return
 			}
 
 			newInteriorNode := NewInteriorNode(currentNodeUL.parent, currentNodeUL.level)
@@ -169,7 +169,7 @@ insertLoop:
 			panic(ErrInvalidTree)
 		}
 	}
-	return nil
+	return
 }
 
 func (m *MerkleTree) RecomputeHash() {
