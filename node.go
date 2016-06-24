@@ -15,6 +15,7 @@ type userLeafNode struct {
 	node
 	key        string
 	value      []byte
+	salt       []byte
 	index      []byte
 	commitment []byte
 }
@@ -128,6 +129,7 @@ func (n *userLeafNode) clone(parent *interiorNode) *userLeafNode {
 		},
 		key:        n.key,
 		value:      n.value,
+		salt:       n.salt,
 		index:      append([]byte{}, n.index...), // make a copy of index
 		commitment: n.commitment,
 	}
