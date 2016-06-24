@@ -2,6 +2,7 @@ package merkletree
 
 import (
 	"bytes"
+	"crypto/rand"
 	"errors"
 
 	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
@@ -19,17 +20,15 @@ const (
 
 type MerkleTree struct {
 	treeNonce []byte
-	salt      []byte
 	policies  Policies
 	root      *interiorNode
 }
 
-func InitMerkleTree(policies Policies, treeNonce, salt []byte) *MerkleTree {
+func InitMerkleTree(policies Policies, treeNonce []byte) *MerkleTree {
 	root := NewInteriorNode(nil, 0)
 
 	m := &MerkleTree{
 		treeNonce: treeNonce,
-		salt:      salt,
 		policies:  policies,
 		root:      root,
 	}
@@ -81,16 +80,26 @@ func (m *MerkleTree) Get(key string) (MerkleNode, []ProofNode) {
 	panic(ErrInvalidTree)
 }
 
-func (m *MerkleTree) Set(key string, value []byte) {
+func (m *MerkleTree) Set(key string, value []byte) error {
 	index := computePrivateIndex(key)
+
+	// generate random per user salt
+	salt := make([]byte, crypto.HashSizeByte)
+	_, err := rand.Read(salt)
+	if err != nil {
+		return err
+	}
+
 	toAdd := userLeafNode{
 		key:        key,
 		value:      value,
 		index:      index,
-		commitment: crypto.Digest(m.salt, []byte(key), value),
+		salt:       salt,
+		commitment: crypto.Digest(salt, []byte(key), value),
 	}
 
 	m.insertNode(index, &toAdd)
+	return nil
 }
 
 // Private Index calculation function
@@ -118,8 +127,9 @@ insertLoop:
 
 			if bytes.Equal(currentNodeUL.index, toAdd.index) {
 				// replace the value
-				currentNodeUL.value = toAdd.value
-				currentNodeUL.commitment = toAdd.commitment
+				toAdd.parent = currentNodeUL.parent
+				toAdd.level = currentNodeUL.level
+				*currentNodeUL = *toAdd
 				return
 			}
 
@@ -172,7 +182,6 @@ insertLoop:
 func (m *MerkleTree) Clone() *MerkleTree {
 	return &MerkleTree{
 		treeNonce: m.treeNonce,
-		salt:      m.salt,
 		policies:  m.policies,
 		root:      m.root.clone(nil),
 	}

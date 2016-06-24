@@ -7,10 +7,9 @@ import (
 )
 
 var treeNonce = []byte("TREE NONCE")
-var salt = []byte("salt")
 
 func TestTwoEntries(t *testing.T) {
-	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
+	m := InitMerkleTree(&DefaultPolicies{}, treeNonce)
 
 	key1 := "key1"
 	val1 := []byte("value1")
@@ -41,7 +40,7 @@ func TestTwoEntries(t *testing.T) {
 }
 
 func TestThreeEntries(t *testing.T) {
-	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
+	m := InitMerkleTree(&DefaultPolicies{}, treeNonce)
 
 	key1 := "key1"
 	val1 := []byte("value1")
@@ -112,7 +111,7 @@ func TestThreeEntries(t *testing.T) {
 }
 
 func TestInsertExistedKey(t *testing.T) {
-	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
+	m := InitMerkleTree(&DefaultPolicies{}, treeNonce)
 
 	key1 := "key"
 	val1 := append([]byte(nil), "value"...)
@@ -139,7 +138,7 @@ func TestTreeClone(t *testing.T) {
 	key2 := "key2"
 	val2 := []byte("value2")
 
-	m1 := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
+	m1 := InitMerkleTree(&DefaultPolicies{}, treeNonce)
 	m1.Set(key1, val1)
 
 	// clone new tree and insert new value
