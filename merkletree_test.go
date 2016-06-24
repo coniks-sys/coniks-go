@@ -7,18 +7,21 @@ import (
 )
 
 var treeNonce = []byte("TREE NONCE")
-var salt = []byte("salt")
 
 func TestTwoEntries(t *testing.T) {
-	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
+	m := InitMerkleTree(&DefaultPolicies{}, treeNonce)
 
 	key1 := "key1"
 	val1 := []byte("value1")
 	key2 := "key2"
 	val2 := []byte("value2")
 
-	m.Set(key1, val1)
-	m.Set(key2, val2)
+	if err := m.Set(key1, val1); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Set(key2, val2); err != nil {
+		t.Fatal(err)
+	}
 
 	n1, _ := m.Get(key1)
 	if n1 == nil {
@@ -41,7 +44,7 @@ func TestTwoEntries(t *testing.T) {
 }
 
 func TestThreeEntries(t *testing.T) {
-	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
+	m := InitMerkleTree(&DefaultPolicies{}, treeNonce)
 
 	key1 := "key1"
 	val1 := []byte("value1")
@@ -50,9 +53,15 @@ func TestThreeEntries(t *testing.T) {
 	key3 := "key3"
 	val3 := []byte("value3")
 
-	m.Set(key1, val1)
-	m.Set(key2, val2)
-	m.Set(key3, val3)
+	if err := m.Set(key1, val1); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Set(key2, val2); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Set(key3, val3); err != nil {
+		t.Fatal(err)
+	}
 
 	n1, _ := m.Get(key1)
 	if n1 == nil {
@@ -112,15 +121,19 @@ func TestThreeEntries(t *testing.T) {
 }
 
 func TestInsertExistedKey(t *testing.T) {
-	m := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
+	m := InitMerkleTree(&DefaultPolicies{}, treeNonce)
 
 	key1 := "key"
 	val1 := append([]byte(nil), "value"...)
 
-	m.Set(key1, val1)
+	if err := m.Set(key1, val1); err != nil {
+		t.Fatal(err)
+	}
 
 	val2 := []byte("new value")
-	m.Set(key1, val2)
+	if err := m.Set(key1, val2); err != nil {
+		t.Fatal(err)
+	}
 
 	val, _ := m.Get(key1)
 	if val == nil {
@@ -139,13 +152,17 @@ func TestTreeClone(t *testing.T) {
 	key2 := "key2"
 	val2 := []byte("value2")
 
-	m1 := InitMerkleTree(&DefaultPolicies{}, treeNonce, salt)
-	m1.Set(key1, val1)
+	m1 := InitMerkleTree(&DefaultPolicies{}, treeNonce)
+	if err := m1.Set(key1, val1); err != nil {
+		t.Fatal(err)
+	}
 
 	// clone new tree and insert new value
 	m2 := m1.Clone()
 
-	m2.Set(key2, val2)
+	if err := m2.Set(key2, val2); err != nil {
+		t.Fatal(err)
+	}
 
 	// lookup
 	r, _ := m2.Get(key1)
