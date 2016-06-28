@@ -10,19 +10,24 @@ import (
 	"crypto/sha512"
 	"testing"
 
-	"github.com/coniks-sys/libmerkleprefixtree-go/crypto/ed25519"
 	"github.com/coniks-sys/libmerkleprefixtree-go/crypto/ed25519/edwards25519"
 	"golang.org/x/crypto/curve25519"
+	"golang.org/x/crypto/ed25519"
 )
 
 func TestCurve25519Conversion(t *testing.T) {
 	public, private, _ := ed25519.GenerateKey(rand.Reader)
+	var pubBytes [32]byte
+	copy(pubBytes[:], public)
+	var privBytes [64]byte
+	copy(privBytes[:], private)
+
 
 	var curve25519Public, curve25519Public2, curve25519Private [32]byte
-	PrivateKeyToCurve25519(&curve25519Private, private)
+	PrivateKeyToCurve25519(&curve25519Private, &privBytes)
 	curve25519.ScalarBaseMult(&curve25519Public, &curve25519Private)
 
-	if !PublicKeyToCurve25519(&curve25519Public2, public) {
+	if !PublicKeyToCurve25519(&curve25519Public2, &pubBytes) {
 		t.Fatalf("PublicKeyToCurve25519 failed")
 	}
 
