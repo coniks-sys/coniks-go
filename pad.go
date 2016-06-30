@@ -103,3 +103,21 @@ func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 	}
 	return pad.snapshots[epoch]
 }
+
+func (pad *PAD) TB(key string, value []byte) (*TemporaryBinding, error) {
+	//FIXME: compute private index twice
+	//it would be refactored after merging VRF integration branch
+	index := computePrivateIndex(key)
+	tb := pad.currentSTR.sig
+	tb = append(tb, index...)
+	tb = append(tb, value...)
+	sig := crypto.Sign(pad.key, tb)
+
+	err := pad.Set(key, value)
+
+	return &TemporaryBinding{
+		index: index,
+		value: value,
+		sig:   sig,
+	}, err
+}
