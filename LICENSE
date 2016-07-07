@@ -3,6 +3,8 @@ This license applies to all parts of the Merkle Prefix Tree Golang library excep
 This module is copyrighted by the Coname Authors.
 - The ed25519 subpackage, located in crypto/ed25519
 This subpackage is copyrighted by the Go Authors.
+- The vrf subpackage, located in crypto/vrf
+This subpackage is copyrighted by the Coname Authors.
 
 Copyright (c) 2016, Princeton University.
 Copyright (c) 2016, Ecole Polytechnique Federale de Lausanne (EPFL).
