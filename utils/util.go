@@ -35,3 +35,10 @@ func IntToBytes(num int) []byte {
 	binary.LittleEndian.PutUint32(buf, uint32(num))
 	return buf
 }
+
+func BoolToByte(b bool) byte {
+	if b {
+		return 1
+	}
+	return 0
+}
