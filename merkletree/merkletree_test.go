@@ -2,10 +2,15 @@ package merkletree
 
 import (
 	"bytes"
+	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 
+	"github.com/coniks-sys/coniks-go/kv"
+	"github.com/coniks-sys/coniks-go/kv/leveldbkv"
 	"github.com/coniks-sys/coniks-go/utils"
+	"github.com/syndtr/goleveldb/leveldb"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -279,4 +284,133 @@ func TestTreeClone(t *testing.T) {
 	if !bytes.Equal(ap.Leaf().Value(), []byte("value2")) {
 		t.Error(key2, "value mismatch\n")
 	}
+}
+
+// copyrighted by the Coname authors
+func withDB(f func(kv.DB)) {
+	dir, err := ioutil.TempDir("", "merkletree")
+	if err != nil {
+		panic(err)
+	}
+	defer os.RemoveAll(dir)
+	db, err := leveldb.OpenFile(dir, nil)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+	f(leveldbkv.Wrap(db))
+}
+
+func TestTreeFlush(t *testing.T) {
+	withDB(func(db kv.DB) {
+		key1 := "key1"
+		val1 := []byte("value1")
+		key2 := "key2"
+		val2 := []byte("value2")
+
+		m1, err := NewMerkleTree()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := m1.Set(key1, val1); err != nil {
+			t.Fatal(err)
+		}
+		if err := m1.Set(key2, val2); err != nil {
+			t.Fatal(err)
+		}
+		m1.recomputeHash()
+
+		wb := db.NewBatch()
+		m1.Flush(1, wb)
+		err = db.Write(wb)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		m2, err := OpenMerkleTree(db, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(m2.nonce, m1.nonce) ||
+			!bytes.Equal(m2.root.Hash(m1), m1.hash) {
+			t.Fatal("Bad tree construction")
+		}
+
+		n1, _ := m2.Get(key1)
+		if n1 == nil {
+			t.Error("Cannot find key:", key1)
+			return
+		}
+
+		n2, _ := m2.Get(key2)
+		if n2 == nil {
+			t.Error("Cannot find key:", key2)
+			return
+		}
+
+		if !bytes.Equal(n1.Value(), val1) {
+			t.Error(key1, "value mismatch")
+		}
+		if !bytes.Equal(n2.Value(), val2) {
+			t.Error(key2, "value mismatch")
+		}
+	})
+}
+
+func TestReconstructBranch(t *testing.T) {
+	withDB(func(db kv.DB) {
+		key1 := "key1"
+		val1 := []byte("value1")
+		key2 := "key3"
+		val2 := []byte("value2")
+
+		m1, err := NewMerkleTree()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := m1.Set(key1, val1); err != nil {
+			t.Fatal(err)
+		}
+		if err := m1.Set(key2, val2); err != nil {
+			t.Fatal(err)
+		}
+		m1.recomputeHash()
+
+		wb := db.NewBatch()
+		m1.Flush(1, wb)
+		err = db.Write(wb)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		m2_1, err := ReconstructBranch(db, 1, computePrivateIndex(key1))
+		if err != nil {
+			t.Fatal(err)
+		}
+		n1, _ := m2_1.Get(key1)
+		if n1 == nil {
+			t.Error("Cannot find key:", key1)
+			return
+		}
+		if !bytes.Equal(n1.Value(), val1) {
+			t.Error(key1, "value mismatch")
+		}
+
+		m2_2, err := ReconstructBranch(db, 1, computePrivateIndex(key2))
+		if err != nil {
+			t.Fatal(err)
+		}
+		n2, _ := m2_2.Get(key2)
+		if n1 == nil {
+			t.Error("Cannot find key:", key2)
+			return
+		}
+		if !bytes.Equal(n2.Value(), val2) {
+			t.Error(key2, "value mismatch")
+		}
+	})
 }

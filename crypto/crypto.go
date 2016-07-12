@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	HashSizeByte   = 32
-	HashID         = "SHAKE128"
-	PrivateKeySize = 64
+	PrivateIndexSize = 32
+	HashSizeByte     = 32
+	HashID           = "SHAKE128"
+	PrivateKeySize   = 64
 )
 
 type SigningKey ed25519.PrivateKey

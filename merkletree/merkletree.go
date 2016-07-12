@@ -10,12 +10,17 @@ import (
 )
 
 var (
-	ErrorInvalidTree = errors.New("[merkletree] invalid tree")
+	ErrorInvalidTree  = errors.New("[merkletree] Invalid tree")
+	ErrorBadTreeNonce = errors.New("[merkletree] Bad tree nonce")
 )
 
 const (
-	EmptyBranchIdentifier = 'E'
-	LeafIdentifier        = 'L'
+	EmptyBranchIdentifier  = 'E'
+	LeafIdentifier         = 'L'
+	InteriorNodeIdentifier = 'I'
+	NodeKeyIdentifier      = 'N'
+	EpochIdentifier        = "LC"
+	TreeNonceIdentifier    = "TN"
 )
 
 type MerkleTree struct {

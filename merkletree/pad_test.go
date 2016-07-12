@@ -31,7 +31,7 @@ func TestPADHashChain(t *testing.T) {
 	key3 := "key3"
 	val3 := []byte("value3")
 
-	pad, err := NewPAD(NewPolicies(2), signKey, 10)
+	pad, err := NewPAD(NewPolicies(2), nil, signKey, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +130,7 @@ func TestPADHashChain(t *testing.T) {
 func TestHashChainExceedsMaximumSize(t *testing.T) {
 	var hashChainLimit uint64 = 4
 
-	pad, err := NewPAD(NewPolicies(2), signKey, hashChainLimit)
+	pad, err := NewPAD(NewPolicies(2), nil, signKey, hashChainLimit)
 	if err != nil {
 		t.Fatal(err)
 	}

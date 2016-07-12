@@ -65,6 +65,9 @@ func (db *leveldbkv) Write(b kv.Batch) error {
 }
 
 func (db *leveldbkv) NewIterator(rg *kv.Range) kv.Iterator {
+	if rg == nil {
+		return (*leveldb.DB)(db).NewIterator(nil, nil)
+	}
 	return (*leveldb.DB)(db).NewIterator(&util.Range{Start: rg.Start, Limit: rg.Limit}, nil)
 }
 

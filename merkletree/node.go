@@ -3,6 +3,14 @@ package merkletree
 import (
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/utils"
+	"errors"
+
+	"github.com/coniks-sys/coniks-go/kv"
+)
+
+var (
+	ErrorBadNodeLength     = errors.New("[merkletree] Bad node length")
+	ErrorBadNodeIdentifier = errors.New("[merkletree] Bad node identifier")
 )
 
 type node struct {
@@ -70,6 +78,9 @@ type MerkleNode interface {
 	isEmpty() bool
 	Hash(*MerkleTree) []byte
 	Clone(*interiorNode) MerkleNode
+	flush(epoch uint64, prefixBits []bool, wb kv.Batch)
+	serialize() []byte
+	setParent(n MerkleNode)
 }
 
 var _ MerkleNode = (*userLeafNode)(nil)
