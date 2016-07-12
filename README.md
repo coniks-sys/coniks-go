@@ -15,7 +15,7 @@ signKey := crypto.GenerateKey()
 
 // init STR history chain with maximum length is len
 // using DefaultPolicies as current policy
-pad := NewPAD(NewPolicies(epochInterval), signKey, len)
+pad := NewPAD(NewPolicies(epochDeadline), signKey, len)
 ```
 
 Update tree in each epoch
@@ -30,7 +30,7 @@ pad.Update(nil)
 
 Look-up
 
-`LookUp(key)` and `LookUpInEpoch(key, counter)` return a `MerkleNode` instance and an `AuthenticationPath` for proofs of inclusion/absence.
+`LookUp(key)` and `LookUpInEpoch(key, epoch)` return a `MerkleNode` instance and an `AuthenticationPath` for proofs of inclusion/absence.
 A proof of absence also includes an empty leaf node in the returned auth path.
 
 ### TODO

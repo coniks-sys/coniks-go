@@ -16,12 +16,12 @@ type PAD struct {
 	key          crypto.SigningKey
 	tree         *MerkleTree
 	snapshots    map[uint64]*SignedTreeRoot
-	loadedEpochs []uint64 // slice of counters in snapshots
+	loadedEpochs []uint64 // slice of epochs in snapshots
 	currentSTR   *SignedTreeRoot
 }
 
 // NewPAD creates new PAD consisting of an array of hash chain
-// indexed by the counter and its maximum length is len
+// indexed by the epoch and its maximum length is len
 func NewPAD(policies Policies, key crypto.SigningKey, len int64) (*PAD, error) {
 	if policies == nil {
 		panic(ErrorNilPolicies)
@@ -40,7 +40,7 @@ func NewPAD(policies Policies, key crypto.SigningKey, len int64) (*PAD, error) {
 }
 
 // if policies is nil, the previous policies will be used
-func (pad *PAD) generateNextSTR(policies Policies, m *MerkleTree, counter uint64) {
+func (pad *PAD) generateNextSTR(policies Policies, m *MerkleTree, epoch uint64) {
 	var prevStrHash []byte
 	if pad.currentSTR == nil {
 		prevStrHash = make([]byte, crypto.HashSizeByte)
@@ -50,15 +50,15 @@ func (pad *PAD) generateNextSTR(policies Policies, m *MerkleTree, counter uint64
 			policies = pad.currentSTR.policies
 		}
 	}
-	pad.currentSTR = NewSTR(pad.key, policies, m, counter, prevStrHash)
+	pad.currentSTR = NewSTR(pad.key, policies, m, epoch, prevStrHash)
 }
 
-func (pad *PAD) updateInternal(policies Policies, counter uint64) {
+func (pad *PAD) updateInternal(policies Policies, epoch uint64) {
 	pad.tree.recomputeHash()
 	m := pad.tree.Clone()
-	pad.generateNextSTR(policies, m, counter)
-	pad.snapshots[counter] = pad.currentSTR
-	pad.loadedEpochs = append(pad.loadedEpochs, counter)
+	pad.generateNextSTR(policies, m, epoch)
+	pad.snapshots[epoch] = pad.currentSTR
+	pad.loadedEpochs = append(pad.loadedEpochs, epoch)
 }
 
 func (pad *PAD) Update(policies Policies) error {
@@ -71,7 +71,7 @@ func (pad *PAD) Update(policies Policies) error {
 		pad.loadedEpochs = append(pad.loadedEpochs[:0], pad.loadedEpochs[n:]...)
 	}
 
-	pad.updateInternal(policies, pad.currentSTR.counter+1)
+	pad.updateInternal(policies, pad.currentSTR.epoch+1)
 	return nil
 }
 
@@ -84,8 +84,8 @@ func (pad *PAD) LookUp(key string) (MerkleNode, *AuthenticationPath) {
 	return str.tree.Get(key)
 }
 
-func (pad *PAD) LookUpInEpoch(key string, counter uint64) (MerkleNode, *AuthenticationPath, error) {
-	str := pad.GetSTR(counter)
+func (pad *PAD) LookUpInEpoch(key string, epoch uint64) (MerkleNode, *AuthenticationPath, error) {
+	str := pad.GetSTR(epoch)
 	if str == nil {
 		return nil, nil, ErrorSTRNotFound
 	}
@@ -93,13 +93,13 @@ func (pad *PAD) LookUpInEpoch(key string, counter uint64) (MerkleNode, *Authenti
 	return n, ap, nil
 }
 
-func (pad *PAD) GetSTR(counter uint64) *SignedTreeRoot {
+func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 	switch true {
-	case counter >= pad.currentSTR.counter:
+	case epoch >= pad.currentSTR.epoch:
 		return pad.currentSTR
-	case counter < 1:
+	case epoch < 1:
 		return nil
 	default:
-		return pad.snapshots[counter]
+		return pad.snapshots[epoch]
 	}
 }

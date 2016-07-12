@@ -17,10 +17,10 @@ func init() {
 	}
 }
 
-// 1st: counter = 1 (empty tree)
-// 2nd: counter = 2 (key1)
-// 3rd: counter = 3 (key1, key2)
-// 4th: counter = 4 (key1, key2, key3) (latest STR)
+// 1st: epoch = 1 (empty tree)
+// 2nd: epoch = 2 (key1)
+// 3rd: epoch = 3 (key1, key2)
+// 4th: epoch = 4 (key1, key2, key3) (latest STR)
 func TestHistoryHashChain(t *testing.T) {
 	key1 := "key"
 	val1 := []byte("value")
@@ -63,8 +63,8 @@ func TestHistoryHashChain(t *testing.T) {
 			t.Fatal("Cannot get STR #", i)
 		}
 
-		if str.counter != uint64(i) {
-			t.Fatal("Got invalid STR", "want", i, "got", str.counter)
+		if str.epoch != uint64(i) {
+			t.Fatal("Got invalid STR", "want", i, "got", str.epoch)
 		}
 	}
 
@@ -78,8 +78,8 @@ func TestHistoryHashChain(t *testing.T) {
 		t.Error("Cannot get STR")
 	}
 
-	if str.counter != 4 {
-		t.Error("Got invalid STR", "want", 4, "got", str.counter)
+	if str.epoch != 4 {
+		t.Error("Got invalid STR", "want", 4, "got", str.epoch)
 	}
 
 	// lookup
