@@ -155,6 +155,7 @@ insertLoop:
 			if direction { // go right
 				if currentNodeI.rightChild.isEmpty() {
 					currentNodeI.rightChild = toAdd
+					toAdd.level = depth + 1
 					toAdd.parent = currentNodeI
 					break insertLoop
 				} else {
