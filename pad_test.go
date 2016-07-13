@@ -17,11 +17,11 @@ func init() {
 	}
 }
 
-// 1st: epoch = 1 (empty tree)
-// 2nd: epoch = 2 (key1)
-// 3rd: epoch = 3 (key1, key2)
-// 4th: epoch = 4 (key1, key2, key3) (latest STR)
-func TestHistoryHashChain(t *testing.T) {
+// 1st: epoch = 0 (empty tree)
+// 2nd: epoch = 1 (key1)
+// 3rd: epoch = 2 (key1, key2)
+// 4th: epoch = 3 (key1, key2, key3) (latest STR)
+func TestPADHashChain(t *testing.T) {
 	key1 := "key"
 	val1 := []byte("value")
 
@@ -31,34 +31,28 @@ func TestHistoryHashChain(t *testing.T) {
 	key3 := "key3"
 	val3 := []byte("value3")
 
-	history, err := NewPAD(NewPolicies(2), signKey, 10)
+	pad, err := NewPAD(NewPolicies(2), signKey, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := history.Set(key1, val1); err != nil {
+	if err := pad.Set(key1, val1); err != nil {
 		t.Fatal(err)
 	}
-	if err := history.Update(nil); err != nil {
-		t.Fatal(err)
-	}
+	pad.Update(nil)
 
-	if err := history.Set(key2, val2); err != nil {
+	if err := pad.Set(key2, val2); err != nil {
 		t.Fatal(err)
 	}
-	if err := history.Update(nil); err != nil {
-		t.Fatal(err)
-	}
+	pad.Update(nil)
 
-	if err := history.Set(key3, val3); err != nil {
+	if err := pad.Set(key3, val3); err != nil {
 		t.Fatal(err)
 	}
-	if err := history.Update(nil); err != nil {
-		t.Fatal(err)
-	}
+	pad.Update(nil)
 
-	for i := 1; i <= 4; i++ {
-		str := history.GetSTR(uint64(i))
+	for i := 0; i < 4; i++ {
+		str := pad.GetSTR(uint64(i))
 		if str == nil {
 			t.Fatal("Cannot get STR #", i)
 		}
@@ -68,22 +62,17 @@ func TestHistoryHashChain(t *testing.T) {
 		}
 	}
 
-	str := history.GetSTR(0)
-	if str != nil {
-		t.Error("Unexpected STR")
-	}
-
-	str = history.GetSTR(5)
+	str := pad.GetSTR(5)
 	if str == nil {
 		t.Error("Cannot get STR")
 	}
 
-	if str.epoch != 4 {
-		t.Error("Got invalid STR", "want", 4, "got", str.epoch)
+	if str.epoch != 3 {
+		t.Error("Got invalid STR", "want", 3, "got", str.epoch)
 	}
 
 	// lookup
-	r, _ := history.LookUp(key1)
+	r, _ := pad.LookUp(key1)
 	if r == nil {
 		t.Error("Cannot find key:", key1)
 		return
@@ -92,7 +81,7 @@ func TestHistoryHashChain(t *testing.T) {
 		t.Error(key1, "value mismatch")
 	}
 
-	r, _ = history.LookUp(key2)
+	r, _ = pad.LookUp(key2)
 	if r == nil {
 		t.Error("Cannot find key:", key2)
 		return
@@ -101,7 +90,7 @@ func TestHistoryHashChain(t *testing.T) {
 		t.Error(key2, "value mismatch")
 	}
 
-	r, _ = history.LookUp(key3)
+	r, _ = pad.LookUp(key3)
 	if r == nil {
 		t.Error("Cannot find key:", key3)
 		return
@@ -110,73 +99,63 @@ func TestHistoryHashChain(t *testing.T) {
 		t.Error(key3, "value mismatch")
 	}
 
-	r, _, err = history.LookUpInEpoch(key2, 2)
+	r, _, err = pad.LookUpInEpoch(key2, 1)
 	if err != nil {
 		t.Error(err)
 	} else if r != nil {
-		t.Error("Found unexpected key", key2, "in STR #", 2)
+		t.Error("Found unexpected key", key2, "in STR #", 1)
 	}
-	r, _, err = history.LookUpInEpoch(key2, 3)
+	r, _, err = pad.LookUpInEpoch(key2, 2)
 	if err != nil {
 		t.Error(err)
 	} else if r == nil {
-		t.Error("Cannot find key", key2, "in STR #", 3)
+		t.Error("Cannot find key", key2, "in STR #", 2)
 	}
 
-	r, _, err = history.LookUpInEpoch(key3, 3)
+	r, _, err = pad.LookUpInEpoch(key3, 2)
 	if err != nil {
 		t.Error(err)
 	} else if r != nil {
-		t.Error("Found unexpected key", key3, "in STR #", 3)
+		t.Error("Found unexpected key", key3, "in STR #", 2)
 	}
 
-	r, _, err = history.LookUpInEpoch(key3, 4)
+	r, _, err = pad.LookUpInEpoch(key3, 3)
 	if err != nil {
 		t.Error(err)
 	} else if r == nil {
-		t.Error("Cannot find key", key3, "in STR #", 4)
+		t.Error("Cannot find key", key3, "in STR #", 3)
 	}
 }
 
 func TestHashChainExceedsMaximumSize(t *testing.T) {
 	var hashChainLimit int64 = 4
 
-	history, err := NewPAD(NewPolicies(2), signKey, hashChainLimit)
+	pad, err := NewPAD(NewPolicies(2), signKey, hashChainLimit)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := history.Update(nil); err != nil {
-		t.Fatal(err)
-	}
-	if err := history.Update(nil); err != nil {
-		t.Fatal(err)
-	}
-	if err := history.Update(nil); err != nil {
-		t.Fatal(err)
-	}
+	pad.Update(nil)
+	pad.Update(nil)
+	pad.Update(nil)
 
-	if len(history.snapshots) != int(hashChainLimit) {
+	if len(pad.snapshots) != int(hashChainLimit) {
 		t.Error("Mismatch hash chain size",
 			"expect", hashChainLimit,
-			"got", len(history.snapshots))
+			"got", len(pad.snapshots))
 	}
 
-	if err := history.Update(nil); err != nil {
-		t.Fatal(err)
-	}
-	if len(history.snapshots) != int(hashChainLimit)/2+1 {
+	pad.Update(nil)
+	if len(pad.snapshots) != int(hashChainLimit)/2+1 {
 		t.Error("Mismatch hash chain size",
 			"expect", hashChainLimit/2+1,
-			"got", len(history.snapshots))
+			"got", len(pad.snapshots))
 	}
 
-	if err := history.Update(nil); err != nil {
-		t.Fatal(err)
-	}
-	if len(history.snapshots) != int(hashChainLimit)/2+2 {
+	pad.Update(nil)
+	if len(pad.snapshots) != int(hashChainLimit)/2+2 {
 		t.Error("Mismatch hash chain size",
 			"expect", hashChainLimit/2+2,
-			"got", len(history.snapshots))
+			"got", len(pad.snapshots))
 	}
 }

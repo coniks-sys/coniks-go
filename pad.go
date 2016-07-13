@@ -1,6 +1,7 @@
 package merkletree
 
 import (
+	"crypto/rand"
 	"errors"
 
 	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
@@ -35,7 +36,7 @@ func NewPAD(policies Policies, key crypto.SigningKey, len int64) (*PAD, error) {
 	}
 	pad.snapshots = make(map[uint64]*SignedTreeRoot, len)
 	pad.loadedEpochs = make([]uint64, 0, len)
-	pad.updateInternal(policies, 1)
+	pad.updateInternal(policies, 0)
 	return pad, nil
 }
 
@@ -44,8 +45,12 @@ func (pad *PAD) generateNextSTR(policies Policies, m *MerkleTree, epoch uint64) 
 	var prevStrHash []byte
 	if pad.currentSTR == nil {
 		prevStrHash = make([]byte, crypto.HashSizeByte)
+		if _, err := rand.Read(prevStrHash); err != nil {
+			// panic here since if there is an error, it will break the PAD.
+			panic(err)
+		}
 	} else {
-		prevStrHash = crypto.Digest(pad.currentSTR.serialize())
+		prevStrHash = crypto.Digest(pad.currentSTR.SerializeWithSignature())
 		if policies == nil {
 			policies = pad.currentSTR.policies
 		}
@@ -61,7 +66,7 @@ func (pad *PAD) updateInternal(policies Policies, epoch uint64) {
 	pad.loadedEpochs = append(pad.loadedEpochs, epoch)
 }
 
-func (pad *PAD) Update(policies Policies) error {
+func (pad *PAD) Update(policies Policies) {
 	// delete older str(s) as needed
 	if len(pad.loadedEpochs) == cap(pad.loadedEpochs) {
 		n := cap(pad.loadedEpochs) / 2
@@ -72,7 +77,6 @@ func (pad *PAD) Update(policies Policies) error {
 	}
 
 	pad.updateInternal(policies, pad.currentSTR.epoch+1)
-	return nil
 }
 
 func (pad *PAD) Set(key string, value []byte) error {
@@ -94,12 +98,8 @@ func (pad *PAD) LookUpInEpoch(key string, epoch uint64) (MerkleNode, *Authentica
 }
 
 func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
-	switch true {
-	case epoch >= pad.currentSTR.epoch:
+	if epoch >= pad.currentSTR.epoch {
 		return pad.currentSTR
-	case epoch < 1:
-		return nil
-	default:
-		return pad.snapshots[epoch]
 	}
+	return pad.snapshots[epoch]
 }
