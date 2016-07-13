@@ -52,6 +52,8 @@ func (str *SignedTreeRoot) getSTRBytesForSig() []byte {
 	return strBytes
 }
 
+// serialize encodes the str to a byte array with the following format:
+// [tree hash, epoch, previous epoch, previous hash, signature]
 func (str *SignedTreeRoot) serialize() []byte {
 	var strBytes []byte
 	strBytes = append(strBytes, str.tree.hash...)                    // root

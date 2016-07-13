@@ -14,16 +14,22 @@ func GetNthBit(bs []byte, offset int) bool {
 	return masked != 0
 }
 
+// LongToBytes converts an int64 variable to byte array
+// in litte endian format
 func LongToBytes(num int64) []byte {
 	buf := make([]byte, 8)
 	binary.LittleEndian.PutUint64(buf, uint64(num))
 	return buf
 }
 
+// ULongToBytes converts an uint64 variable to byte array
+// in litte endian format
 func ULongToBytes(num uint64) []byte {
 	return LongToBytes(int64(num))
 }
 
+// IntToBytes converts an int variable to byte array
+// in litte endian format
 func IntToBytes(num int) []byte {
 	buf := make([]byte, 4)
 	binary.LittleEndian.PutUint32(buf, uint32(num))

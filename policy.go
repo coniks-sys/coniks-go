@@ -24,6 +24,8 @@ func NewPolicies(epDeadline TimeStamp) Policies {
 	}
 }
 
+// Serialize encodes the policy to a byte array with the following format:
+// [lib version, cryptographic algorithm in use, epoch deadline]
 func (p *DefaultPolicies) Serialize() []byte {
 	var bs []byte
 	bs = append(bs, []byte(Version)...)                            // lib Version
