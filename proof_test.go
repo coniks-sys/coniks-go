@@ -31,30 +31,20 @@ func computeLeafHash(ap *AuthenticationPath) (leafHash []byte) {
 	return
 }
 
-func computeProofHash(ap *AuthenticationPath, depth int) (leftHash, rightHash []byte) {
-	if util.GetNthBit(ap.Index(), depth) { // right child
-		leftHash = ap.PrunedTree()[depth]
-		if depth == ap.Level()-1 {
-			rightHash = computeLeafHash(ap)
-		} else {
-			leftChildHash, rightChildHash := computeProofHash(ap, depth+1)
-			rightHash = crypto.Digest(leftChildHash, rightChildHash)
-		}
-	} else {
-		rightHash = ap.PrunedTree()[depth]
-		if depth == ap.Level()-1 {
-			leftHash = computeLeafHash(ap)
-		} else {
-			leftChildHash, rightChildHash := computeProofHash(ap, depth+1)
-			leftHash = crypto.Digest(leftChildHash, rightChildHash)
-		}
-	}
-	return
-}
-
 func authPathHash(ap *AuthenticationPath) []byte {
-	left, right := computeProofHash(ap, 0)
-	return crypto.Digest(left, right)
+	prunedHashes := ap.PrunedTree()
+	hash := computeLeafHash(ap)
+	depth := ap.level - 1
+	indexBits := util.ToBits(ap.Index())
+	for depth > -1 {
+		if indexBits[depth] { // right child
+			hash = crypto.Digest(prunedHashes[depth], hash)
+		} else {
+			hash = crypto.Digest(hash, prunedHashes[depth])
+		}
+		depth -= 1
+	}
+	return hash
 }
 
 func verifyProof(t *testing.T, ap *AuthenticationPath, treeHash []byte, key string) {
