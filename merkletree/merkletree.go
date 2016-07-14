@@ -19,7 +19,7 @@ const (
 	LeafIdentifier         = 'L'
 	InteriorNodeIdentifier = 'I'
 	NodeKeyIdentifier      = 'N'
-	EpochIdentifier        = "LC"
+	STRIdentifier          = 'S'
 	TreeNonceIdentifier    = "TN"
 )
 

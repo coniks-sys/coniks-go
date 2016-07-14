@@ -2,7 +2,6 @@ package merkletree
 
 import (
 	"crypto/rand"
-	"encoding/binary"
 	"errors"
 
 	"github.com/coniks-sys/coniks-go/crypto"
@@ -46,33 +45,6 @@ func NewPAD(policies Policies, db kv.DB, key crypto.SigningKey, length uint64) (
 	return pad, nil
 }
 
-// NewPADFromDB creates new PAD with a latest tree stored in the db
-func NewPADFromDB(policies Policies, db kv.DB, key crypto.SigningKey, length int64) (*PAD, error) {
-	if policies == nil {
-		panic(ErrorNilPolicies)
-	}
-	var err error
-	pad := new(PAD)
-	pad.key = key
-	epBytes, err := db.Get([]byte(EpochIdentifier))
-	if err != nil {
-		return nil, err
-	}
-	if len(epBytes[:]) != 8 {
-		panic(ErrorBadEpochLength)
-	}
-	ep := uint64(binary.LittleEndian.Uint64(epBytes[:8]))
-	pad.tree, err = OpenMerkleTree(db, ep)
-	if err != nil {
-		return nil, err
-	}
-	pad.snapshots = make(map[uint64]*SignedTreeRoot, length)
-	pad.loadedEpochs = make([]uint64, 0, length)
-	pad.db = db
-	pad.updateInternal(policies, 1)
-	return pad, nil
-}
-
 // if policies is nil, the previous policies will be used
 func (pad *PAD) generateNextSTR(policies Policies, m *MerkleTree, epoch uint64) {
 	var prevStrHash []byte
@@ -93,7 +65,7 @@ func (pad *PAD) generateNextSTR(policies Policies, m *MerkleTree, epoch uint64) 
 
 func (pad *PAD) updateInternal(policies Policies, epoch uint64) {
 	pad.tree.recomputeHash()
-	pad.Flush(epoch)
+	pad.StoreToKV(epoch)
 	m := pad.tree.Clone()
 	pad.generateNextSTR(policies, m, epoch)
 	pad.snapshots[epoch] = pad.currentSTR

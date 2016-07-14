@@ -78,9 +78,9 @@ type MerkleNode interface {
 	isEmpty() bool
 	Hash(*MerkleTree) []byte
 	Clone(*interiorNode) MerkleNode
-	flush(epoch uint64, prefixBits []bool, wb kv.Batch)
-	serialize() []byte
 	setParent(n MerkleNode)
+	storeToKV(epoch uint64, prefixBits []bool, wb kv.Batch)
+	serialize() []byte
 }
 
 var _ MerkleNode = (*userLeafNode)(nil)
