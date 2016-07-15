@@ -111,13 +111,15 @@ func (n *interiorNode) Clone(parent *interiorNode) MerkleNode {
 			parent: parent,
 			level:  n.level,
 		},
+		leftHash:  append([]byte{}, n.leftHash...),
+		rightHash: append([]byte{}, n.rightHash...),
 	}
-	if n.leftChild != nil {
-		newNode.leftChild = n.leftChild.Clone(newNode)
+	if n.leftChild == nil ||
+		n.rightChild == nil {
+		panic(ErrorInvalidTree)
 	}
-	if n.rightChild != nil {
-		newNode.rightChild = n.rightChild.Clone(newNode)
-	}
+	newNode.leftChild = n.leftChild.Clone(newNode)
+	newNode.rightChild = n.rightChild.Clone(newNode)
 	return newNode
 }
 
