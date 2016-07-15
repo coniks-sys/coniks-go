@@ -83,18 +83,18 @@ func (pad *PAD) Set(key string, value []byte) error {
 	return pad.tree.Set(key, value)
 }
 
-func (pad *PAD) Lookup(key string) (MerkleNode, *AuthenticationPath) {
+func (pad *PAD) Lookup(key string) *AuthenticationPath {
 	str := pad.currentSTR
 	return str.tree.Get(key)
 }
 
-func (pad *PAD) LookupInEpoch(key string, epoch uint64) (MerkleNode, *AuthenticationPath, error) {
+func (pad *PAD) LookupInEpoch(key string, epoch uint64) (*AuthenticationPath, error) {
 	str := pad.GetSTR(epoch)
 	if str == nil {
-		return nil, nil, ErrorSTRNotFound
+		return nil, ErrorSTRNotFound
 	}
-	n, ap := str.tree.Get(key)
-	return n, ap, nil
+	ap := str.tree.Get(key)
+	return ap, nil
 }
 
 func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {

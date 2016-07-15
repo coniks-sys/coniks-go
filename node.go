@@ -67,7 +67,6 @@ func NewInteriorNode(parent MerkleNode, level int, prefixBits []bool) *interiorN
 }
 
 type MerkleNode interface {
-	Value() []byte
 	isEmpty() bool
 	Hash(*MerkleTree) []byte
 	Clone(*interiorNode) MerkleNode
@@ -146,50 +145,14 @@ func (n *emptyNode) Clone(parent *interiorNode) MerkleNode {
 	}
 }
 
-func (n *userLeafNode) Value() []byte {
-	return n.value
-}
-
 func (n *userLeafNode) isEmpty() bool {
 	return false
-}
-
-func (n *interiorNode) Value() []byte {
-	return nil
 }
 
 func (n *interiorNode) isEmpty() bool {
 	return false
 }
 
-func (n *emptyNode) Value() []byte {
-	return nil
-}
-
 func (n *emptyNode) isEmpty() bool {
 	return true
-}
-
-type ProofNode interface {
-	IsEmpty() bool
-	Commitment() []byte
-}
-
-var _ ProofNode = (*userLeafNode)(nil)
-var _ ProofNode = (*emptyNode)(nil)
-
-func (n *emptyNode) Commitment() []byte {
-	return nil
-}
-
-func (n *emptyNode) IsEmpty() bool {
-	return true
-}
-
-func (n *userLeafNode) Commitment() []byte {
-	return n.commitment
-}
-
-func (n *userLeafNode) IsEmpty() bool {
-	return false
 }
