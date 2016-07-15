@@ -21,7 +21,7 @@ func (ap *AuthenticationPath) Index() []byte {
 	return ap.index
 }
 
-func (ap *AuthenticationPath) LookUpIndex() []byte {
+func (ap *AuthenticationPath) LookupIndex() []byte {
 	return ap.lookupIndex
 }
 

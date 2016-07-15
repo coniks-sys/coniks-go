@@ -54,7 +54,7 @@ func verifyProof(t *testing.T, ap *AuthenticationPath, treeHash []byte, key stri
 	}
 
 	// step 1. Verify the auth path of the returned leaf
-	if bytes.Equal(ap.Index(), ap.LookUpIndex()) {
+	if bytes.Equal(ap.Index(), ap.LookupIndex()) {
 		// proof of inclusion
 		// make sure we got a userLeafNode
 		if _, ok := ap.Leaf().(*userLeafNode); !ok {
@@ -64,7 +64,7 @@ func verifyProof(t *testing.T, ap *AuthenticationPath, treeHash []byte, key stri
 		// proof of absence
 		// step 2. Check that where i and j differ is at bit l
 		indexBits := util.ToBits(ap.Index())
-		lookupIndexBits := util.ToBits(ap.LookUpIndex())
+		lookupIndexBits := util.ToBits(ap.LookupIndex())
 
 		for i := 0; i < ap.Level(); i++ {
 			if indexBits[i] != lookupIndexBits[i] {
@@ -78,7 +78,7 @@ func verifyProof(t *testing.T, ap *AuthenticationPath, treeHash []byte, key stri
 		}
 
 		// step 3. vrf_verify(i, alice) == true
-		if !bytes.Equal(computePrivateIndex(key), ap.LookUpIndex()) {
+		if !bytes.Equal(computePrivateIndex(key), ap.LookupIndex()) {
 			t.Error("VRF verify returns false")
 		}
 	}

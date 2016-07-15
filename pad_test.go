@@ -72,7 +72,7 @@ func TestPADHashChain(t *testing.T) {
 	}
 
 	// lookup
-	r, _ := pad.LookUp(key1)
+	r, _ := pad.Lookup(key1)
 	if r == nil {
 		t.Error("Cannot find key:", key1)
 		return
@@ -81,7 +81,7 @@ func TestPADHashChain(t *testing.T) {
 		t.Error(key1, "value mismatch")
 	}
 
-	r, _ = pad.LookUp(key2)
+	r, _ = pad.Lookup(key2)
 	if r == nil {
 		t.Error("Cannot find key:", key2)
 		return
@@ -90,7 +90,7 @@ func TestPADHashChain(t *testing.T) {
 		t.Error(key2, "value mismatch")
 	}
 
-	r, _ = pad.LookUp(key3)
+	r, _ = pad.Lookup(key3)
 	if r == nil {
 		t.Error("Cannot find key:", key3)
 		return
@@ -99,27 +99,27 @@ func TestPADHashChain(t *testing.T) {
 		t.Error(key3, "value mismatch")
 	}
 
-	r, _, err = pad.LookUpInEpoch(key2, 1)
+	r, _, err = pad.LookupInEpoch(key2, 1)
 	if err != nil {
 		t.Error(err)
 	} else if r != nil {
 		t.Error("Found unexpected key", key2, "in STR #", 1)
 	}
-	r, _, err = pad.LookUpInEpoch(key2, 2)
+	r, _, err = pad.LookupInEpoch(key2, 2)
 	if err != nil {
 		t.Error(err)
 	} else if r == nil {
 		t.Error("Cannot find key", key2, "in STR #", 2)
 	}
 
-	r, _, err = pad.LookUpInEpoch(key3, 2)
+	r, _, err = pad.LookupInEpoch(key3, 2)
 	if err != nil {
 		t.Error(err)
 	} else if r != nil {
 		t.Error("Found unexpected key", key3, "in STR #", 2)
 	}
 
-	r, _, err = pad.LookUpInEpoch(key3, 3)
+	r, _, err = pad.LookupInEpoch(key3, 3)
 	if err != nil {
 		t.Error(err)
 	} else if r == nil {
