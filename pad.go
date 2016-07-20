@@ -50,7 +50,7 @@ func (pad *PAD) generateNextSTR(policies Policies, m *MerkleTree, epoch uint64) 
 			panic(err)
 		}
 	} else {
-		prevStrHash = crypto.Digest(pad.currentSTR.SerializeWithSignature())
+		prevStrHash = crypto.Digest(pad.currentSTR.sig)
 		if policies == nil {
 			policies = pad.currentSTR.policies
 		}
