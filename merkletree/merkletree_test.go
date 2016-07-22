@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/coniks-sys/libmerkleprefixtree-go/internal"
+	"github.com/coniks-sys/coniks-go/utils"
 	"golang.org/x/crypto/sha3"
 )
 

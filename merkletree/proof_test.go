@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
-	"github.com/coniks-sys/libmerkleprefixtree-go/internal"
+	"github.com/coniks-sys/coniks-go/crypto"
+	"github.com/coniks-sys/coniks-go/utils"
 )
 
 func computeLeafHash(ap *AuthenticationPath) (leafHash []byte) {

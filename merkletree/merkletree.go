@@ -5,8 +5,8 @@ import (
 	"crypto/rand"
 	"errors"
 
-	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
-	"github.com/coniks-sys/libmerkleprefixtree-go/internal"
+	"github.com/coniks-sys/coniks-go/crypto"
+	"github.com/coniks-sys/coniks-go/utils"
 )
 
 var (

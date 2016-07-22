@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
+	"github.com/coniks-sys/coniks-go/crypto"
 )
 
 var signKey crypto.SigningKey

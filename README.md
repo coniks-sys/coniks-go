@@ -1,37 +1,29 @@
-[![Build Status](https://travis-ci.org/coniks-sys/libmerkleprefixtree-go.svg?branch=master)](https://travis-ci.org/coniks-sys/libmerkleprefixtree-go)
+# CONIKS Go Library
 
-# libmerkleprefixtree-go
-A Merkle prefix tree implementation in Golang
+[![Build Status](https://travis-ci.org/coniks-sys/coniks-go.svg?branch=master)](https://travis-ci.org/coniks-sys/coniks-go)
 
-This library currently uses the `SHAKE128` ShakeHash with output size of 32 bytes.
+https://coniks.org
 
-The signature scheme is `Ed25519` signature algorithm.
+##Introduction
+CONIKS is a key management system that provides transparency and privacy 
+for end-user public keys.
+CONIKS protects end-to-end encrypted communications against malicious or 
+compromised communication providers and surveillance by storing users' 
+encryption keys in tamper-evident and publicly auditable 
+key directories on the server side. 
+This allows messaging clients to verify the identity of 
+users automatically, and prevents malicious/compromised servers from 
+hijacking secure communications without getting caught.
 
-### Usage
-Initiate the history hash chain (the persistent authenticated dictionary)
-```
-// generate private key for STR signing
-signKey := crypto.GenerateKey()
+## Golang Library
+The packages in this library implement the various components of the CONIKS system and may be imported individually.
 
-// init STR history chain with maximum length is len
-// using DefaultPolicies as current policy
-pad := NewPAD(NewPolicies(epochDeadline), signKey, len)
-```
+- ``crypto``: Cryptographic algorithms and operations
+- ``merkletree``: Merkle prefix tree and related data structures
+- ``utils``: Utility functions 
 
-Update tree in each epoch
-```
-// insert new data
-pad.Set(key, value)
-...
-// update STR history chain
-// pass nil if the policies doesn't change
-pad.Update(nil)
-```
+## Disclaimer
+Please keep in mind that this CONIKS library is under active development. The repository may contain experimental features that aren't fully tested. We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/releases).
 
-Look-up
-
-`LookUp(key)` and `LookUpInEpoch(key, epoch)` return a `MerkleNode` instance and an `AuthenticationPath` for proofs of inclusion/absence.
-A proof of absence also includes an empty leaf node in the returned auth path.
-
-### TODO
-Some methods/functions should be exported in the future when the library is being used in real applications.
+##Documentation
+Coming soon!

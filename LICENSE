@@ -1,5 +1,5 @@
 This license applies to all parts of the Merkle Prefix Tree Golang library except the following:
-- Coname utility functions, located in internal/coname.go
+- Coname utility functions, located in utils/coname.go
 This module is copyrighted by the Coname Authors.
 - The ed25519 subpackage, located in crypto/ed25519
 This subpackage is copyrighted by the Go Authors.

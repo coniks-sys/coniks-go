@@ -10,7 +10,7 @@ import (
 	"crypto/sha512"
 	"testing"
 
-	"github.com/coniks-sys/libmerkleprefixtree-go/crypto/ed25519/edwards25519"
+	"github.com/coniks-sys/coniks-go/crypto/ed25519/edwards25519"
 	"golang.org/x/crypto/curve25519"
 	"golang.org/x/crypto/ed25519"
 )
