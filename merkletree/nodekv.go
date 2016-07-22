@@ -1,11 +1,11 @@
 package merkletree
 
-import (	
+import (
 	"encoding/binary"
 
-	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
-	"github.com/coniks-sys/libmerkleprefixtree-go/internal"
-	"github.com/coniks-sys/libmerkleprefixtree-go/kv"
+	"github.com/coniks-sys/coniks-go/crypto"
+	"github.com/coniks-sys/coniks-go/kv"
+	"github.com/coniks-sys/coniks-go/utils"
 )
 
 func serializeKvKey(epoch uint64, prefixBits []bool) []byte {

@@ -3,8 +3,8 @@ package merkletree
 import (
 	"encoding/binary"
 
-	"github.com/coniks-sys/libmerkleprefixtree-go/crypto"
-	"github.com/coniks-sys/libmerkleprefixtree-go/kv"
+	"github.com/coniks-sys/coniks-go/crypto"
+	"github.com/coniks-sys/coniks-go/kv"
 )
 
 // NewPADFromKV creates new PAD with a latest tree stored in the KV db

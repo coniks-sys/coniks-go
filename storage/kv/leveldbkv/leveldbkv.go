@@ -18,7 +18,7 @@ package leveldbkv
 import (
 	"fmt"
 
-	"github.com/coniks-sys/libmerkleprefixtree-go/kv"
+	"github.com/coniks-sys/coniks-go/kv"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"

@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/coniks-sys/libmerkleprefixtree-go/kv"
-	"github.com/coniks-sys/libmerkleprefixtree-go/kv/leveldbkv"
+	"github.com/coniks-sys/coniks-go/kv"
+	"github.com/coniks-sys/coniks-go/kv/leveldbkv"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
