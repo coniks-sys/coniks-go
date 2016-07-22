@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/coniks-sys/coniks-go.svg?branch=master)](https://travis-ci.org/coniks-sys/coniks-go)
 
-https://coniks.org
+http://coniks.org
 
 ##Introduction
 CONIKS is a key management system that provides transparency and privacy 
