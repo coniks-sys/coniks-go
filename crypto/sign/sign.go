@@ -9,6 +9,7 @@ import (
 const (
 	PrivateKeySize = 64
 	PublicKeySize  = 32
+	SignatureSize  = 64
 )
 
 type PrivateKey ed25519.PrivateKey
