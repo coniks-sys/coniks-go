@@ -23,7 +23,7 @@ type PAD struct {
 
 // NewPAD creates new PAD consisting of an array of hash chain
 // indexed by the epoch and its maximum length is len
-func NewPAD(policies Policies, key crypto.SigningKey, len int64) (*PAD, error) {
+func NewPAD(policies Policies, key crypto.SigningKey, len uint64) (*PAD, error) {
 	if policies == nil {
 		panic(ErrorNilPolicies)
 	}

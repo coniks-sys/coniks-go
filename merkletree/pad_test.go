@@ -128,7 +128,7 @@ func TestPADHashChain(t *testing.T) {
 }
 
 func TestHashChainExceedsMaximumSize(t *testing.T) {
-	var hashChainLimit int64 = 4
+	var hashChainLimit uint64 = 4
 
 	pad, err := NewPAD(NewPolicies(2), signKey, hashChainLimit)
 	if err != nil {
