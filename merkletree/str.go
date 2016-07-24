@@ -60,11 +60,6 @@ func (str *SignedTreeRoot) Serialize() []byte {
 	return strBytes
 }
 
-// SerializeWithSignature serializes the STR along with its signature
-func (str *SignedTreeRoot) SerializeWithSignature() []byte {
-	return append(str.Serialize(), str.sig...)
-}
-
 func (str *SignedTreeRoot) Root() []byte {
 	return str.tree.hash
 }
