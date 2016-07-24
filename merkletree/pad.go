@@ -120,20 +120,10 @@ func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 }
 
 func (pad *PAD) TB(key string, value []byte) (*TemporaryBinding, error) {
-	str := pad.latestSTR
 	index, _ := pad.computePrivateIndex(key, pad.policies.vrfPrivate())
-	tb := str.Signature
-	tb = append(tb, index...)
-	tb = append(tb, value...)
-	sig := crypto.Sign(pad.key, tb)
-
+	tb := NewTB(pad.key, pad.latestSTR.Signature, index, value)
 	err := pad.tree.Set(index, key, value)
-
-	return &TemporaryBinding{
-		Index:     index,
-		Value:     value,
-		Signature: sig,
-	}, err
+	return tb, err
 }
 
 // reshuffle recomputes indices of keys and store them with their values in new
