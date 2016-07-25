@@ -29,6 +29,18 @@ func TestHonestComplete(t *testing.T) {
 	}
 }
 
+func TestConvertSecretKeyToPublicKey(t *testing.T) {
+	pk, sk, err := GenerateKey(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pkBytes := Public(sk)
+	if !bytes.Equal(pk, pkBytes) {
+		t.Fatal("Couldn't obtain public key.")
+	}
+}
+
 func TestFlipBitForgery(t *testing.T) {
 	pk, sk, err := GenerateKey(nil)
 	if err != nil {

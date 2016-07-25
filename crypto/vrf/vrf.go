@@ -26,6 +26,7 @@ import (
 
 	"github.com/coniks-sys/coniks-go/crypto/ed25519/edwards25519"
 	"github.com/coniks-sys/coniks-go/crypto/ed25519/extra25519"
+	"golang.org/x/crypto/ed25519"
 )
 
 const (
@@ -56,6 +57,10 @@ func GenerateKey(rnd io.Reader) (pk []byte, sk *[SecretKeySize]byte, err error) 
 
 	copy(sk[32:], pkBytes[:])
 	return pkBytes[:], sk, err
+}
+
+func Public(sk *[SecretKeySize]byte) []byte {
+	return ed25519.PrivateKey(sk[:]).Public().(ed25519.PublicKey)
 }
 
 func expandSecret(sk *[SecretKeySize]byte) (x, skhr *[32]byte) {

@@ -37,11 +37,10 @@ func NewMerkleTree() (*MerkleTree, error) {
 	return m, nil
 }
 
-func (m *MerkleTree) Get(key string) *AuthenticationPath {
-	lookupIndex := computePrivateIndex(key)
+func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 	lookupIndexBits := util.ToBits(lookupIndex)
 	depth := 0
-	var nodePointer interface{}
+	var nodePointer MerkleNode
 	nodePointer = m.root
 
 	authPath := &AuthenticationPath{
@@ -92,8 +91,7 @@ func (m *MerkleTree) Get(key string) *AuthenticationPath {
 	panic(ErrorInvalidTree)
 }
 
-func (m *MerkleTree) Set(key string, value []byte) error {
-	index := computePrivateIndex(key)
+func (m *MerkleTree) Set(index []byte, key string, value []byte) error {
 
 	// generate random per user salt
 	salt := make([]byte, crypto.HashSizeByte)
@@ -113,16 +111,10 @@ func (m *MerkleTree) Set(key string, value []byte) error {
 	return nil
 }
 
-// Private Index calculation function
-// would be replaced with Ismail's VRF implementation
-func computePrivateIndex(key string) []byte {
-	return crypto.Digest([]byte(key))
-}
-
 func (m *MerkleTree) insertNode(index []byte, toAdd *userLeafNode) {
 	indexBits := util.ToBits(index)
 	depth := 0
-	var nodePointer interface{}
+	var nodePointer MerkleNode
 	nodePointer = m.root
 
 insertLoop:
@@ -189,6 +181,30 @@ insertLoop:
 		default:
 			panic(ErrorInvalidTree)
 		}
+	}
+}
+
+// visits all leaf-nodes and calls callBack on each of them
+// doesn't modify the underlying tree m
+func (m *MerkleTree) visitLeafNodes(callBack func(*userLeafNode)) {
+	visitULNsInternal(m.root, callBack)
+}
+
+func visitULNsInternal(nodePtr MerkleNode, callBack func(*userLeafNode)) {
+	switch nodePtr.(type) {
+	case *userLeafNode:
+		callBack(nodePtr.(*userLeafNode))
+	case *interiorNode:
+		if leftChild := nodePtr.(*interiorNode).leftChild; leftChild != nil {
+			visitULNsInternal(leftChild, callBack)
+		}
+		if rightChild := nodePtr.(*interiorNode).rightChild; rightChild != nil {
+			visitULNsInternal(rightChild, callBack)
+		}
+	case *emptyNode:
+		// do nothing
+	default:
+		panic(ErrorInvalidTree)
 	}
 }
 

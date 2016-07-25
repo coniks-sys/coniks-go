@@ -4,6 +4,7 @@ type AuthenticationPath struct {
 	treeNonce    []byte
 	prunedHashes [][]byte
 	lookupIndex  []byte
+	vrfProof     []byte
 	leaf         ProofNode
 }
 
@@ -17,6 +18,10 @@ func (ap *AuthenticationPath) PrunedTree() [][]byte {
 
 func (ap *AuthenticationPath) LookupIndex() []byte {
 	return ap.lookupIndex
+}
+
+func (ap *AuthenticationPath) VrfProof() []byte {
+	return ap.vrfProof
 }
 
 func (ap *AuthenticationPath) Leaf() ProofNode {

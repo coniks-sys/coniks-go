@@ -22,7 +22,6 @@ func TestCurve25519Conversion(t *testing.T) {
 	var privBytes [64]byte
 	copy(privBytes[:], private)
 
-
 	var curve25519Public, curve25519Public2, curve25519Private [32]byte
 	PrivateKeyToCurve25519(&curve25519Private, &privBytes)
 	curve25519.ScalarBaseMult(&curve25519Public, &curve25519Private)

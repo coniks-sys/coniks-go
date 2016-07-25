@@ -31,7 +31,7 @@ func TestPADHashChain(t *testing.T) {
 	key3 := "key3"
 	val3 := []byte("value3")
 
-	pad, err := NewPAD(NewPolicies(2), signKey, 10)
+	pad, err := NewPAD(NewPolicies(2, vrfPrivKey1), signKey, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestPADHashChain(t *testing.T) {
 	}
 
 	// lookup
-	ap := pad.Lookup(key1)
+	ap, _ := pad.Lookup(key1)
 	if ap.Leaf().Value() == nil {
 		t.Error("Cannot find key:", key1)
 		return
@@ -81,7 +81,7 @@ func TestPADHashChain(t *testing.T) {
 		t.Error(key1, "value mismatch")
 	}
 
-	ap = pad.Lookup(key2)
+	ap, _ = pad.Lookup(key2)
 	if ap.Leaf().Value() == nil {
 		t.Error("Cannot find key:", key2)
 		return
@@ -90,7 +90,7 @@ func TestPADHashChain(t *testing.T) {
 		t.Error(key2, "value mismatch")
 	}
 
-	ap = pad.Lookup(key3)
+	ap, _ = pad.Lookup(key3)
 	if ap.Leaf().Value() == nil {
 		t.Error("Cannot find key:", key3)
 		return
@@ -130,7 +130,7 @@ func TestPADHashChain(t *testing.T) {
 func TestHashChainExceedsMaximumSize(t *testing.T) {
 	var hashChainLimit uint64 = 4
 
-	pad, err := NewPAD(NewPolicies(2), signKey, hashChainLimit)
+	pad, err := NewPAD(NewPolicies(2, vrfPrivKey1), signKey, hashChainLimit)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,5 +157,72 @@ func TestHashChainExceedsMaximumSize(t *testing.T) {
 		t.Error("Mismatch hash chain size",
 			"expect", hashChainLimit/2+2,
 			"got", len(pad.snapshots))
+	}
+}
+
+func TestPoliciesChange(t *testing.T) {
+	key1 := "key"
+	val1 := []byte("value")
+
+	key2 := "key2"
+	val2 := []byte("value2")
+
+	key3 := "key3"
+	val3 := []byte("value3")
+
+	pad, err := NewPAD(NewPolicies(3, vrfPrivKey1), signKey, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := pad.Set(key1, val1); err != nil {
+		t.Fatal(err)
+	}
+	// key change between epoch 1 and 2:
+	pad.Update(NewPolicies(3, vrfPrivKey2))
+
+	if err := pad.Set(key2, val2); err != nil {
+		t.Fatal(err)
+	}
+	pad.Update(nil)
+
+	if err := pad.Set(key3, val3); err != nil {
+		t.Fatal(err)
+	}
+	pad.Update(nil)
+
+	ap, _ := pad.Lookup(key1)
+	if ap.Leaf().Value() == nil {
+		t.Error("Cannot find key:", key1)
+	}
+	if !bytes.Equal(ap.Leaf().Value(), val1) {
+		t.Error(key1, "value mismatch")
+	}
+
+	ap, _ = pad.Lookup(key2)
+	if ap.Leaf().Value() == nil {
+		t.Error("Cannot find key:", key2)
+	}
+	if !bytes.Equal(ap.Leaf().Value(), val2) {
+		t.Error(key2, "value mismatch")
+	}
+
+	ap, err = pad.LookupInEpoch(key1, 1)
+	if err != nil {
+		t.Error(err)
+	} else if !bytes.Equal(ap.Leaf().Value(), val1) {
+		t.Error(key1, "value mismatch")
+	}
+	ap, err = pad.LookupInEpoch(key2, 2)
+	if err != nil {
+		t.Error(err)
+	}
+	ap, err = pad.LookupInEpoch(key3, 3)
+	if err != nil {
+		t.Error(err)
+	} else if ap.Leaf().Value() == nil {
+		t.Error("Cannot find key", key3, "in STR #", 3)
+	} else if !bytes.Equal(ap.Leaf().Value(), val3) {
+		t.Error(key3, "value mismatch")
 	}
 }
