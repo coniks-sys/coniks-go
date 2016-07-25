@@ -130,6 +130,7 @@ func (pad *PAD) TB(key string, value []byte) (*TemporaryBinding, error) {
 	err := pad.tree.Set(index, key, value)
 
 	return &TemporaryBinding{
+		str:   pad.currentSTR.sig,
 		index: index,
 		value: value,
 		sig:   sig,

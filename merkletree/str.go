@@ -79,3 +79,15 @@ func (str *SignedTreeRoot) PreviousSTRHash() []byte {
 func (str *SignedTreeRoot) Signature() []byte {
 	return str.sig
 }
+
+func (str *SignedTreeRoot) LibVersion() []byte {
+	return []byte(Version)
+}
+
+func (str *SignedTreeRoot) HashID() []byte {
+	return []byte(crypto.HashID)
+}
+
+func (str *SignedTreeRoot) EpochDeadlinePolicy() []byte {
+	return util.ULongToBytes(uint64(str.policies.EpochDeadline()))
+}

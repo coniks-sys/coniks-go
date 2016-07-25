@@ -1,6 +1,7 @@
 package merkletree
 
 type TemporaryBinding struct {
+	str   []byte
 	index []byte
 	value []byte
 	sig   []byte
@@ -16,4 +17,8 @@ func (tb *TemporaryBinding) Value() []byte {
 
 func (tb *TemporaryBinding) Signature() []byte {
 	return tb.sig
+}
+
+func (tb *TemporaryBinding) STR() []byte {
+	return tb.str
 }
