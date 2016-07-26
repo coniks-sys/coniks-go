@@ -2,33 +2,15 @@ package merkletree
 
 import (
 	"bytes"
-	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/coniks-sys/coniks-go/storage/kv"
-	"github.com/coniks-sys/coniks-go/storage/kv/leveldbkv"
-	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/coniks-sys/coniks-go/utils"
 	"github.com/yahoo/coname/vrf"
 )
 
-// copyrighted by the Coname authors
-func withDB(f func(kv.DB)) {
-	dir, err := ioutil.TempDir("", "merkletree")
-	if err != nil {
-		panic(err)
-	}
-	defer os.RemoveAll(dir)
-	db, err := leveldb.OpenFile(dir, nil)
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
-	f(leveldbkv.Wrap(db))
-}
-
 func TestTreeStore(t *testing.T) {
-	withDB(func(db kv.DB) {
+	util.WithDB(func(db kv.DB) {
 		key1 := "key1"
 		val1 := []byte("value1")
 		key2 := "key2"
@@ -85,7 +67,7 @@ func TestTreeStore(t *testing.T) {
 }
 
 func TestReconstructBranch(t *testing.T) {
-	withDB(func(db kv.DB) {
+	util.WithDB(func(db kv.DB) {
 		key1 := "key1"
 		val1 := []byte("value1")
 		key2 := "key3"

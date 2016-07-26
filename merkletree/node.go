@@ -1,15 +1,9 @@
 package merkletree
 
 import (
-	"errors"
-
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/utils"
-)
-
-var (
-	ErrorBadNodeIdentifier = errors.New("[merkletree] Bad node identifier")
 )
 
 type node struct {
@@ -78,7 +72,6 @@ type MerkleNode interface {
 	Hash(*MerkleTree) []byte
 	Clone(*interiorNode) MerkleNode
 	storeToKV(epoch uint64, prefixBits []bool, wb kv.Batch)
-	serialize() []byte
 }
 
 var _ MerkleNode = (*userLeafNode)(nil)

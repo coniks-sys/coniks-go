@@ -2,10 +2,15 @@ package merkletree
 
 import (
 	"encoding/binary"
+	"errors"
 
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/utils"
+)
+
+var (
+	ErrorBadNodeIdentifier = errors.New("[merkletree] Bad node identifier")
 )
 
 func serializeKvKey(epoch uint64, prefixBits []bool) []byte {
@@ -19,32 +24,23 @@ func serializeKvKey(epoch uint64, prefixBits []bool) []byte {
 	return key
 }
 
+// storeToKV stores an interiorNode into db as following scheme:
+// [identifier, level, leftHash, rightHash]
 func (n *interiorNode) storeToKV(epoch uint64, prefixBits []bool, wb kv.Batch) {
-	wb.Put(serializeKvKey(epoch, prefixBits), n.serialize())
-	n.leftChild.storeToKV(epoch, append(prefixBits, false), wb)
-	n.rightChild.storeToKV(epoch, append(prefixBits, true), wb)
-}
-
-func (n *userLeafNode) storeToKV(epoch uint64, prefixBits []bool, wb kv.Batch) {
-	wb.Put(serializeKvKey(epoch, prefixBits), n.serialize())
-}
-
-func (n *emptyNode) storeToKV(epoch uint64, prefixBits []bool, wb kv.Batch) {
-	wb.Put(serializeKvKey(epoch, prefixBits), n.serialize())
-}
-
-func (n *interiorNode) serialize() []byte {
-	// identifier + level + leftHash + rightHash
 	buf := make([]byte, 0, 1+4+crypto.HashSizeByte*2)
 	buf = append(buf, InteriorNodeIdentifier)
 	buf = append(buf, util.IntToBytes(n.level)...)
 	buf = append(buf, n.leftHash...)
 	buf = append(buf, n.rightHash...)
-	return buf
+
+	wb.Put(serializeKvKey(epoch, prefixBits), buf)
+	n.leftChild.storeToKV(epoch, append(prefixBits, false), wb)
+	n.rightChild.storeToKV(epoch, append(prefixBits, true), wb)
 }
 
-func (n *userLeafNode) serialize() []byte {
-	// identifier + level + len(key) + key + len(value) + value + salt + index + commitment
+// storeToKV stores a userLeafNode into db as following scheme:
+// [identifier, level, key+len, value+len, salt, index, commitment]
+func (n *userLeafNode) storeToKV(epoch uint64, prefixBits []bool, wb kv.Batch) {
 	buf := make([]byte, 0, 1+4+crypto.HashSizeByte*2+crypto.PrivateIndexSize+len(n.key)+len(n.value)+4+4)
 	buf = append(buf, LeafIdentifier)
 	buf = append(buf, util.IntToBytes(n.level)...)
@@ -55,16 +51,19 @@ func (n *userLeafNode) serialize() []byte {
 	buf = append(buf, n.salt...)
 	buf = append(buf, n.index...)
 	buf = append(buf, n.commitment...)
-	return buf
+
+	wb.Put(serializeKvKey(epoch, prefixBits), buf)
 }
 
-func (n *emptyNode) serialize() []byte {
-	// identifier + level + index
+// storeToKV stores an emptyNode into db as following scheme:
+// [identifier, level, index]
+func (n *emptyNode) storeToKV(epoch uint64, prefixBits []bool, wb kv.Batch) {
 	buf := make([]byte, 0, 1+4+len(n.index))
 	buf = append(buf, EmptyBranchIdentifier)
 	buf = append(buf, util.IntToBytes(n.level)...)
 	buf = append(buf, n.index...)
-	return buf
+
+	wb.Put(serializeKvKey(epoch, prefixBits), buf)
 }
 
 func loadNode(db kv.DB, epoch uint64, prefixBits []bool) (MerkleNode, error) {
