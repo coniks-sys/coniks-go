@@ -8,7 +8,7 @@ type TemporaryBinding struct {
 	Signature []byte
 }
 
-func NewTB(key crypto.SigningKey, index, indexProof, value, str []byte) *TemporaryBinding {
+func NewTB(key crypto.SigningKey, index, value, str []byte) *TemporaryBinding {
 	tb := make([]byte, 0, len(str)+len(index)+len(value))
 	tb = append(tb, str...)
 	tb = append(tb, index...)
