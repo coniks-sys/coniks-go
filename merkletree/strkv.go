@@ -8,7 +8,7 @@ import (
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
-func (str *SignedTreeRoot) serializeKvKey(epoch uint64) []byte {
+func (str *SignedTreeRoot) serializeKVKey(epoch uint64) []byte {
 	buf := make([]byte, 0, 1+8)
 	buf = append(buf, STRIdentifier)
 	buf = append(buf, util.ULongToBytes(epoch)...)
@@ -24,7 +24,7 @@ func (str *SignedTreeRoot) StoreToKV(wb kv.Batch) {
 		buf = append(buf, util.ULongToBytes(str.prevEpoch)...)
 	}
 	buf = append(buf, str.prevStrHash...)
-	wb.Put(str.serializeKvKey(str.epoch), buf)
+	wb.Put(str.serializeKVKey(str.epoch), buf)
 
 	str.tree.StoreToKV(str.epoch, wb)
 	str.policies.StoreToKV(str.epoch, wb)
@@ -43,7 +43,7 @@ func (str *SignedTreeRoot) LoadFromKV(db kv.DB, key crypto.SigningKey, epoch uin
 	}
 	str.tree = tree
 
-	buf, err := db.Get(str.serializeKvKey(epoch))
+	buf, err := db.Get(str.serializeKVKey(epoch))
 	if err == db.ErrNotFound() {
 		return nil
 	} else if err != nil {

@@ -13,7 +13,7 @@ var (
 	ErrorBadNodeIdentifier = errors.New("[merkletree] Bad node identifier")
 )
 
-func serializeKvKey(epoch uint64, prefixBits []bool) []byte {
+func serializeKVKey(epoch uint64, prefixBits []bool) []byte {
 	// NodeKeyIdentifier + epoch + len(prefixBits) + index
 	index := util.ToBytes(prefixBits)
 	key := make([]byte, 0, 1+8+4+len(index))
@@ -33,7 +33,7 @@ func (n *interiorNode) storeToKV(epoch uint64, prefixBits []bool, wb kv.Batch) {
 	buf = append(buf, n.leftHash...)
 	buf = append(buf, n.rightHash...)
 
-	wb.Put(serializeKvKey(epoch, prefixBits), buf)
+	wb.Put(serializeKVKey(epoch, prefixBits), buf)
 	n.leftChild.storeToKV(epoch, append(prefixBits, false), wb)
 	n.rightChild.storeToKV(epoch, append(prefixBits, true), wb)
 }
@@ -52,7 +52,7 @@ func (n *userLeafNode) storeToKV(epoch uint64, prefixBits []bool, wb kv.Batch) {
 	buf = append(buf, n.index...)
 	buf = append(buf, n.commitment...)
 
-	wb.Put(serializeKvKey(epoch, prefixBits), buf)
+	wb.Put(serializeKVKey(epoch, prefixBits), buf)
 }
 
 // storeToKV stores an emptyNode into db as following scheme:
@@ -63,11 +63,11 @@ func (n *emptyNode) storeToKV(epoch uint64, prefixBits []bool, wb kv.Batch) {
 	buf = append(buf, util.IntToBytes(n.level)...)
 	buf = append(buf, n.index...)
 
-	wb.Put(serializeKvKey(epoch, prefixBits), buf)
+	wb.Put(serializeKVKey(epoch, prefixBits), buf)
 }
 
 func loadNode(db kv.DB, epoch uint64, prefixBits []bool) (MerkleNode, error) {
-	nodeBytes, err := db.Get(serializeKvKey(epoch, prefixBits))
+	nodeBytes, err := db.Get(serializeKVKey(epoch, prefixBits))
 	if err == db.ErrNotFound() {
 		return nil, nil
 	} else if err != nil {

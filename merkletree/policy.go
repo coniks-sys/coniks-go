@@ -17,7 +17,7 @@ type Policies interface {
 	// storage interface
 	StoreToKV(uint64, kv.Batch)
 	LoadFromKV(kv.DB, uint64) error
-	serializeKvKey(uint64) []byte
+	serializeKVKey(uint64) []byte
 }
 
 type DefaultPolicies struct {

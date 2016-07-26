@@ -8,7 +8,7 @@ import (
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
-func (p *DefaultPolicies) serializeKvKey(epoch uint64) []byte {
+func (p *DefaultPolicies) serializeKVKey(epoch uint64) []byte {
 	buf := make([]byte, 0, 1+8)
 	buf = append(buf, PoliciesIdentifier)
 	buf = append(buf, util.ULongToBytes(epoch)...)
@@ -25,11 +25,11 @@ func (p *DefaultPolicies) StoreToKV(epoch uint64, wb kv.Batch) {
 	buf = append(buf, []byte(p.HashID)...)
 	buf = append(buf, util.ULongToBytes(uint64(p.epochDeadline))...)
 	buf = append(buf, p.vrfPrivateKey[:]...)
-	wb.Put(p.serializeKvKey(epoch), buf)
+	wb.Put(p.serializeKVKey(epoch), buf)
 }
 
 func (p *DefaultPolicies) LoadFromKV(db kv.DB, epoch uint64) error {
-	buf, err := db.Get(p.serializeKvKey(epoch))
+	buf, err := db.Get(p.serializeKVKey(epoch))
 	if err != nil {
 		return err
 	}
