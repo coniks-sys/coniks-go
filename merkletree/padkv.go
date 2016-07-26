@@ -43,7 +43,7 @@ func (pad *PAD) StoreToKV(epoch uint64) error {
 	}
 	wb := pad.db.NewBatch()
 	pad.tree.StoreToKV(epoch, wb)
-	pad.currentSTR.StoreToKV(wb)
+	pad.latestSTR.StoreToKV(wb)
 	// and store latest STR's epoch to db
 	wb.Put([]byte(EpochIdentifier), util.ULongToBytes(epoch))
 	err := pad.db.Write(wb)

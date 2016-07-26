@@ -3,6 +3,8 @@ package merkletree
 import (
 	"bytes"
 	"testing"
+
+	"github.com/yahoo/coname/vrf"
 )
 
 func TestNodeSerializationAndDeserialization(t *testing.T) {
@@ -15,22 +17,24 @@ func TestNodeSerializationAndDeserialization(t *testing.T) {
 	val1 := []byte("value1")
 	key2 := "key3"
 	val2 := []byte("value2")
-
-	if err := m.Set(key1, val1); err != nil {
+	index1 := vrf.Compute([]byte(key1), vrfPrivKey1)
+	if err := m.Set(index1, key1, val1); err != nil {
 		t.Fatal(err)
 	}
-	if err := m.Set(key2, val2); err != nil {
+
+	index2 := vrf.Compute([]byte(key2), vrfPrivKey1)
+	if err := m.Set(index2, key2, val2); err != nil {
 		t.Fatal(err)
 	}
 
 	m.recomputeHash()
 
-	ap := m.Get(key1)
+	ap := m.Get(index1)
 	if ap.Leaf().IsEmpty() {
 		t.Fatal("Cannot find key:", key1)
 	}
 
-	ap = m.Get(key2)
+	ap = m.Get(index2)
 	if ap.Leaf().IsEmpty() {
 		t.Fatal("Cannot find key:", key2)
 	}

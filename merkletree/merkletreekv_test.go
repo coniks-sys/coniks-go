@@ -9,6 +9,7 @@ import (
 	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/storage/kv/leveldbkv"
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/yahoo/coname/vrf"
 )
 
 // copyrighted by the Coname authors
@@ -37,10 +38,12 @@ func TestTreeStore(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := m1.Set(key1, val1); err != nil {
+		index1 := vrf.Compute([]byte(key1), vrfPrivKey1)
+		if err := m1.Set(index1, key1, val1); err != nil {
 			t.Fatal(err)
 		}
-		if err := m1.Set(key2, val2); err != nil {
+		index2 := vrf.Compute([]byte(key2), vrfPrivKey1)
+		if err := m1.Set(index2, key2, val2); err != nil {
 			t.Fatal(err)
 		}
 		m1.recomputeHash()
@@ -61,7 +64,7 @@ func TestTreeStore(t *testing.T) {
 			t.Fatal("Bad tree construction")
 		}
 
-		ap := m2.Get(key1)
+		ap := m2.Get(index1)
 		if ap.Leaf().IsEmpty() {
 			t.Error("Cannot find key:", key1)
 			return
@@ -70,7 +73,7 @@ func TestTreeStore(t *testing.T) {
 			t.Error(key1, "value mismatch")
 		}
 
-		ap = m2.Get(key2)
+		ap = m2.Get(index2)
 		if ap.Leaf().IsEmpty() {
 			t.Error("Cannot find key:", key2)
 			return
@@ -92,10 +95,12 @@ func TestReconstructBranch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := m1.Set(key1, val1); err != nil {
+		index1 := vrf.Compute([]byte(key1), vrfPrivKey1)
+		if err := m1.Set(index1, key1, val1); err != nil {
 			t.Fatal(err)
 		}
-		if err := m1.Set(key2, val2); err != nil {
+		index2 := vrf.Compute([]byte(key2), vrfPrivKey1)
+		if err := m1.Set(index2, key2, val2); err != nil {
 			t.Fatal(err)
 		}
 		m1.recomputeHash()
@@ -111,24 +116,26 @@ func TestReconstructBranch(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		m2_1, err := ReconstructBranch(db, 1, computePrivateIndex(key1))
+		m2_1, err := ReconstructBranch(db, 1, index1)
 		if err != nil {
 			t.Fatal(err)
 		}
-		ap := m2_1.Get(key1)
+		ap := m2_1.Get(index1)
 		if ap.Leaf().IsEmpty() {
 			t.Error("Cannot find key:", key1)
 			return
 		}
 		if !bytes.Equal(ap.Leaf().Value(), val1) {
-			t.Error(key1, "value mismatch")
+			t.Error(key1, "value mismatch",
+				"want", val1,
+				"get", ap.Leaf().Value())
 		}
 
-		m2_2, err := ReconstructBranch(db, 1, computePrivateIndex(key2))
+		m2_2, err := ReconstructBranch(db, 1, index2)
 		if err != nil {
 			t.Fatal(err)
 		}
-		ap = m2_2.Get(key2)
+		ap = m2_2.Get(index2)
 		if ap.Leaf().IsEmpty() {
 			t.Error("Cannot find key:", key2)
 			return
