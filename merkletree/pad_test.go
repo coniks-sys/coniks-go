@@ -31,30 +31,39 @@ func TestPADHashChain(t *testing.T) {
 	key3 := "key3"
 	val3 := []byte("value3")
 
+	treeHashes := make(map[uint64][]byte)
+
 	pad, err := NewPAD(NewPolicies(2, vrfPrivKey1), signKey, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
+	treeHashes[0] = append([]byte{}, pad.tree.hash...)
 
 	if err := pad.Set(key1, val1); err != nil {
 		t.Fatal(err)
 	}
 	pad.Update(nil)
+	treeHashes[1] = append([]byte{}, pad.tree.hash...)
 
 	if err := pad.Set(key2, val2); err != nil {
 		t.Fatal(err)
 	}
 	pad.Update(nil)
+	treeHashes[2] = append([]byte{}, pad.tree.hash...)
 
 	if err := pad.Set(key3, val3); err != nil {
 		t.Fatal(err)
 	}
 	pad.Update(nil)
+	treeHashes[3] = append([]byte{}, pad.tree.hash...)
 
 	for i := 0; i < 4; i++ {
 		str := pad.GetSTR(uint64(i))
 		if str == nil {
 			t.Fatal("Cannot get STR #", i)
+		}
+		if !bytes.Equal(str.Root(), treeHashes[uint64(i)]) {
+			t.Fatal("Malformed PAD Update")
 		}
 
 		if str.epoch != uint64(i) {

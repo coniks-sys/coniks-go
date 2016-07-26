@@ -220,5 +220,6 @@ func (m *MerkleTree) Clone() *MerkleTree {
 	return &MerkleTree{
 		nonce: m.nonce,
 		root:  m.root.Clone(nil).(*interiorNode),
+		hash:  append([]byte{}, m.hash...),
 	}
 }
