@@ -10,12 +10,12 @@ import (
 )
 
 func computeLeafHash(ap *AuthenticationPath) (leafHash []byte) {
-	leaf := ap.Leaf()
+	leaf := ap.Leaf
 	if !leaf.IsEmpty() {
 		// user leaf node
 		leafHash = crypto.Digest(
 			[]byte{LeafIdentifier},                // K_leaf
-			[]byte(ap.TreeNonce()),                // K_n
+			[]byte(ap.TreeNonce),                  // K_n
 			[]byte(leaf.Index()),                  // i
 			[]byte(util.IntToBytes(leaf.Level())), // l
 			[]byte(leaf.Commitment()),             // commit(key|| value)
@@ -24,7 +24,7 @@ func computeLeafHash(ap *AuthenticationPath) (leafHash []byte) {
 		// empty leaf node
 		leafHash = crypto.Digest(
 			[]byte{EmptyBranchIdentifier},         // K_empty
-			[]byte(ap.TreeNonce()),                // K_n
+			[]byte(ap.TreeNonce),                  // K_n
 			[]byte(leaf.Index()),                  // i
 			[]byte(util.IntToBytes(leaf.Level())), // l
 		)
@@ -33,10 +33,10 @@ func computeLeafHash(ap *AuthenticationPath) (leafHash []byte) {
 }
 
 func authPathHash(ap *AuthenticationPath) []byte {
-	prunedHashes := ap.PrunedTree()
+	prunedHashes := ap.PrunedTree
 	hash := computeLeafHash(ap)
-	depth := ap.Leaf().Level() - 1
-	indexBits := util.ToBits(ap.Leaf().Index())
+	depth := ap.Leaf.Level() - 1
+	indexBits := util.ToBits(ap.Leaf.Index())
 	for depth > -1 {
 		if indexBits[depth] { // right child
 			hash = crypto.Digest(prunedHashes[depth], hash)
@@ -55,33 +55,33 @@ func verifyProof(t *testing.T, ap *AuthenticationPath, treeHash []byte, key stri
 	}
 
 	// step 1. Verify the auth path of the returned leaf
-	if bytes.Equal(ap.Leaf().Index(), ap.LookupIndex()) {
+	if bytes.Equal(ap.Leaf.Index(), ap.LookupIndex) {
 		// proof of inclusion
 		// make sure we got a userLeafNode
-		if _, ok := ap.Leaf().(*userLeafNode); !ok {
+		if _, ok := ap.Leaf.(*userLeafNode); !ok {
 			t.Error("Expect a user leaf node in returned path")
 		}
 	} else {
 		// proof of absence
 		// step 2. vrf_verify(i, alice) == true
 		// we probably want to use vrf.Verify() here instead
-		if !bytes.Equal(vrf.Compute([]byte(key), vrfPrivKey1), ap.LookupIndex()) {
+		if !bytes.Equal(vrf.Compute([]byte(key), vrfPrivKey1), ap.LookupIndex) {
 			t.Error("VRF verify returns false")
 		}
 
 		// step 3. Check that where i and j differ is at bit l
-		indexBits := util.ToBits(ap.Leaf().Index())
-		lookupIndexBits := util.ToBits(ap.LookupIndex())
+		indexBits := util.ToBits(ap.Leaf.Index())
+		lookupIndexBits := util.ToBits(ap.LookupIndex)
 
-		for i := 0; i < ap.Leaf().Level(); i++ {
+		for i := 0; i < ap.Leaf.Level(); i++ {
 			if indexBits[i] != lookupIndexBits[i] {
 				t.Error("Invalid proof of absence. Expect indecies share the same prefix",
-					"lookup index: ", indexBits[:ap.Leaf().Level()],
-					"leaf index: ", lookupIndexBits[:ap.Leaf().Level()])
+					"lookup index: ", indexBits[:ap.Leaf.Level()],
+					"leaf index: ", lookupIndexBits[:ap.Leaf.Level()])
 			}
 		}
-		if indexBits[ap.Leaf().Level()+1] == lookupIndexBits[ap.Leaf().Level()+1] {
-			t.Error("Invalid proof of absence. Expect indecies differ is at bit", ap.Leaf().Level()+1)
+		if indexBits[ap.Leaf.Level()+1] == lookupIndexBits[ap.Leaf.Level()+1] {
+			t.Error("Invalid proof of absence. Expect indecies differ is at bit", ap.Leaf.Level()+1)
 		}
 	}
 }
@@ -115,42 +115,42 @@ func TestVerifyProof(t *testing.T) {
 	m.recomputeHash()
 
 	ap1 := m.Get(index1)
-	if ap1.Leaf().Value() == nil {
+	if ap1.Leaf.Value() == nil {
 		t.Error("Cannot find key:", key1)
 		return
 	}
 	ap2 := m.Get(index2)
-	if ap2.Leaf().Value() == nil {
+	if ap2.Leaf.Value() == nil {
 		t.Error("Cannot find key:", key2)
 		return
 	}
 	ap3 := m.Get(index3)
-	if ap3.Leaf().Value() == nil {
+	if ap3.Leaf.Value() == nil {
 		t.Error("Cannot find key:", key3)
 		return
 	}
 
 	// proof of inclusion
 	proof := m.Get(index3)
-	verifyProof(t, proof, m.GetHash(), key3)
+	verifyProof(t, proof, m.hash, key3)
 	hash := authPathHash(proof)
-	if !bytes.Equal(m.GetHash(), hash) {
+	if !bytes.Equal(m.hash, hash) {
 		t.Error("Invalid proof of inclusion")
 	}
 
 	// proof of absence
 	absentIndex := vrf.Compute([]byte("123"), vrfPrivKey1)
 	proof = m.Get(absentIndex) // shares the same prefix with an empty node
-	verifyProof(t, proof, m.GetHash(), "123")
+	verifyProof(t, proof, m.hash, "123")
 	authPathHash(proof)
-	if _, ok := proof.Leaf().(*emptyNode); !ok {
+	if _, ok := proof.Leaf.(*emptyNode); !ok {
 		t.Error("Invalid proof of absence. Expect an empty node in returned path")
 	}
 
 	/*proof = m.Get([]byte("key4")) // shares the same prefix with leaf node n2
-	verifyProof(t, proof, m.GetHash(), "key4")
+	verifyProof(t, proof, m.Hash, "key4")
 	authPathHash(proof)
-	if _, ok := proof.Leaf().(*userLeafNode); !ok {
+	if _, ok := proof.Leaf.(*userLeafNode); !ok {
 		t.Error("Invalid proof of absence. Expect a user leaf node in returned path")
 	}*/
 }

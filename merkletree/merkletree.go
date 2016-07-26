@@ -44,8 +44,8 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 	nodePointer = m.root
 
 	authPath := &AuthenticationPath{
-		treeNonce:   m.nonce,
-		lookupIndex: lookupIndex,
+		TreeNonce:   m.nonce,
+		LookupIndex: lookupIndex,
 	}
 
 	for {
@@ -59,11 +59,11 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 		}
 		direction := lookupIndexBits[depth]
 		if direction {
-			authPath.prunedHashes = append(authPath.prunedHashes,
+			authPath.PrunedTree = append(authPath.PrunedTree,
 				nodePointer.(*interiorNode).leftHash)
 			nodePointer = nodePointer.(*interiorNode).rightChild
 		} else {
-			authPath.prunedHashes = append(authPath.prunedHashes,
+			authPath.PrunedTree = append(authPath.PrunedTree,
 				nodePointer.(*interiorNode).rightHash)
 			nodePointer = nodePointer.(*interiorNode).leftChild
 		}
@@ -76,7 +76,7 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 	switch nodePointer.(type) {
 	case *userLeafNode:
 		pNode := nodePointer.(*userLeafNode).Clone(nil).(*userLeafNode)
-		authPath.leaf = pNode
+		authPath.Leaf = pNode
 		if bytes.Equal(nodePointer.(*userLeafNode).index, lookupIndex) {
 			return authPath
 		}
@@ -85,7 +85,7 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 		pNode.value = nil
 		return authPath
 	case *emptyNode:
-		authPath.leaf = nodePointer.(*emptyNode).Clone(nil).(*emptyNode)
+		authPath.Leaf = nodePointer.(*emptyNode).Clone(nil).(*emptyNode)
 		return authPath
 	}
 	panic(ErrorInvalidTree)
@@ -210,10 +210,6 @@ func visitULNsInternal(nodePtr MerkleNode, callBack func(*userLeafNode)) {
 
 func (m *MerkleTree) recomputeHash() {
 	m.hash = m.root.Hash(m)
-}
-
-func (m *MerkleTree) GetHash() []byte {
-	return m.hash
 }
 
 func (m *MerkleTree) Clone() *MerkleTree {
