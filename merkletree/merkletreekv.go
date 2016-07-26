@@ -1,9 +1,15 @@
 package merkletree
 
 import (
+	"errors"
+
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/utils"
+)
+
+var (
+	ErrorBadTreeNonce = errors.New("[merkletree] Bad tree nonce")
 )
 
 func NewMerkleTreeFromKV(db kv.DB, epoch uint64) (*MerkleTree, error) {

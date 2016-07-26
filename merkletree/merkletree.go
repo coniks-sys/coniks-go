@@ -10,8 +10,7 @@ import (
 )
 
 var (
-	ErrorInvalidTree  = errors.New("[merkletree] Invalid tree")
-	ErrorBadTreeNonce = errors.New("[merkletree] Bad tree nonce")
+	ErrorInvalidTree = errors.New("[merkletree] Invalid tree")
 )
 
 const (

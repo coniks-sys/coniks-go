@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/utils"
-	"github.com/yahoo/coname/vrf"
 )
 
 func TestTreeStore(t *testing.T) {
