@@ -30,6 +30,7 @@ func NewMerkleTreeFromKV(db kv.DB, epoch uint64) (*MerkleTree, error) {
 		return nil, err
 	}
 	m.root = root.(*interiorNode)
+	m.hash = m.root.Hash(m)
 	return m, nil
 }
 

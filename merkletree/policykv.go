@@ -40,7 +40,9 @@ func (p *DefaultPolicies) LoadFromKV(db kv.DB, epoch uint64) error {
 	buf = buf[4:]
 	p.HashID = string(buf[:l])
 	buf = buf[l:]
-	copy(p.vrfPrivateKey[:], buf[:vrf.SecretKeySize])
+	vrfKey := new([vrf.SecretKeySize]byte)
+	copy(vrfKey[:], buf[:vrf.SecretKeySize])
+	p.vrfPrivateKey = vrfKey
 	buf = buf[vrf.SecretKeySize:]
 	if len(buf) != 0 {
 		panic(kv.ErrorBadBufferLength)
