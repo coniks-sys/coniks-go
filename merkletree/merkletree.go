@@ -20,8 +20,9 @@ const (
 	InteriorNodeIdentifier = 'I'
 	NodeKeyIdentifier      = 'N'
 	STRIdentifier          = 'S'
-	EpochIdentifier        = "EI"
-	TreeNonceIdentifier    = "TN"
+	PoliciesIdentifier     = 'P'
+	EpochIdentifier        = 'O'
+	TreeNonceIdentifier    = 'T'
 )
 
 type MerkleTree struct {

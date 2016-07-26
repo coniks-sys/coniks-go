@@ -9,7 +9,6 @@ import (
 )
 
 var (
-	ErrorBadNodeLength     = errors.New("[merkletree] Bad node length")
 	ErrorBadNodeIdentifier = errors.New("[merkletree] Bad node identifier")
 )
 

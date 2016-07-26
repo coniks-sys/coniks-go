@@ -9,21 +9,25 @@ import (
 )
 
 func serializeSTRKVKey(epoch uint64) []byte {
-	buf := make([]byte, 1+8)
+	buf := make([]byte, 0, 1+8)
 	buf = append(buf, STRIdentifier)
 	buf = append(buf, util.ULongToBytes(epoch)...)
 	return buf
 }
 
 func (str *SignedTreeRoot) StoreToKV(wb kv.Batch) {
-	buf := make([]byte, 8+8+crypto.HashSizeByte+len(str.policies.Serialize()))
+	buf := make([]byte, 0, 8+8+2*crypto.HashSizeByte)
+	buf = append(buf, str.tree.hash...)
 	buf = append(buf, util.ULongToBytes(str.epoch)...)
 	buf = append(buf, util.ULongToBytes(str.prevEpoch)...)
 	buf = append(buf, str.prevStrHash...)
-	buf = append(buf, str.policies.Serialize()...)
 	wb.Put(serializeSTRKVKey(str.epoch), buf)
+
+	str.tree.StoreToKV(str.epoch, wb)
+	str.policies.StoreToKV(str.epoch, wb)
 }
 
+// TODO: change to str.LoadFromKV
 func loadSTR(db kv.DB, epoch uint64) (*SignedTreeRoot, error) {
 	tree, err := NewMerkleTreeFromKV(db, epoch)
 	if err != nil {

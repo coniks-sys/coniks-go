@@ -65,7 +65,6 @@ func (pad *PAD) signTreeRoot(m *MerkleTree, epoch uint64) {
 
 func (pad *PAD) updateInternal(policies Policies, epoch uint64) {
 	pad.tree.recomputeHash()
-	pad.StoreToKV(epoch)
 	m := pad.tree.Clone()
 	// create STR with the policies that were actually used in the prev.
 	// Set() operation
@@ -82,6 +81,8 @@ func (pad *PAD) updateInternal(policies Policies, epoch uint64) {
 			pad.reshuffle()
 		}
 	}
+
+	pad.StoreToKV(epoch)
 }
 
 func (pad *PAD) Update(policies Policies) {

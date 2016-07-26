@@ -90,7 +90,7 @@ func deserializeNode(buf []byte) MerkleNode {
 		n.rightHash = append([]byte{}, buf[:crypto.HashSizeByte]...)
 		buf = buf[crypto.HashSizeByte:]
 		if len(buf) != 0 {
-			panic(ErrorBadNodeLength)
+			panic(kv.ErrorBadBufferLength)
 		}
 		return n
 	case LeafIdentifier:
@@ -113,7 +113,7 @@ func deserializeNode(buf []byte) MerkleNode {
 		n.commitment = buf[:crypto.HashSizeByte]
 		buf = buf[crypto.HashSizeByte:]
 		if len(buf) != 0 {
-			panic(ErrorBadNodeLength)
+			panic(kv.ErrorBadBufferLength)
 		}
 		return n
 	case EmptyBranchIdentifier:
@@ -124,7 +124,7 @@ func deserializeNode(buf []byte) MerkleNode {
 		n.index = buf[:]
 		buf = buf[len(n.index):]
 		if len(buf) != 0 {
-			panic(ErrorBadNodeLength)
+			panic(kv.ErrorBadBufferLength)
 		}
 		return n
 	}

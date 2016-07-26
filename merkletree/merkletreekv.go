@@ -7,7 +7,7 @@ import (
 )
 
 func NewMerkleTreeFromKV(db kv.DB, epoch uint64) (*MerkleTree, error) {
-	nonceKey := append([]byte(TreeNonceIdentifier), util.ULongToBytes(epoch)...)
+	nonceKey := append([]byte{TreeNonceIdentifier}, util.ULongToBytes(epoch)...)
 	val, err := db.Get(nonceKey)
 	var nonce []byte
 	if err != nil {
@@ -93,5 +93,5 @@ func (m *MerkleTree) StoreToKV(epoch uint64, wb kv.Batch) {
 	// store tree nodes
 	m.root.storeToKV(epoch, []bool{}, wb)
 	// store tree nonce
-	wb.Put(append([]byte(TreeNonceIdentifier), util.ULongToBytes(epoch)...), m.nonce)
+	wb.Put(append([]byte{TreeNonceIdentifier}, util.ULongToBytes(epoch)...), m.nonce)
 }

@@ -17,7 +17,7 @@ func NewPADFromKV(policies Policies, db kv.DB, key crypto.SigningKey, length int
 	pad := new(PAD)
 	pad.key = key
 	// get latest epoch from db
-	epBytes, err := db.Get([]byte(EpochIdentifier))
+	epBytes, err := db.Get([]byte{EpochIdentifier})
 	if err != nil {
 		return nil, err
 	}
@@ -42,10 +42,9 @@ func (pad *PAD) StoreToKV(epoch uint64) error {
 		return nil
 	}
 	wb := pad.db.NewBatch()
-	pad.tree.StoreToKV(epoch, wb)
 	pad.latestSTR.StoreToKV(wb)
 	// and store latest STR's epoch to db
-	wb.Put([]byte(EpochIdentifier), util.ULongToBytes(epoch))
+	wb.Put([]byte{EpochIdentifier}, util.ULongToBytes(epoch))
 	err := pad.db.Write(wb)
 	if err != nil {
 		return err
