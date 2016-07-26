@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/coniks-sys/coniks-go/kv"
-	"github.com/coniks-sys/coniks-go/kv/leveldbkv"
+	"github.com/coniks-sys/coniks-go/storage/kv"
+	"github.com/coniks-sys/coniks-go/storage/kv/leveldbkv"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -61,22 +61,21 @@ func TestTreeStore(t *testing.T) {
 			t.Fatal("Bad tree construction")
 		}
 
-		n1, _ := m2.Get(key1)
-		if n1 == nil {
+		ap := m2.Get(key1)
+		if ap.Leaf().IsEmpty() {
 			t.Error("Cannot find key:", key1)
 			return
 		}
+		if !bytes.Equal(ap.Leaf().Value(), val1) {
+			t.Error(key1, "value mismatch")
+		}
 
-		n2, _ := m2.Get(key2)
-		if n2 == nil {
+		ap = m2.Get(key2)
+		if ap.Leaf().IsEmpty() {
 			t.Error("Cannot find key:", key2)
 			return
 		}
-
-		if !bytes.Equal(n1.Value(), val1) {
-			t.Error(key1, "value mismatch")
-		}
-		if !bytes.Equal(n2.Value(), val2) {
+		if !bytes.Equal(ap.Leaf().Value(), val2) {
 			t.Error(key2, "value mismatch")
 		}
 	})
@@ -116,12 +115,12 @@ func TestReconstructBranch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		n1, _ := m2_1.Get(key1)
-		if n1 == nil {
+		ap := m2_1.Get(key1)
+		if ap.Leaf().IsEmpty() {
 			t.Error("Cannot find key:", key1)
 			return
 		}
-		if !bytes.Equal(n1.Value(), val1) {
+		if !bytes.Equal(ap.Leaf().Value(), val1) {
 			t.Error(key1, "value mismatch")
 		}
 
@@ -129,12 +128,12 @@ func TestReconstructBranch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		n2, _ := m2_2.Get(key2)
-		if n1 == nil {
+		ap = m2_2.Get(key2)
+		if ap.Leaf().IsEmpty() {
 			t.Error("Cannot find key:", key2)
 			return
 		}
-		if !bytes.Equal(n2.Value(), val2) {
+		if !bytes.Equal(ap.Leaf().Value(), val2) {
 			t.Error(key2, "value mismatch")
 		}
 	})

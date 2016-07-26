@@ -5,10 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/coniks-sys/coniks-go/kv"
-	"github.com/coniks-sys/coniks-go/kv/leveldbkv"
 	"github.com/coniks-sys/coniks-go/utils"
-	"github.com/syndtr/goleveldb/leveldb"
 	"golang.org/x/crypto/sha3"
 )
 

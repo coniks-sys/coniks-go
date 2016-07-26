@@ -5,8 +5,7 @@ import (
 	"errors"
 
 	"github.com/coniks-sys/coniks-go/crypto"
-	"github.com/coniks-sys/coniks-go/kv"
-	"github.com/coniks-sys/coniks-go/utils"
+	"github.com/coniks-sys/coniks-go/storage/kv"
 )
 
 var (
@@ -126,19 +125,4 @@ func (pad *PAD) TB(key string, value []byte) (*TemporaryBinding, error) {
 		value: value,
 		sig:   sig,
 	}, err
-}
-
-func (pad *PAD) Flush(epoch uint64) error {
-	if pad.db == nil {
-		return nil
-	}
-	wb := pad.db.NewBatch()
-	pad.tree.Flush(epoch, wb)
-	// and store latest STR's epoch to db
-	wb.Put([]byte(EpochIdentifier), util.ULongToBytes(epoch))
-	err := pad.db.Write(wb)
-	if err != nil {
-		return err
-	}
-	return nil
 }

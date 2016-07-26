@@ -1,11 +1,11 @@
 package merkletree
 
 import (
-	"github.com/coniks-sys/coniks-go/crypto"
-	"github.com/coniks-sys/coniks-go/utils"
 	"errors"
 
-	"github.com/coniks-sys/coniks-go/kv"
+	"github.com/coniks-sys/coniks-go/crypto"
+	"github.com/coniks-sys/coniks-go/storage/kv"
+	"github.com/coniks-sys/coniks-go/utils"
 )
 
 var (
@@ -78,7 +78,6 @@ type MerkleNode interface {
 	isEmpty() bool
 	Hash(*MerkleTree) []byte
 	Clone(*interiorNode) MerkleNode
-	setParent(n MerkleNode)
 	storeToKV(epoch uint64, prefixBits []bool, wb kv.Batch)
 	serialize() []byte
 }
@@ -158,11 +157,11 @@ func (n *emptyNode) Clone(parent *interiorNode) MerkleNode {
 	}
 }
 
-func (n *userLeafNode) isEmpty() bool {
+func (n *interiorNode) isEmpty() bool {
 	return false
 }
 
-func (n *interiorNode) isEmpty() bool {
+func (n *userLeafNode) isEmpty() bool {
 	return false
 }
 

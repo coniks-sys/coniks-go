@@ -2,7 +2,7 @@ package merkletree
 
 import (
 	"github.com/coniks-sys/coniks-go/crypto"
-	"github.com/coniks-sys/coniks-go/kv"
+	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
@@ -32,13 +32,16 @@ func (m *MerkleTree) reconstructTree(db kv.DB, parent MerkleNode, epoch uint64, 
 	if err != nil {
 		return nil, err
 	}
-	n.setParent(parent)
+
 	if _, ok := n.(*emptyNode); ok {
+		n.(*emptyNode).parent = parent
 		return n, nil
 	}
 	if _, ok := n.(*userLeafNode); ok {
+		n.(*userLeafNode).parent = parent
 		return n, nil
 	}
+	n.(*interiorNode).parent = parent
 	n.(*interiorNode).leftChild, err = m.reconstructTree(db, n, epoch, append(prefixBits, false))
 	if err != nil {
 		return nil, err
@@ -70,10 +73,15 @@ loadingLoop:
 		} else {
 			parent.(*interiorNode).leftChild = n
 		}
-		n.setParent(parent)
 		switch n.(type) {
-		case *userLeafNode, *emptyNode:
+		case *userLeafNode:
+			n.(*userLeafNode).parent = parent
 			break loadingLoop
+		case *emptyNode:
+			n.(*emptyNode).parent = parent
+			break loadingLoop
+		case *interiorNode:
+			n.(*interiorNode).parent = parent
 		}
 		parent = n
 	}

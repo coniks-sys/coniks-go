@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 
 	"github.com/coniks-sys/coniks-go/crypto"
-	"github.com/coniks-sys/coniks-go/kv"
+	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 

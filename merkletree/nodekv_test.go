@@ -25,13 +25,13 @@ func TestNodeSerializationAndDeserialization(t *testing.T) {
 
 	m.recomputeHash()
 
-	n1, _ := m.Get(key1)
-	if n1 == nil {
+	ap := m.Get(key1)
+	if ap.Leaf().IsEmpty() {
 		t.Fatal("Cannot find key:", key1)
 	}
 
-	n2, _ := m.Get(key2)
-	if n2 == nil {
+	ap = m.Get(key2)
+	if ap.Leaf().IsEmpty() {
 		t.Fatal("Cannot find key:", key2)
 	}
 
@@ -71,8 +71,8 @@ func TestNodeSerializationAndDeserialization(t *testing.T) {
 	}
 
 	// test leaf node
-	lnWant := n1.(*userLeafNode)
-	lnGot := deserializeNode(n1.serialize()).(*userLeafNode)
+	lnWant := ap.Leaf().(*userLeafNode)
+	lnGot := deserializeNode(ap.Leaf().(*userLeafNode).serialize()).(*userLeafNode)
 	if lnGot.level != lnWant.level ||
 		!bytes.Equal(lnGot.index, lnWant.index) ||
 		lnGot.key != lnWant.key ||

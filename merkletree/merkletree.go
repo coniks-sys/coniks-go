@@ -20,6 +20,7 @@ const (
 	InteriorNodeIdentifier = 'I'
 	NodeKeyIdentifier      = 'N'
 	STRIdentifier          = 'S'
+	EpochIdentifier        = "EI"
 	TreeNonceIdentifier    = "TN"
 )
 
