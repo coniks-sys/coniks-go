@@ -33,7 +33,7 @@ func TestNodeSerializationAndDeserialization(t *testing.T) {
 		m.recomputeHash()
 
 		ap := m.Get(index1)
-		if ap.Leaf().IsEmpty() {
+		if ap.Leaf().Value() == nil {
 			t.Fatal("Cannot find key:", key1)
 		}
 

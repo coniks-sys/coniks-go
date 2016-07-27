@@ -47,7 +47,7 @@ func TestTreeStore(t *testing.T) {
 		}
 
 		ap := m2.Get(index1)
-		if ap.Leaf().IsEmpty() {
+		if ap.Leaf().Value() == nil {
 			t.Error("Cannot find key:", key1)
 			return
 		}
@@ -56,7 +56,7 @@ func TestTreeStore(t *testing.T) {
 		}
 
 		ap = m2.Get(index2)
-		if ap.Leaf().IsEmpty() {
+		if ap.Leaf().Value() == nil {
 			t.Error("Cannot find key:", key2)
 			return
 		}
@@ -103,7 +103,7 @@ func TestReconstructBranch(t *testing.T) {
 			t.Fatal(err)
 		}
 		ap := m2_1.Get(index1)
-		if ap.Leaf().IsEmpty() {
+		if ap.Leaf().Value() == nil {
 			t.Error("Cannot find key:", key1)
 			return
 		}
@@ -118,7 +118,7 @@ func TestReconstructBranch(t *testing.T) {
 			t.Fatal(err)
 		}
 		ap = m2_2.Get(index2)
-		if ap.Leaf().IsEmpty() {
+		if ap.Leaf().Value() == nil {
 			t.Error("Cannot find key:", key2)
 			return
 		}

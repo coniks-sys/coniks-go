@@ -122,7 +122,16 @@ func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 	if epoch >= pad.latestSTR.epoch {
 		return pad.latestSTR
 	}
-	return pad.snapshots[epoch]
+	if pad.snapshots[epoch] != nil {
+		return pad.snapshots[epoch]
+	}
+	// look through persistent storage
+	str := new(SignedTreeRoot)
+	err := str.LoadFromKV(pad.db, pad.key, epoch)
+	if err != nil {
+		return nil
+	}
+	return str
 }
 
 func (pad *PAD) TB(key string, value []byte) (*TemporaryBinding, error) {
