@@ -25,8 +25,10 @@ func TestSTRStore(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		policies := new(DefaultPolicies)
+
 		strGot := new(SignedTreeRoot)
-		err = strGot.LoadFromKV(db, signKey, 1)
+		err = strGot.LoadFromKV(db, policies, signKey, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -47,7 +49,7 @@ func TestSTRStore(t *testing.T) {
 			t.Fatal(err)
 		}
 		strGot = new(SignedTreeRoot)
-		err = strGot.LoadFromKV(db, signKey, 2)
+		err = strGot.LoadFromKV(db, policies, signKey, 2)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -62,7 +64,7 @@ func TestSTRStore(t *testing.T) {
 
 		// test get non-exist str from db
 		strGot = new(SignedTreeRoot)
-		err = strGot.LoadFromKV(db, signKey, 3)
+		err = strGot.LoadFromKV(db, policies, signKey, 3)
 		if err != db.ErrNotFound() {
 			t.Fatal("Got unexpected str from db")
 		}

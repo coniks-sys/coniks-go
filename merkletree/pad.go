@@ -126,12 +126,13 @@ func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 		return pad.snapshots[epoch]
 	}
 	// look through persistent storage
-	str := new(SignedTreeRoot)
-	err := str.LoadFromKV(pad.db, pad.key, epoch)
-	if err != nil {
-		return nil
-	}
-	return str
+	// str := new(SignedTreeRoot)
+	// err := str.LoadFromKV(pad.db, pad.key, epoch)
+	// if err != nil {
+	// return nil
+	// }
+	// return str
+	return nil // util we have a better way to construct the tree partially based on the lookup index.
 }
 
 func (pad *PAD) TB(key string, value []byte) (*TemporaryBinding, error) {

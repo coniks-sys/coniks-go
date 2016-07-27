@@ -9,7 +9,7 @@ import (
 )
 
 // NewPADFromKV creates new PAD with a latest tree stored in the KV db
-func NewPADFromKV(db kv.DB, key crypto.SigningKey, length int64) (*PAD, error) {
+func NewPADFromKV(db kv.DB, policies Policies, key crypto.SigningKey, length int64) (*PAD, error) {
 	var err error
 	pad := new(PAD)
 	pad.key = key
@@ -35,20 +35,12 @@ func NewPADFromKV(db kv.DB, key crypto.SigningKey, length int64) (*PAD, error) {
 
 	// get str from db
 	str := new(SignedTreeRoot)
-	err = str.LoadFromKV(db, key, ep)
+	err = str.LoadFromKV(db, policies, key, ep)
 	if err != nil {
 		return nil, err
 	}
 	pad.latestSTR = str
-
-	// get policies from db
-	p := new(DefaultPolicies)
-	err = p.LoadFromKV(db, ep)
-	if err != nil {
-		return nil, err
-	}
-	pad.policies = p
-
+	pad.policies = str.policies
 	pad.snapshots[ep] = str
 	pad.loadedEpochs = append(pad.loadedEpochs, ep)
 

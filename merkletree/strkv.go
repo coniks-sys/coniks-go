@@ -30,13 +30,12 @@ func (str *SignedTreeRoot) StoreToKV(wb kv.Batch) {
 	str.policies.StoreToKV(str.epoch, wb)
 }
 
-func (str *SignedTreeRoot) LoadFromKV(db kv.DB, key crypto.SigningKey, epoch uint64) error {
-	p := new(DefaultPolicies)
-	err := p.LoadFromKV(db, epoch)
+func (str *SignedTreeRoot) LoadFromKV(db kv.DB, policies Policies, key crypto.SigningKey, epoch uint64) error {
+	err := policies.LoadFromKV(db, epoch)
 	if err != nil {
 		return err
 	}
-	str.policies = p
+	str.policies = policies
 	tree, err := NewMerkleTreeFromKV(db, epoch)
 	if err != nil {
 		return err
