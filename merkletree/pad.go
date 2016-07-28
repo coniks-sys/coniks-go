@@ -90,7 +90,7 @@ func (pad *PAD) Update(policies Policies) {
 		pad.loadedEpochs = append(pad.loadedEpochs[:0], pad.loadedEpochs[n:]...)
 	}
 
-	pad.updateInternal(policies, pad.latestSTR.epoch+1)
+	pad.updateInternal(policies, pad.latestSTR.Epoch+1)
 }
 
 func (pad *PAD) Set(key string, value []byte) error {
@@ -99,7 +99,7 @@ func (pad *PAD) Set(key string, value []byte) error {
 }
 
 func (pad *PAD) Lookup(key string) (*AuthenticationPath, error) {
-	return pad.LookupInEpoch(key, pad.latestSTR.epoch)
+	return pad.LookupInEpoch(key, pad.latestSTR.Epoch)
 }
 
 func (pad *PAD) LookupInEpoch(key string, epoch uint64) (*AuthenticationPath, error) {
@@ -107,14 +107,14 @@ func (pad *PAD) LookupInEpoch(key string, epoch uint64) (*AuthenticationPath, er
 	if str == nil {
 		return nil, ErrorSTRNotFound
 	}
-	lookupIndex, proof := pad.computePrivateIndex(key, str.policies.vrfPrivate())
+	lookupIndex, proof := pad.computePrivateIndex(key, str.Policies.vrfPrivate())
 	ap := str.tree.Get(lookupIndex)
-	ap.vrfProof = proof
+	ap.VrfProof = proof
 	return ap, nil
 }
 
 func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
-	if epoch >= pad.latestSTR.epoch {
+	if epoch >= pad.latestSTR.Epoch {
 		return pad.latestSTR
 	}
 	return pad.snapshots[epoch]
@@ -123,7 +123,7 @@ func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 func (pad *PAD) TB(key string, value []byte) (*TemporaryBinding, error) {
 	str := pad.latestSTR
 	index, _ := pad.computePrivateIndex(key, pad.policies.vrfPrivate())
-	tb := str.sig
+	tb := str.Signature
 	tb = append(tb, index...)
 	tb = append(tb, value...)
 	sig := crypto.Sign(pad.key, tb)
@@ -131,9 +131,9 @@ func (pad *PAD) TB(key string, value []byte) (*TemporaryBinding, error) {
 	err := pad.tree.Set(index, key, value)
 
 	return &TemporaryBinding{
-		index: index,
-		value: value,
-		sig:   sig,
+		Index:     index,
+		Value:     value,
+		Signature: sig,
 	}, err
 }
 

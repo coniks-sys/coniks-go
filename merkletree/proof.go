@@ -1,31 +1,11 @@
 package merkletree
 
 type AuthenticationPath struct {
-	treeNonce    []byte
-	prunedHashes [][]byte
-	lookupIndex  []byte
-	vrfProof     []byte
-	leaf         ProofNode
-}
-
-func (ap *AuthenticationPath) TreeNonce() []byte {
-	return ap.treeNonce
-}
-
-func (ap *AuthenticationPath) PrunedTree() [][]byte {
-	return ap.prunedHashes
-}
-
-func (ap *AuthenticationPath) LookupIndex() []byte {
-	return ap.lookupIndex
-}
-
-func (ap *AuthenticationPath) VrfProof() []byte {
-	return ap.vrfProof
-}
-
-func (ap *AuthenticationPath) Leaf() ProofNode {
-	return ap.leaf
+	TreeNonce   []byte
+	PrunedTree  [][]byte
+	LookupIndex []byte
+	VrfProof    []byte
+	Leaf        ProofNode
 }
 
 type ProofNode interface {

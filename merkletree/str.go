@@ -18,12 +18,12 @@ var (
 // previous STR, and its signature.
 // STR should be final
 type SignedTreeRoot struct {
-	tree        *MerkleTree
-	epoch       uint64
-	prevEpoch   uint64
-	prevStrHash []byte
-	sig         []byte
-	policies    Policies
+	tree            *MerkleTree
+	Epoch           uint64
+	PreviousEpoch   uint64
+	PreviousSTRHash []byte
+	Signature       []byte
+	Policies        Policies
 }
 
 func NewSTR(key crypto.SigningKey, policies Policies, m *MerkleTree, epoch uint64, prevHash []byte) *SignedTreeRoot {
@@ -35,14 +35,14 @@ func NewSTR(key crypto.SigningKey, policies Policies, m *MerkleTree, epoch uint6
 		prevEpoch = 0
 	}
 	str := &SignedTreeRoot{
-		tree:        m,
-		epoch:       epoch,
-		prevEpoch:   prevEpoch,
-		prevStrHash: prevHash,
-		policies:    policies,
+		tree:            m,
+		Epoch:           epoch,
+		PreviousEpoch:   prevEpoch,
+		PreviousSTRHash: prevHash,
+		Policies:        policies,
 	}
 	bytesPreSig := str.Serialize()
-	str.sig = crypto.Sign(key, bytesPreSig)
+	str.Signature = crypto.Sign(key, bytesPreSig)
 	return str
 }
 
@@ -50,32 +50,16 @@ func NewSTR(key crypto.SigningKey, policies Policies, m *MerkleTree, epoch uint6
 // [epoch, previous epoch, tree hash, previous STR hash, policies serialization]
 func (str *SignedTreeRoot) Serialize() []byte {
 	var strBytes []byte
-	strBytes = append(strBytes, util.ULongToBytes(str.epoch)...) // t - epoch number
-	if str.epoch > 0 {
-		strBytes = append(strBytes, util.ULongToBytes(str.prevEpoch)...) // t_prev - previous epoch number
+	strBytes = append(strBytes, util.ULongToBytes(str.Epoch)...) // t - epoch number
+	if str.Epoch > 0 {
+		strBytes = append(strBytes, util.ULongToBytes(str.PreviousEpoch)...) // t_prev - previous epoch number
 	}
 	strBytes = append(strBytes, str.tree.hash...)            // root
-	strBytes = append(strBytes, str.prevStrHash...)          // previous STR hash
-	strBytes = append(strBytes, str.policies.Serialize()...) // P
+	strBytes = append(strBytes, str.PreviousSTRHash...)      // previous STR hash
+	strBytes = append(strBytes, str.Policies.Serialize()...) // P
 	return strBytes
 }
 
 func (str *SignedTreeRoot) Root() []byte {
 	return str.tree.hash
-}
-
-func (str *SignedTreeRoot) Epoch() uint64 {
-	return str.epoch
-}
-
-func (str *SignedTreeRoot) PreviousEpoch() uint64 {
-	return str.prevEpoch
-}
-
-func (str *SignedTreeRoot) PreviousSTRHash() []byte {
-	return str.prevStrHash
-}
-
-func (str *SignedTreeRoot) Signature() []byte {
-	return str.sig
 }
