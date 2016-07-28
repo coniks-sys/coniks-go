@@ -1,7 +1,6 @@
 package merkletree
 
 import (
-	"crypto/rand"
 	"crypto/subtle"
 	"errors"
 
@@ -48,8 +47,9 @@ func NewPAD(policies Policies, key crypto.SigningKey, len uint64) (*PAD, error) 
 func (pad *PAD) signTreeRoot(m *MerkleTree, epoch uint64) {
 	var prevSTRsig []byte
 	if pad.latestSTR == nil {
-		prevSTRsig = make([]byte, crypto.HashSizeByte)
-		if _, err := rand.Read(prevSTRsig); err != nil {
+		var err error
+		prevSTRsig, err = makeRand()
+		if err != nil {
 			// panic here since if there is an error, it will break the PAD.
 			panic(err)
 		}

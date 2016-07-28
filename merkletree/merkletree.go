@@ -26,8 +26,8 @@ type MerkleTree struct {
 
 func NewMerkleTree() (*MerkleTree, error) {
 	root := NewInteriorNode(nil, 0, []bool{})
-	nonce := make([]byte, crypto.HashSizeByte)
-	if _, err := rand.Read(nonce); err != nil {
+	nonce, err := makeRand()
+	if err != nil {
 		return nil, err
 	}
 	nonce = crypto.Digest(nonce)
@@ -95,12 +95,10 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 func (m *MerkleTree) Set(index []byte, key string, value []byte) error {
 
 	// generate random per user salt
-	salt := make([]byte, crypto.HashSizeByte)
-	if _, err := rand.Read(salt); err != nil {
+	salt, err := makeRand()
+	if err != nil {
 		return err
 	}
-	// do not directly reveal bytes from rand.Read on the wire:
-	salt = crypto.Digest(salt)
 
 	toAdd := userLeafNode{
 		key:        key,
@@ -225,4 +223,13 @@ func (m *MerkleTree) Clone() *MerkleTree {
 		root:  m.root.Clone(nil).(*interiorNode),
 		hash:  append([]byte{}, m.hash...),
 	}
+}
+
+func makeRand() ([]byte, error) {
+	r := make([]byte, crypto.HashSizeByte)
+	if _, err := rand.Read(r); err != nil {
+		return nil, err
+	}
+	// Do not directly reveal bytes from rand.Read on the wire
+	return crypto.Digest(r), nil
 }
