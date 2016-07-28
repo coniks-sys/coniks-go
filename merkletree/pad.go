@@ -45,18 +45,18 @@ func NewPAD(policies Policies, key crypto.SigningKey, len uint64) (*PAD, error) 
 
 // if policies is nil, the previous policies will be used
 func (pad *PAD) signTreeRoot(m *MerkleTree, epoch uint64) {
-	var prevSTRhash []byte
+	var prevhash []byte
 	if pad.latestSTR == nil {
 		var err error
-		prevSTRhash, err = crypto.MakeRand()
+		prevhash, err = crypto.MakeRand()
 		if err != nil {
 			// panic here since if there is an error, it will break the PAD.
 			panic(err)
 		}
 	} else {
-		prevSTRhash = crypto.Digest(pad.latestSTR.Signature)
+		prevhash = crypto.Digest(pad.latestSTR.Signature)
 	}
-	pad.latestSTR = NewSTR(pad.key, pad.policies, m, epoch, prevSTRhash)
+	pad.latestSTR = NewSTR(pad.key, pad.policies, m, epoch, prevhash)
 }
 
 func (pad *PAD) updateInternal(policies Policies, epoch uint64) {
