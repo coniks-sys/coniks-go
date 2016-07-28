@@ -41,3 +41,13 @@ func Verify(key SigningKey, message, sig []byte) bool {
 	}
 	return ed25519.Verify(pk, message, sig)
 }
+
+// MakeRand generates a random slice of byte and hashes it.
+func MakeRand() ([]byte, error) {
+	r := make([]byte, HashSizeByte)
+	if _, err := rand.Read(r); err != nil {
+		return nil, err
+	}
+	// Do not directly reveal bytes from rand.Read on the wire
+	return Digest(r), nil
+}
