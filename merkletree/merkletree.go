@@ -2,7 +2,6 @@ package merkletree
 
 import (
 	"bytes"
-	"crypto/rand"
 	"errors"
 
 	"github.com/coniks-sys/coniks-go/crypto"
@@ -26,8 +25,8 @@ type MerkleTree struct {
 
 func NewMerkleTree() (*MerkleTree, error) {
 	root := NewInteriorNode(nil, 0, []bool{})
-	nonce := make([]byte, crypto.HashSizeByte)
-	if _, err := rand.Read(nonce); err != nil {
+	nonce, err := crypto.MakeRand()
+	if err != nil {
 		return nil, err
 	}
 	m := &MerkleTree{
@@ -94,8 +93,8 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 func (m *MerkleTree) Set(index []byte, key string, value []byte) error {
 
 	// generate random per user salt
-	salt := make([]byte, crypto.HashSizeByte)
-	if _, err := rand.Read(salt); err != nil {
+	salt, err := crypto.MakeRand()
+	if err != nil {
 		return err
 	}
 
