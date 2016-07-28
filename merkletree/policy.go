@@ -14,15 +14,15 @@ type Policies interface {
 	vrfPrivate() *[vrf.SecretKeySize]byte
 }
 
-type DefaultPolicies struct {
+type ConiksPolicies struct {
 	vrfPrivateKey *[vrf.SecretKeySize]byte
 	epochDeadline TimeStamp
 }
 
-var _ Policies = (*DefaultPolicies)(nil)
+var _ Policies = (*ConiksPolicies)(nil)
 
 func NewPolicies(epDeadline TimeStamp, vrfPrivKey *[vrf.SecretKeySize]byte) Policies {
-	return &DefaultPolicies{
+	return &ConiksPolicies{
 		epochDeadline: epDeadline,
 		vrfPrivateKey: vrfPrivKey,
 	}
@@ -30,7 +30,7 @@ func NewPolicies(epDeadline TimeStamp, vrfPrivKey *[vrf.SecretKeySize]byte) Poli
 
 // Serialize encodes the policy to a byte array with the following format:
 // [lib version, cryptographic algorithm in use, epoch deadline]
-func (p *DefaultPolicies) Serialize() []byte {
+func (p *ConiksPolicies) Serialize() []byte {
 	var bs []byte
 	bs = append(bs, []byte(Version)...)                            // lib Version
 	bs = append(bs, []byte(crypto.HashID)...)                      // cryptographic algorithms in use
@@ -39,10 +39,10 @@ func (p *DefaultPolicies) Serialize() []byte {
 	return bs
 }
 
-func (p *DefaultPolicies) vrfPrivate() *[vrf.SecretKeySize]byte {
+func (p *ConiksPolicies) vrfPrivate() *[vrf.SecretKeySize]byte {
 	return p.vrfPrivateKey
 }
 
-func (p *DefaultPolicies) EpochDeadline() TimeStamp {
+func (p *ConiksPolicies) EpochDeadline() TimeStamp {
 	return p.epochDeadline
 }
