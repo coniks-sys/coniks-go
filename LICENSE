@@ -1,4 +1,4 @@
-This license applies to all parts of the Merkle Prefix Tree Golang library except the following:
+This license applies to all parts of the CONIKS Golang library and reference implementation except the following:
 - Coname utility functions, located in utils/coname.go
 This module is copyrighted by the Coname Authors.
 - The ed25519 subpackage, located in crypto/ed25519
@@ -22,7 +22,7 @@ modification, are permitted provided that the following conditions are met:
   this list of conditions and the following disclaimer in the documentation
   and/or other materials provided with the distribution.
 
-* Neither the names of Princeton University and EPFL nor the names of its
+* Neither the names of Princeton University, EPFL and The Tor Project nor the names of its
   contributors may be used to endorse or promote products derived from
   this software without specific prior written permission.
 
