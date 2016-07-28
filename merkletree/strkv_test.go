@@ -25,7 +25,7 @@ func TestSTRStore(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		policies := new(DefaultPolicies)
+		policies := new(ConiksPolicies)
 
 		strGot := new(SignedTreeRoot)
 		err = strGot.LoadFromKV(db, policies, signKey, 1)

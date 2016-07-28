@@ -34,7 +34,7 @@ func TestPadStore(t *testing.T) {
 		}
 		pad.Update(nil)
 
-		policies := new(DefaultPolicies)
+		policies := new(ConiksPolicies)
 		padGot, err := NewPADFromKV(db, policies, signKey, 10)
 		if err != nil {
 			t.Fatal(err)
