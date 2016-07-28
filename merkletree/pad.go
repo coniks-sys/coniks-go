@@ -120,8 +120,8 @@ func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 }
 
 func (pad *PAD) TB(key string, value []byte) (*TemporaryBinding, error) {
-	index, vrfProof := pad.computePrivateIndex(key, pad.policies.vrfPrivate())
-	tb := NewTB(pad.key, index, vrfProof, value, pad.latestSTR.sig)
+	index, _ := pad.computePrivateIndex(key, pad.policies.vrfPrivate())
+	tb := NewTB(pad.key, index, value, pad.latestSTR.Signature)
 	err := pad.tree.Set(index, key, value)
 	return tb, err
 }
