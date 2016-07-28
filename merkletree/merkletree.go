@@ -29,7 +29,6 @@ func NewMerkleTree() (*MerkleTree, error) {
 	if err != nil {
 		return nil, err
 	}
-	nonce = crypto.Digest(nonce)
 	m := &MerkleTree{
 		nonce: nonce,
 		root:  root,
