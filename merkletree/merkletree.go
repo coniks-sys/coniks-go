@@ -99,6 +99,8 @@ func (m *MerkleTree) Set(index []byte, key string, value []byte) error {
 	if _, err := rand.Read(salt); err != nil {
 		return err
 	}
+	// do not directly reveal bytes from rand.Read on the wire:
+	salt = crypto.Digest(salt)
 
 	toAdd := userLeafNode{
 		key:        key,
