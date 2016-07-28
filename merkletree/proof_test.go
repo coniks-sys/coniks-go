@@ -49,12 +49,13 @@ func authPathHash(ap *AuthenticationPath) []byte {
 }
 
 func verifyProof(t *testing.T, ap *AuthenticationPath, treeHash []byte, key string) {
-	hash := authPathHash(ap)
-	if !bytes.Equal(treeHash, hash) {
-		t.Fatal("Invalid proof")
+	// step 1. vrf_verify(i, alice) == true
+	// we probably want to use vrf.Verify() here instead
+	if !bytes.Equal(vrf.Compute([]byte(key), vrfPrivKey1), ap.LookupIndex) {
+		t.Error("VRF verify returns false")
 	}
 
-	// step 1. Verify the auth path of the returned leaf
+	// step 2. verify if it's a proof of inclusion/proof of absence
 	if bytes.Equal(ap.Leaf.Index(), ap.LookupIndex) {
 		// proof of inclusion
 		// make sure we got a userLeafNode
@@ -63,26 +64,23 @@ func verifyProof(t *testing.T, ap *AuthenticationPath, treeHash []byte, key stri
 		}
 	} else {
 		// proof of absence
-		// step 2. vrf_verify(i, alice) == true
-		// we probably want to use vrf.Verify() here instead
-		if !bytes.Equal(vrf.Compute([]byte(key), vrfPrivKey1), ap.LookupIndex) {
-			t.Error("VRF verify returns false")
-		}
-
-		// step 3. Check that where i and j differ is at bit l
+		// check if i and j match in the first l bits
 		indexBits := util.ToBits(ap.Leaf.Index())
 		lookupIndexBits := util.ToBits(ap.LookupIndex)
 
 		for i := 0; i < ap.Leaf.Level(); i++ {
 			if indexBits[i] != lookupIndexBits[i] {
-				t.Error("Invalid proof of absence. Expect indecies share the same prefix",
+				t.Error("Invalid proof of absence. Expect indices share the same prefix",
 					"lookup index: ", indexBits[:ap.Leaf.Level()],
 					"leaf index: ", lookupIndexBits[:ap.Leaf.Level()])
 			}
 		}
-		if indexBits[ap.Leaf.Level()+1] == lookupIndexBits[ap.Leaf.Level()+1] {
-			t.Error("Invalid proof of absence. Expect indecies differ is at bit", ap.Leaf.Level()+1)
-		}
+	}
+
+	// step 3. Verify the auth path of the returned leaf
+	hash := authPathHash(ap)
+	if !bytes.Equal(treeHash, hash) {
+		t.Fatal("Invalid proof")
 	}
 }
 
@@ -133,24 +131,35 @@ func TestVerifyProof(t *testing.T) {
 	// proof of inclusion
 	proof := m.Get(index3)
 	verifyProof(t, proof, m.hash, key3)
-	hash := authPathHash(proof)
-	if !bytes.Equal(m.hash, hash) {
-		t.Error("Invalid proof of inclusion")
-	}
 
 	// proof of absence
 	absentIndex := vrf.Compute([]byte("123"), vrfPrivKey1)
 	proof = m.Get(absentIndex) // shares the same prefix with an empty node
 	verifyProof(t, proof, m.hash, "123")
-	authPathHash(proof)
 	if _, ok := proof.Leaf.(*emptyNode); !ok {
 		t.Error("Invalid proof of absence. Expect an empty node in returned path")
 	}
+}
 
-	/*proof = m.Get([]byte("key4")) // shares the same prefix with leaf node n2
-	verifyProof(t, proof, m.Hash, "key4")
-	authPathHash(proof)
-	if _, ok := proof.Leaf.(*userLeafNode); !ok {
-		t.Error("Invalid proof of absence. Expect a user leaf node in returned path")
-	}*/
+func TestVerifyProofSamePrefix(t *testing.T) {
+	m, err := NewMerkleTree()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	key1 := "key1"
+	index1 := vrf.Compute([]byte(key1), vrfPrivKey1)
+	val1 := []byte("value1")
+	if err := m.Set(index1, key1, val1); err != nil {
+		t.Fatal(err)
+	}
+	m.recomputeHash()
+	absentIndex := vrf.Compute([]byte("a"), vrfPrivKey1)
+	proof := m.Get(absentIndex) // shares the same prefix with leaf node key1
+	// assert these indices share the same prefix in the first bit
+	if !bytes.Equal(util.ToBytes(util.ToBits(index1)[:proof.Leaf.Level()]),
+		util.ToBytes(util.ToBits(absentIndex)[:proof.Leaf.Level()])) {
+		t.Fatal("Expect these indices share the same prefix in the first bit")
+	}
+	verifyProof(t, proof, m.hash, "a")
 }
