@@ -235,3 +235,95 @@ func TestPoliciesChange(t *testing.T) {
 		t.Error(key3, "value mismatch")
 	}
 }
+
+func TestTB(t *testing.T) {
+	key1 := "key"
+	val1 := []byte("value")
+
+	pad, err := NewPAD(NewPolicies(3, vrfPrivKey1), signKey, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tb, err := pad.TB(key1, val1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// TODO shouldn't there be a serialize function?
+	tbb := pad.latestSTR.Signature
+	tbb = append(tbb, tb.Index...)
+	tbb = append(tbb, tb.Value...)
+
+	// TODO use SigningKeyToPublic from crypto as soon as it is merged:
+	// pub := ed25519.PrivateKey(pad.key[:]).Public().(crypto.SigningKey)
+	// TODO Verify shouldn't use private key (related to above comment)
+	if !crypto.Verify(pad.key, tbb, tb.Signature) {
+		t.Fatal("Couldn't validate signature")
+	}
+	// create next epoch and see if the TB is inserted as promised:
+	pad.Update(nil)
+
+	ap, err := pad.Lookup(key1)
+	if !bytes.Equal(ap.LookupIndex, tb.Index) || !bytes.Equal(ap.Leaf.Value(), tb.Value) {
+		t.Error("Value wasn't inserted as promised")
+	}
+
+}
+
+func BenchmarkCreateLargePAD(b *testing.B) {
+	snapLen := uint64(10)
+	keyPrefix := "key"
+	valuePrefix := []byte("value")
+
+	NumEntries := 10000
+	b.ResetTimer()
+	// benchmark creating a large tree:
+	for n := 0; n < b.N && n < NumEntries; n++ {
+		_, err := createLargePadForBenchmark(NumEntries, keyPrefix, valuePrefix, snapLen)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+
+}
+
+func BenchmarkLookUpFromLargeDirectory(b *testing.B) {
+	snapLen := uint64(10)
+	keyPrefix := "key"
+	valuePrefix := []byte("value")
+
+	NumEntries := 100000
+	pad, err := createLargePadForBenchmark(NumEntries, keyPrefix, valuePrefix, snapLen)
+	if err != nil {
+		b.Fatal(err)
+	}
+	// ignore the tree creation:
+	b.ResetTimer()
+
+	// measure LookUps in large tree (with NumEntries leafs)
+	for n := 0; n < b.N && n < NumEntries; n++ {
+		key := keyPrefix + string(n)
+		_, err := pad.Lookup(key)
+		if err != nil {
+			b.Fatalf("Coudldn't lookup key=%s", key)
+		}
+	}
+}
+
+func createLargePadForBenchmark(N int, keyPrefix string, valuePrefix []byte, snapLen uint64) (*PAD, error) {
+	pad, err := NewPAD(NewPolicies(3, vrfPrivKey1), signKey, snapLen)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < N; i++ {
+		key := keyPrefix + string(i)
+		value := append(valuePrefix, byte(i))
+		if err := pad.Set(key, value); err != nil {
+			return nil, fmt.Errorf("Couldn't set key=%s and value=%s. Error: %v",
+				key, value, err)
+		}
+		pad.Update(nil)
+	}
+	return pad, nil
+}
