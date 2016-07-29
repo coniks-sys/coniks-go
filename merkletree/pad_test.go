@@ -5,6 +5,11 @@ import (
 	"testing"
 
 	"github.com/coniks-sys/coniks-go/crypto/sign"
+	"crypto/rand"
+	"errors"
+	"fmt"
+	"github.com/coniks-sys/coniks-go/crypto"
+	"io"
 )
 
 var signKey sign.PrivateKey
@@ -267,7 +272,37 @@ func TestTB(t *testing.T) {
 	if !bytes.Equal(ap.LookupIndex, tb.Index) || !bytes.Equal(ap.Leaf.Value(), tb.Value) {
 		t.Error("Value wasn't inserted as promised")
 	}
+}
 
+func TestNewPADMissingPolicies(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("Expected NewPAD to panic if policies are missing.")
+		}
+	}()
+	if _, err := NewPAD(nil, signKey, 10); err != nil {
+		t.Fatal("Expected NewPAD to panic but got error.")
+	}
+}
+
+// TODO move this to helper "mockRandReader" or sth like that; and provide a
+// an equivalent function to reset the original rand.Reader
+type testErrorRandReader struct{}
+
+func (er testErrorRandReader) Read([]byte) (int, error) {
+	return 0, errors.New("Not enough entropy!")
+}
+
+func TestNewPADErrorWhileCreatingTree(t *testing.T) {
+	origRand := rand.Reader
+	rand.Reader = testErrorRandReader{}
+	defer func(orig io.Reader) {
+		rand.Reader = orig
+	}(origRand)
+	pad, err := NewPAD(NewPolicies(3, vrfPrivKey1), signKey, 3)
+	if err == nil || pad != nil {
+		t.Fatal("NewPad should return an error in case the tree creation failed")
+	}
 }
 
 func BenchmarkCreateLargePAD(b *testing.B) {
@@ -279,7 +314,8 @@ func BenchmarkCreateLargePAD(b *testing.B) {
 	b.ResetTimer()
 	// benchmark creating a large tree:
 	for n := 0; n < b.N && n < NumEntries; n++ {
-		_, err := createLargePadForBenchmark(NumEntries, keyPrefix, valuePrefix, snapLen)
+		_, err := createPad(NumEntries, keyPrefix, valuePrefix, snapLen,
+			false)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -293,12 +329,14 @@ func BenchmarkLookUpFromLargeDirectory(b *testing.B) {
 	valuePrefix := []byte("value")
 
 	NumEntries := 100000
-	pad, err := createLargePadForBenchmark(NumEntries, keyPrefix, valuePrefix, snapLen)
+	pad, err := createPad(NumEntries, keyPrefix, valuePrefix,
+		snapLen, false)
 	if err != nil {
 		b.Fatal(err)
 	}
 	// ignore the tree creation:
 	b.ResetTimer()
+	fmt.Println("Done creating large pad/tree.")
 
 	// measure LookUps in large tree (with NumEntries leafs)
 	for n := 0; n < b.N && n < NumEntries; n++ {
@@ -310,7 +348,12 @@ func BenchmarkLookUpFromLargeDirectory(b *testing.B) {
 	}
 }
 
-func createLargePadForBenchmark(N int, keyPrefix string, valuePrefix []byte, snapLen uint64) (*PAD, error) {
+// creates a PAD containing a tree with N entries (+ potential emptyLeafNodes)
+// each key value pair has the form (keyPrefix+string(i), valuePrefix+string(i))
+// for i = 0,...,N
+// After each inserted value the STR gets updated
+func createPad(N int, keyPrefix string, valuePrefix []byte, snapLen uint64,
+	updateAfterEachSet bool) (*PAD, error) {
 	pad, err := NewPAD(NewPolicies(3, vrfPrivKey1), signKey, snapLen)
 	if err != nil {
 		return nil, err
@@ -323,6 +366,11 @@ func createLargePadForBenchmark(N int, keyPrefix string, valuePrefix []byte, sna
 			return nil, fmt.Errorf("Couldn't set key=%s and value=%s. Error: %v",
 				key, value, err)
 		}
+		if updateAfterEachSet {
+			pad.Update(nil)
+		}
+	}
+	if !updateAfterEachSet {
 		pad.Update(nil)
 	}
 	return pad, nil

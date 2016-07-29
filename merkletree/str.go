@@ -7,10 +7,6 @@ import (
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
-var (
-	ErrorBadEpoch = errors.New("[merkletree] Bad STR Epoch. STR's epoch must be nonzero")
-)
-
 // SignedTreeRoot represents a signed tree root, which is generated
 // at the beginning of every epoch.
 // Signed tree roots contain the current root node,
