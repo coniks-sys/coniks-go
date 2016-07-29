@@ -11,6 +11,7 @@ env:
     secure: IgtNHjaBYoiMXsLjyc/ZsciSTb027D+24L9iHEWXnH+L82tEZUhYUDI1hZjYtu1WXtfjb9taIXE/wTGR6ET5nDaoF1mmNXUFSzFDciIsLw7HDANcAGiUwY6D4Bu9sbVKnEskWc2v1dlEAiIVyGGbu2opV1eq2DcijidJ4bXdHotDuOTRiTZwgsE1Nou59zg+mpw3XliGmM5IRmZ60bKSw33aRE3D8H/pv98Eorfnq6UNHOBVA1SLTfbQoX0rGTLccDKqBEFUlXLURYiJVGguQ331lo4c61gOMHaF0GHaarYEbR6uRPFx7oKidGFVOm8l8fqq84Bimo9JIljAcVR+2YRln++3yw8VYCoMSL5+9O15LVBX98EFqKernMthHV0OqXu3wUVMcuA4/RCbBNQ8pCnLHQm/siowhNps0DDjdZjaWNB6dHRBP+4A7Cm4AEhveWxLUStsVLCQueJKxmEqYIKRUtXE6otz2yYHbgLQoPFMAOomjov9enMtJ66vgHwQ50Dwx6adjN29k3NxPQCBlR/iLhFRm247/C8vFCbnzMa/9NwJa0wNs7/++qBDeAAngp7kUc3mDK6lvgmio3SDHI5L/ic8TRFYZX/eNRo7txax1vN8Smqmy1Tl2rWSt8XJmop556grWmZ1DcY1Md8mo6I8BrnJfljfjuoQcI0TmvM=
 
 script:
+  - test -z "$(go fmt ./...)"
   - go test -coverprofile=crypto.coverprofile ./crypto
   - go test -coverprofile=ed25519.coverprofile ./crypto/ed25519/edwards25519
   - go test -coverprofile=extra25519.coverprofile ./crypto/ed25519/extra25519
