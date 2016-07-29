@@ -9,7 +9,7 @@ type TemporaryBinding struct {
 }
 
 func NewTB(key crypto.SigningKey, strSig, index, value []byte) *TemporaryBinding {
-	tb := &TemporaryBinding {
+	tb := &TemporaryBinding{
 		Index: index,
 		Value: value,
 	}
@@ -18,7 +18,7 @@ func NewTB(key crypto.SigningKey, strSig, index, value []byte) *TemporaryBinding
 	return tb
 }
 
-func innerTBSerialize(strSig, index, value [] byte) []byte {
+func innerTBSerialize(strSig, index, value []byte) []byte {
 	var tbBytes []byte
 	tbBytes = append(tbBytes, strSig...)
 	tbBytes = append(tbBytes, index...)

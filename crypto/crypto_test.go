@@ -1,8 +1,8 @@
 package crypto
 
 import (
-        "testing"
-)       
+	"testing"
+)
 
 // copied from official crypto.ed25519 tests
 func TestSignVerify(t *testing.T) {
@@ -14,7 +14,7 @@ func TestSignVerify(t *testing.T) {
 	message := []byte("test message")
 	sig := key.Sign(message)
 
-        pk, ok := key.Public()
+	pk, ok := key.Public()
 	if !ok {
 		t.Errorf("bad PK?")
 	}

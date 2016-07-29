@@ -52,11 +52,11 @@ func innerSTRSerialize(epochB, prevEpochB, root, prevStrHash, policiesB []byte) 
 	if prevEpochB != nil {
 		strBytes = append(strBytes, prevEpochB...) // t_prev - previous epoch number
 	}
-	strBytes = append(strBytes, root...)            // root
-	strBytes = append(strBytes, prevStrHash...)      // previous STR hash
-	strBytes = append(strBytes, policiesB...) // P
+	strBytes = append(strBytes, root...)        // root
+	strBytes = append(strBytes, prevStrHash...) // previous STR hash
+	strBytes = append(strBytes, policiesB...)   // P
 	return strBytes
-}  
+}
 
 // Serialize encodes the STR to a byte array with the following format:
 // [epoch, previous epoch, tree hash, previous STR hash, policies serialization]
