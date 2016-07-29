@@ -1,6 +1,7 @@
 # CONIKS Go Library
 
 [![Build Status](https://travis-ci.org/coniks-sys/coniks-go.svg?branch=master)](https://travis-ci.org/coniks-sys/coniks-go)
+[![Coverage Status](https://coveralls.io/repos/github/coniks-sys/coniks-go/badge.svg?branch=master)](https://coveralls.io/github/coniks-sys/coniks-go)
 
 http://coniks.org
 
