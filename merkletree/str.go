@@ -3,7 +3,7 @@ package merkletree
 import (
 	"errors"
 
-	"github.com/coniks-sys/coniks-go/crypto"
+	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
@@ -26,7 +26,7 @@ type SignedTreeRoot struct {
 	Policies        Policies
 }
 
-func NewSTR(key crypto.SigningKey, policies Policies, m *MerkleTree, epoch uint64, prevHash []byte) *SignedTreeRoot {
+func NewSTR(key sign.PrivateKey, policies Policies, m *MerkleTree, epoch uint64, prevHash []byte) *SignedTreeRoot {
 	if epoch < 0 {
 		panic(ErrorBadEpoch)
 	}
@@ -74,7 +74,7 @@ func (str *SignedTreeRoot) Root() []byte {
 	return str.tree.hash
 }
 
-func VerifySTR(pk crypto.VerifKey, epochB, prevEpochB, root, prevStrHash, policiesB, strSig []byte) bool {
+func VerifySTR(pk sign.PublicKey, epochB, prevEpochB, root, prevStrHash, policiesB, strSig []byte) bool {
 	strBytes := innerSTRSerialize(epochB, prevEpochB, root, prevStrHash, policiesB)
 	return pk.Verify(strBytes, strSig)
 }

@@ -1,11 +1,11 @@
-package crypto
+package sign
 
 import (
 	"testing"
 )
 
 // copied from official crypto.ed25519 tests
-func TestSignVerify(t *testing.T) {
+func TestVerifySignature(t *testing.T) {
 	key, err := GenerateKey()
 	if err != nil {
 		t.Fatal(err)

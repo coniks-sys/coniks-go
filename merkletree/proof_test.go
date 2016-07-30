@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
@@ -15,13 +14,13 @@ func TestVerifyProof(t *testing.T) {
 	}
 
 	key1 := "key1"
-	index1 := vrf.Compute([]byte(key1), vrfPrivKey1)
+	index1 := vrfPrivKey1.Compute([]byte(key1))
 	val1 := []byte("value1")
 	key2 := "key2"
-	index2 := vrf.Compute([]byte(key2), vrfPrivKey1)
+	index2 := vrfPrivKey1.Compute([]byte(key2))
 	val2 := []byte("value2")
 	key3 := "key3"
-	index3 := vrf.Compute([]byte(key3), vrfPrivKey1)
+	index3 := vrfPrivKey1.Compute([]byte(key3))
 	val3 := []byte("value3")
 
 	if err := m.Set(index1, key1, val1); err != nil {
@@ -55,7 +54,7 @@ func TestVerifyProof(t *testing.T) {
 	// proof of inclusion
 	proof := m.Get(index3)
 	// step 1. verify VRF index
-	if !bytes.Equal(vrf.Compute([]byte(key3), vrfPrivKey1), proof.LookupIndex) {
+	if !bytes.Equal(vrfPrivKey1.Compute([]byte(key3)), proof.LookupIndex) {
 		t.Error("VRF verification returns false")
 	}
 	// step 2. verify auth path
@@ -69,9 +68,9 @@ func TestVerifyProof(t *testing.T) {
 	}
 
 	// proof of absence
-	absentIndex := vrf.Compute([]byte("123"), vrfPrivKey1)
+	absentIndex := vrfPrivKey1.Compute([]byte("123"))
 	proof = m.Get(absentIndex) // shares the same prefix with an empty node
-	if !bytes.Equal(vrf.Compute([]byte("123"), vrfPrivKey1), proof.LookupIndex) {
+	if !bytes.Equal(vrfPrivKey1.Compute([]byte("123")), proof.LookupIndex) {
 		t.Error("VRF verification returns false")
 	}
 	if !VerifyAuthPath(proof,
@@ -91,20 +90,20 @@ func TestVerifyProofSamePrefix(t *testing.T) {
 	}
 
 	key1 := "key1"
-	index1 := vrf.Compute([]byte(key1), vrfPrivKey1)
+	index1 := vrfPrivKey1.Compute([]byte(key1))
 	val1 := []byte("value1")
 	if err := m.Set(index1, key1, val1); err != nil {
 		t.Fatal(err)
 	}
 	m.recomputeHash()
-	absentIndex := vrf.Compute([]byte("a"), vrfPrivKey1)
+	absentIndex := vrfPrivKey1.Compute([]byte("a"))
 	proof := m.Get(absentIndex) // shares the same prefix with leaf node key1
 	// assert these indices share the same prefix in the first bit
 	if !bytes.Equal(util.ToBytes(util.ToBits(index1)[:proof.Leaf.Level()]),
 		util.ToBytes(util.ToBits(absentIndex)[:proof.Leaf.Level()])) {
 		t.Fatal("Expect these indices share the same prefix in the first bit")
 	}
-	if !bytes.Equal(vrf.Compute([]byte("a"), vrfPrivKey1), proof.LookupIndex) {
+	if !bytes.Equal(vrfPrivKey1.Compute([]byte("a")), proof.LookupIndex) {
 		t.Error("VRF verification returns false")
 	}
 	if !VerifyAuthPath(proof,

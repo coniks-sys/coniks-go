@@ -31,24 +31,28 @@ import (
 
 const (
 	PublicKeySize    = 32
-	SecretKeySize    = 64
+	PrivateKeySize   = 64
 	Size             = 32
 	intermediateSize = 32
 	ProofSize        = 32 + 32 + intermediateSize
 )
 
+type PrivateKey [PrivateKeySize]byte
+type PublicKey [PublicKeySize]byte
+
 // GenerateKey creates a public/private key pair. rnd is used for randomness.
 // If it is nil, `crypto/rand` is used.
-func GenerateKey(rnd io.Reader) (pk []byte, sk *[SecretKeySize]byte, err error) {
+func GenerateKey(rnd io.Reader) (pk *PublicKey, sk *PrivateKey, err error) {
 	if rnd == nil {
 		rnd = rand.Reader
 	}
-	sk = new([SecretKeySize]byte)
+	sk = new(PrivateKey)
+	pk = new(PublicKey)
 	_, err = io.ReadFull(rnd, sk[:32])
 	if err != nil {
 		return nil, nil, err
 	}
-	x, _ := expandSecret(sk)
+	x, _ := sk.expandSecret()
 
 	var pkP edwards25519.ExtendedGroupElement
 	edwards25519.GeScalarMultBase(&pkP, x)
@@ -56,14 +60,15 @@ func GenerateKey(rnd io.Reader) (pk []byte, sk *[SecretKeySize]byte, err error) 
 	pkP.ToBytes(&pkBytes)
 
 	copy(sk[32:], pkBytes[:])
-	return pkBytes[:], sk, err
+	copy(pk[:], pkBytes[:])
+	return pk, sk, err
 }
 
-func Public(sk *[SecretKeySize]byte) []byte {
+func (sk *PrivateKey) Public() []byte {
 	return ed25519.PrivateKey(sk[:]).Public().(ed25519.PublicKey)
 }
 
-func expandSecret(sk *[SecretKeySize]byte) (x, skhr *[32]byte) {
+func (sk *PrivateKey) expandSecret() (x, skhr *[32]byte) {
 	x, skhr = new([32]byte), new([32]byte)
 	hash := sha3.NewShake256()
 	hash.Write(sk[:32])
@@ -75,8 +80,8 @@ func expandSecret(sk *[SecretKeySize]byte) (x, skhr *[32]byte) {
 	return
 }
 
-func Compute(m []byte, sk *[SecretKeySize]byte) []byte {
-	x, _ := expandSecret(sk)
+func (sk *PrivateKey) Compute(m []byte) []byte {
+	x, _ := sk.expandSecret()
 	var ii edwards25519.ExtendedGroupElement
 	var iiB [32]byte
 	edwards25519.GeScalarMult(&ii, x, hashToCurve(m))
@@ -104,8 +109,8 @@ func hashToCurve(m []byte) *edwards25519.ExtendedGroupElement {
 
 // Prove returns the vrf value and a proof such that Verify(pk, m, vrf, proof)
 // == true. The vrf value is the same as returned by Compute(m, sk).
-func Prove(m []byte, sk *[SecretKeySize]byte) (vrf, proof []byte) {
-	x, skhr := expandSecret(sk)
+func (sk *PrivateKey) Prove(m []byte) (vrf, proof []byte) {
+	x, skhr := sk.expandSecret()
 	var cH, rH [64]byte
 	var r, c, minusC, t, grB, hrB, iiB [32]byte
 	var ii, gr, hr edwards25519.ExtendedGroupElement
@@ -150,13 +155,13 @@ func Prove(m []byte, sk *[SecretKeySize]byte) (vrf, proof []byte) {
 }
 
 // Verify returns true iff vrf=Compute(m, sk) for the sk that corresponds to pk.
-func Verify(pkBytes, m, vrfBytes, proof []byte) bool {
-	if len(proof) != ProofSize || len(vrfBytes) != Size || len(pkBytes) != PublicKeySize {
+func (pkBytes *PublicKey) Verify(m, vrfBytes, proof []byte) bool {
+	if len(proof) != ProofSize || len(vrfBytes) != Size || len(*pkBytes) != PublicKeySize {
 		return false
 	}
 	var pk, c, cRef, t, vrf, iiB, ABytes, BBytes [32]byte
 	copy(vrf[:], vrfBytes)
-	copy(pk[:], pkBytes)
+	copy(pk[:], pkBytes[:])
 	copy(c[:32], proof[:32])
 	copy(t[:32], proof[32:64])
 	copy(iiB[:], proof[64:96])

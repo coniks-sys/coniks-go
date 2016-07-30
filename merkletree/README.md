@@ -7,7 +7,7 @@ We use the `SHAKE128` ShakeHash with output size of 32 bytes, and the signature 
 Initiate the history hash chain (the persistent authenticated dictionary)
 ```
 // generate private key for STR signing
-signKey := crypto.GenerateKey()
+signKey := sign.GenerateKey()
 
 // init STR history chain with maximum length is len
 pad := NewPAD(NewPolicies(epochDeadline, vrfPrivKey), signKey, len)

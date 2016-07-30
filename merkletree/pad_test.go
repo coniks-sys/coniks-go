@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/coniks-sys/coniks-go/crypto"
+	"github.com/coniks-sys/coniks-go/crypto/sign"
 )
 
-var signKey crypto.SigningKey
+var signKey sign.PrivateKey
 
 func init() {
 	var err error
-	signKey, err = crypto.GenerateKey()
+	signKey, err = sign.GenerateKey()
 	if err != nil {
 		panic(err)
 	}

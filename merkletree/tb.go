@@ -1,6 +1,6 @@
 package merkletree
 
-import "github.com/coniks-sys/coniks-go/crypto"
+import "github.com/coniks-sys/coniks-go/crypto/sign"
 
 type TemporaryBinding struct {
 	Index     []byte
@@ -8,7 +8,7 @@ type TemporaryBinding struct {
 	Signature []byte
 }
 
-func NewTB(key crypto.SigningKey, strSig, index, value []byte) *TemporaryBinding {
+func NewTB(key sign.PrivateKey, strSig, index, value []byte) *TemporaryBinding {
 	tb := &TemporaryBinding{
 		Index: index,
 		Value: value,
@@ -30,7 +30,7 @@ func (tb *TemporaryBinding) Serialize(strSig []byte) []byte {
 	return innerTBSerialize(strSig, tb.Index, tb.Value)
 }
 
-func VerifyTB(pk crypto.VerifKey, strSig, index, value, tbSig []byte) bool {
+func VerifyTB(pk sign.PublicKey, strSig, index, value, tbSig []byte) bool {
 	tbBytes := innerTBSerialize(strSig, index, value)
 	return pk.Verify(tbBytes, tbSig)
 }
