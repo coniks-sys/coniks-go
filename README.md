@@ -22,6 +22,7 @@ The packages in this library implement the various components of the CONIKS syst
 - ``crypto``: Cryptographic algorithms and operations
 - ``merkletree``: Merkle prefix tree and related data structures
 - ``utils``: Utility functions 
+- ``storage``: DB hooks for storage backend (currently the library supports key-value db only)
 
 ## Disclaimer
 Please keep in mind that this CONIKS library is under active development. The repository may contain experimental features that aren't fully tested. We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/releases).
