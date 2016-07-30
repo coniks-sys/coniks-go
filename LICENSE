@@ -1,10 +1,11 @@
 This license applies to all parts of the CONIKS Golang library and reference implementation except the following:
-- Coname utility functions, located in utils/coname.go
-This module is copyrighted by the Coname Authors.
 - The ed25519 subpackage, located in crypto/ed25519
 This subpackage is copyrighted by the Go Authors.
+- Coname utility functions, located in utils/coname.go
 - The vrf subpackage, located in crypto/vrf
-This subpackage is copyrighted by the Coname Authors.
+- The kv subpackage, located in storage/kv
+- The leveldbkv subpackage, located in storage/kv/leveldbkv
+These subpackages are copyrighted by the Coname Authors.
 
 Copyright (c) 2016, Princeton University.
 Copyright (c) 2016, Ecole Polytechnique Federale de Lausanne (EPFL).
