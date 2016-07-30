@@ -74,7 +74,7 @@ func (str *SignedTreeRoot) Root() []byte {
 	return str.tree.hash
 }
 
-func VerifySTR(pk crypto.VerifKey, epochB, prevEpochB, root, prevStrHash, policiesB, strSig []byte) bool {
+func VerifySTR(pk crypto.VerifyKey, epochB, prevEpochB, root, prevStrHash, policiesB, strSig []byte) bool {
 	strBytes := innerSTRSerialize(epochB, prevEpochB, root, prevStrHash, policiesB)
 	return pk.Verify(strBytes, strSig)
 }

@@ -14,7 +14,7 @@ const (
 )
 
 type SigningKey ed25519.PrivateKey
-type VerifKey ed25519.PublicKey
+type VerifyKey ed25519.PublicKey
 
 func Digest(ms ...[]byte) []byte {
 	h := sha3.NewShake128()
@@ -35,12 +35,12 @@ func (key *SigningKey) Sign(message []byte) []byte {
 	return ed25519.Sign(ed25519.PrivateKey(*key), message)
 }
 
-func (key *SigningKey) Public() (VerifKey, bool) {
+func (key *SigningKey) Public() (VerifyKey, bool) {
 	pk, ok := ed25519.PrivateKey(*key).Public().(ed25519.PublicKey)
-	return VerifKey(pk), ok
+	return VerifyKey(pk), ok
 }
 
-func (pk *VerifKey) Verify(message, sig []byte) bool {
+func (pk *VerifyKey) Verify(message, sig []byte) bool {
 	return ed25519.Verify(ed25519.PublicKey(*pk), message, sig)
 }
 

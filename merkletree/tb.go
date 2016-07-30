@@ -30,7 +30,7 @@ func (tb *TemporaryBinding) Serialize(strSig []byte) []byte {
 	return innerTBSerialize(strSig, tb.Index, tb.Value)
 }
 
-func VerifyTB(pk crypto.VerifKey, strSig, index, value, tbSig []byte) bool {
+func VerifyTB(pk crypto.VerifyKey, strSig, index, value, tbSig []byte) bool {
 	tbBytes := innerTBSerialize(strSig, index, value)
 	return pk.Verify(tbBytes, tbSig)
 }
