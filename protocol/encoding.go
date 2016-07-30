@@ -26,20 +26,7 @@ func MarshalTemporaryBinding(tb *merkletree.TemporaryBinding) ([]byte, error) {
 }
 
 func MarshalSTR(str *merkletree.SignedTreeRoot) ([]byte, error) {
-	return json.Marshal(&struct {
-		Root        string `json:"root"`
-		Epoch       uint64 `json:"epoch"`
-		PrevEpoch   uint64 `json:"prev_epoch"`
-		PrevSTRHash string `json:"prev_str_hash"`
-		Signature   string `json:"signature"`
-		// TODO: Policies
-	}{
-		Root:        b64en(str.Root()),
-		Epoch:       str.Epoch,
-		PrevEpoch:   str.PreviousEpoch,
-		PrevSTRHash: b64en(str.PreviousSTRHash),
-		Signature:   b64en(str.Signature),
-	})
+	return json.Marshal(str)
 }
 
 func MarshalAuthenticationPath(ap *merkletree.AuthenticationPath) ([]byte, error) {

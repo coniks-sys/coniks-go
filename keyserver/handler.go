@@ -3,8 +3,18 @@ package keyserver
 import (
 	"encoding/base64"
 
+	"github.com/coniks-sys/coniks-go/merkletree"
 	p "github.com/coniks-sys/coniks-go/protocol"
 )
+
+// RegistrationResponse is used to replace the protocol RegistrationResponse
+// with addition TB field
+type RegistrationResponse struct {
+	Type int
+	STR  *merkletree.SignedTreeRoot
+	AP   *merkletree.AuthenticationPath
+	TB   *merkletree.TemporaryBinding
+}
 
 func (server *ConiksServer) handleRegistrationMessage(reg *p.RegistrationRequest) (p.Response, error) {
 	if len(reg.Username) == 0 || len(reg.Key) == 0 {
@@ -31,29 +41,18 @@ func (server *ConiksServer) handleRegistrationMessage(reg *p.RegistrationRequest
 	ap, tb, errCode := server.directory.Register(reg.Username, key)
 	if errCode != p.Success {
 		server.Unlock()
-		return p.NewErrorResponse(errCode), p.Error(errCode)
+		return p.NewErrorResponse(errCode),
+			p.Error(errCode)
 	}
 	server.tbs[reg.Username] = tb
 	server.Unlock()
 
-	// TODO: do we want to store the user policies into DB?
+	// TODO: store the user policies into DB after kv branch is merged
 
-	tbEncoded, err := p.MarshalTemporaryBinding(tb)
-	if err != nil {
-		return p.NewErrorResponse(p.ErrorInternalServer), err
-	}
-	apEncoded, err := p.MarshalAuthenticationPath(ap)
-	if err != nil {
-		return p.NewErrorResponse(p.ErrorInternalServer), err
-	}
-	strEncoded, err := p.MarshalSTR(server.directory.LatestSTR())
-	if err != nil {
-		return p.NewErrorResponse(p.ErrorInternalServer), err
-	}
-
-	return &p.RegistrationResponse{
-		STR: string(strEncoded),
-		AP:  string(apEncoded),
-		TB:  string(tbEncoded),
+	return &RegistrationResponse{
+		Type: p.RegistrationType,
+		STR:  server.directory.LatestSTR(),
+		AP:   ap,
+		TB:   tb,
 	}, nil
 }

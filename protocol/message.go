@@ -1,5 +1,7 @@
 package protocol
 
+import "github.com/coniks-sys/coniks-go/merkletree"
+
 // Defines constants representing the types
 // of messages exchanged by clients and servers.
 const (
@@ -11,6 +13,8 @@ type Request struct {
 	Request interface{}
 }
 
+type Response interface{}
+
 type RegistrationRequest struct {
 	Username               string `json:"username"`
 	Key                    string `json:"key"`
@@ -18,18 +22,16 @@ type RegistrationRequest struct {
 	AllowPublicLookup      bool   `json:"allow_public_lookup,omitempty"`
 }
 
-type Response interface{}
-
 type ErrorResponse struct {
 	Error int
 }
 
 type RegistrationResponse struct {
-	STR string `json:"str"`
-	AP  string `json:"ap"`
-	TB  string `json:"tb"`
+	Type int
+	STR  *merkletree.SignedTreeRoot
+	AP   *merkletree.AuthenticationPath
 }
 
-func NewErrorResponse(errCode int) *ErrorResponse {
+func NewErrorResponse(errCode int) Response {
 	return &ErrorResponse{Error: errCode}
 }
