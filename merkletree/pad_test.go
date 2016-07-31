@@ -259,10 +259,11 @@ func TestTB(t *testing.T) {
 	tbb = append(tbb, tb.Index...)
 	tbb = append(tbb, tb.Value...)
 
-	// TODO use SigningKeyToPublic from crypto as soon as it is merged:
-	// pub := ed25519.PrivateKey(pad.key[:]).Public().(crypto.SigningKey)
-	// TODO Verify shouldn't use private key (related to above comment)
-	if !crypto.Verify(pad.key, tbb, tb.Signature) {
+	pk, ok := pad.key.Public()
+	if !ok {
+		t.Fatal("Couldn't retrieve public-key.")
+	}
+	if !pk.Verify(tbb, tb.Signature) {
 		t.Fatal("Couldn't validate signature")
 	}
 	// create next epoch and see if the TB is inserted as promised:
@@ -310,27 +311,48 @@ func BenchmarkCreateLargePAD(b *testing.B) {
 	keyPrefix := "key"
 	valuePrefix := []byte("value")
 
-	NumEntries := 10000
+	// total number of entries in tree:
+	NumEntries := 1000000
+	// tree.Clone and update STR every:
+	updateOnce := uint64(NumEntries - 1)
+
 	b.ResetTimer()
 	// benchmark creating a large tree:
 	for n := 0; n < b.N && n < NumEntries; n++ {
-		_, err := createPad(NumEntries, keyPrefix, valuePrefix, snapLen,
-			false)
+		_, err := createPad(uint64(NumEntries), keyPrefix, valuePrefix, snapLen,
+			updateOnce)
 		if err != nil {
 			b.Fatal(err)
 		}
 	}
-
 }
 
-func BenchmarkLookUpFromLargeDirectory(b *testing.B) {
+func BenchmarkPADUpdate100K(b *testing.B) {
+	// benchmark pad.Update() (tree clone & STR update)
+	keyPrefix := "key"
+	valuePrefix := []byte("value")
+	snapLen := uint64(10)
+	entries := 100000
+	noUpdate := uint64(entries + 1)
+	pad, err := createPad(uint64(entries), keyPrefix, valuePrefix, snapLen, noUpdate)
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		pad.Update(nil)
+	}
+}
+
+func BenchmarkPADLookUpFromLargeDirectory(b *testing.B) {
 	snapLen := uint64(10)
 	keyPrefix := "key"
 	valuePrefix := []byte("value")
 
-	NumEntries := 100000
-	pad, err := createPad(NumEntries, keyPrefix, valuePrefix,
-		snapLen, false)
+	NumEntries := 10000
+	updateOnce := uint64(NumEntries - 1)
+	pad, err := createPad(uint64(NumEntries), keyPrefix, valuePrefix,
+		snapLen, updateOnce)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -351,27 +373,25 @@ func BenchmarkLookUpFromLargeDirectory(b *testing.B) {
 // creates a PAD containing a tree with N entries (+ potential emptyLeafNodes)
 // each key value pair has the form (keyPrefix+string(i), valuePrefix+string(i))
 // for i = 0,...,N
-// After each inserted value the STR gets updated
-func createPad(N int, keyPrefix string, valuePrefix []byte, snapLen uint64,
-	updateAfterEachSet bool) (*PAD, error) {
+// The STR will get updated every epoch defined by every multiple of
+// `updateEvery`. If `updateEvery > N` createPAD won't update the STR
+func createPad(N uint64, keyPrefix string, valuePrefix []byte, snapLen uint64,
+	updateEvery uint64) (*PAD, error) {
 	pad, err := NewPAD(NewPolicies(3, vrfPrivKey1), signKey, snapLen)
 	if err != nil {
 		return nil, err
 	}
 
-	for i := 0; i < N; i++ {
+	for i := uint64(0); i < N; i++ {
 		key := keyPrefix + string(i)
 		value := append(valuePrefix, byte(i))
 		if err := pad.Set(key, value); err != nil {
 			return nil, fmt.Errorf("Couldn't set key=%s and value=%s. Error: %v",
 				key, value, err)
 		}
-		if updateAfterEachSet {
+		if i != 0 && i%updateEvery == 0 {
 			pad.Update(nil)
 		}
-	}
-	if !updateAfterEachSet {
-		pad.Update(nil)
 	}
 	return pad, nil
 }
