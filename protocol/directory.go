@@ -3,15 +3,21 @@ package protocol
 import (
 	"log"
 
-	"github.com/coniks-sys/coniks-go/crypto"
+	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/merkletree"
 )
+
+type ConiksUserPolicies struct {
+	Username               string
+	AllowUnsignedKeychange bool
+	AllowPublicLookup      bool
+}
 
 type ConiksDirectory struct {
 	pad *merkletree.PAD
 }
 
-func InitDirectory(policies merkletree.Policies, secretKey crypto.SigningKey,
+func InitDirectory(policies merkletree.Policies, secretKey sign.PrivateKey,
 	dirSize uint64) *ConiksDirectory {
 	pad, err := merkletree.NewPAD(policies, secretKey, dirSize)
 	if err != nil {

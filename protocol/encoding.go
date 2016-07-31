@@ -32,7 +32,7 @@ func MarshalSTR(str *merkletree.SignedTreeRoot) ([]byte, error) {
 func MarshalAuthenticationPath(ap *merkletree.AuthenticationPath) ([]byte, error) {
 	var prunedTree []string
 	for i := range ap.PrunedTree {
-		prunedTree = append(prunedTree, b64en(ap.PrunedTree[i]))
+		prunedTree = append(prunedTree, b64en(ap.PrunedTree[i][:]))
 	}
 
 	type Leaf struct {

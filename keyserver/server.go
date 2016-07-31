@@ -11,13 +11,16 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/coniks-sys/coniks-go/crypto"
+	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/merkletree"
 	"github.com/coniks-sys/coniks-go/protocol"
+	"github.com/coniks-sys/coniks-go/storage/kv"
+	"github.com/coniks-sys/coniks-go/storage/kv/leveldbkv"
 )
 
 type ServerConfig struct {
 	SigningKeyPath       string  `toml:"signing_key"`
+	DatabasePath         string  `toml:"database"`
 	Address              string  `toml:"address"` // address:port
 	LoadedHistoryLength  uint64  `toml:"loaded_history_length"`
 	RegistrationCapacity uint64  `toml:"registration_capacity"`
@@ -38,7 +41,8 @@ type ConiksServer struct {
 	stop     chan struct{}
 	waitStop sync.WaitGroup
 
-	secretKey crypto.SigningKey
+	db        kv.DB
+	secretKey sign.PrivateKey
 
 	policies         merkletree.Policies
 	policiesFilePath string
@@ -63,13 +67,16 @@ func New(conf *ServerConfig) *ConiksServer {
 		log.Fatalf("Cannot read signing key: %v", err)
 		return nil
 	}
-	if len(skBytes) != crypto.PrivateKeySize {
+	if len(skBytes) != sign.PrivateKeySize {
 		log.Fatalf("Signing key must be 64 bytes (got %d)", len(skBytes))
 		return nil
 	}
 
-	sk := make([]byte, crypto.PrivateKeySize)
-	copy(sk, skBytes[:crypto.PrivateKeySize])
+	sk := make([]byte, sign.PrivateKeySize)
+	copy(sk, skBytes[:sign.PrivateKeySize])
+
+	// open db
+	kvdb := leveldbkv.OpenDB(conf.DatabasePath)
 
 	// read server policies
 	p, err := readPolicies(conf.PoliciesPath)
@@ -77,11 +84,12 @@ func New(conf *ServerConfig) *ConiksServer {
 		log.Fatalf("Cannot read policies config: %v", err)
 		return nil
 	}
-	policies := merkletree.NewPolicies(p.EpochDeadline, &p.VRFKey)
+	policies := merkletree.NewPolicies(p.EpochDeadline, p.VRFKey)
 
 	// create server instance
 	server := new(ConiksServer)
 	server.stop = make(chan struct{})
+	server.db = kvdb
 	server.secretKey = sk
 	server.policies = policies
 	server.policiesFilePath = conf.PoliciesPath
@@ -140,9 +148,10 @@ func (server *ConiksServer) EpochUpdate() {
 	}
 }
 
-func (server *ConiksServer) Shutdown() {
+func (server *ConiksServer) Shutdown() error {
 	close(server.stop)
 	server.waitStop.Wait()
+	return server.db.Close()
 }
 
 func (server *ConiksServer) updatePolicies() {
@@ -157,7 +166,7 @@ func (server *ConiksServer) updatePolicies() {
 				log.Println("open config: ", err)
 			}
 			server.policiesMutex.Lock()
-			server.policies = merkletree.NewPolicies(p.EpochDeadline, &p.VRFKey)
+			server.policies = merkletree.NewPolicies(p.EpochDeadline, p.VRFKey)
 			server.policiesMutex.Unlock()
 			log.Println("Policies reloaded!")
 		}

@@ -12,7 +12,7 @@ import (
 type ServerPolicies struct {
 	EpochDeadline merkletree.TimeStamp `toml:"epoch_deadline"`
 	VRFKeyPath    string               `toml:"vrf_key_path"`
-	VRFKey        [vrf.SecretKeySize]byte
+	VRFKey        *vrf.PrivateKey
 }
 
 func readPolicies(path string) (*ServerPolicies, error) {
@@ -28,10 +28,11 @@ func readPolicies(path string) (*ServerPolicies, error) {
 		log.Fatalf("Cannot read VRF key: %v", err)
 		return nil, nil
 	}
-	if len(skBytes) != vrf.SecretKeySize {
+	if len(skBytes) != vrf.PrivateKeySize {
 		log.Fatalf("Signing key must be 64 bytes (got %d)", len(skBytes))
 		return nil, nil
 	}
+	p.VRFKey = new(vrf.PrivateKey)
 	copy(p.VRFKey[:], skBytes)
 
 	return &p, nil

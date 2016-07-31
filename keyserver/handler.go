@@ -5,6 +5,7 @@ import (
 
 	"github.com/coniks-sys/coniks-go/merkletree"
 	p "github.com/coniks-sys/coniks-go/protocol"
+	"github.com/coniks-sys/coniks-go/utils"
 )
 
 // RegistrationResponse is used to replace the protocol RegistrationResponse
@@ -47,7 +48,15 @@ func (server *ConiksServer) handleRegistrationMessage(reg *p.RegistrationRequest
 	server.tbs[reg.Username] = tb
 	server.Unlock()
 
-	// TODO: store the user policies into DB after kv branch is merged
+	// store the user policies into DB
+	err = server.StoreUserPoliciesToKV(&p.ConiksUserPolicies{
+		AllowUnsignedKeychange: reg.AllowUnsignedKeychange,
+		AllowPublicLookup:      reg.AllowPublicLookup,
+	})
+	if err != nil {
+		return p.NewErrorResponse(p.ErrorInternalServer),
+			err
+	}
 
 	return &RegistrationResponse{
 		Type: p.RegistrationType,
@@ -55,4 +64,13 @@ func (server *ConiksServer) handleRegistrationMessage(reg *p.RegistrationRequest
 		AP:   ap,
 		TB:   tb,
 	}, nil
+}
+
+func (server *ConiksServer) StoreUserPoliciesToKV(up *p.ConiksUserPolicies) error {
+	buf := make([]byte, 0, 1)
+	buf = append(util.ToBytes([]bool{up.AllowUnsignedKeychange, up.AllowPublicLookup}))
+	if err := server.db.Put([]byte(up.Username), buf); err != nil {
+		return err
+	}
+	return nil
 }
