@@ -286,20 +286,27 @@ func TestNewPADMissingPolicies(t *testing.T) {
 	}
 }
 
-// TODO move this to helper "mockRandReader" or sth like that; and provide a
-// an equivalent function to reset the original rand.Reader
+// TODO move the following to some (internal?) testutils package
 type testErrorRandReader struct{}
 
 func (er testErrorRandReader) Read([]byte) (int, error) {
 	return 0, errors.New("Not enough entropy!")
 }
 
-func TestNewPADErrorWhileCreatingTree(t *testing.T) {
-	origRand := rand.Reader
+func mockRandReadWithErroringReader() (orig io.Reader) {
+	orig = rand.Reader
 	rand.Reader = testErrorRandReader{}
-	defer func(orig io.Reader) {
-		rand.Reader = orig
-	}(origRand)
+	return
+}
+
+func unMockRandReader(orig io.Reader) {
+	rand.Reader = orig
+}
+
+func TestNewPADErrorWhileCreatingTree(t *testing.T) {
+	origRand := mockRandReadWithErroringReader()
+	defer unMockRandReader(origRand)
+
 	pad, err := NewPAD(NewPolicies(3, vrfPrivKey1), signKey, 3)
 	if err == nil || pad != nil {
 		t.Fatal("NewPad should return an error in case the tree creation failed")
@@ -327,12 +334,24 @@ func BenchmarkCreateLargePAD(b *testing.B) {
 	}
 }
 
-func BenchmarkPADUpdate100K(b *testing.B) {
-	// benchmark pad.Update() (tree clone & STR update)
+//
+// Benchmarks which can be used produce data similar to Figure 7. in Section 5
+//
+func BenchmarkPADUpdate100K(b *testing.B) { benchPADUpdate(b, 100000) }
+func BenchmarkPADUpdate500K(b *testing.B) { benchPADUpdate(b, 500000) }
+
+// make sure you have enough memory/cpu power if you want to run the benchmarks
+// below; also give the benchmarks enough time to finish using the -timeout flag
+func BenchmarkPADUpdate1M(b *testing.B)   { benchPADUpdate(b, 1000000) }
+func BenchmarkPADUpdate2_5M(b *testing.B) { benchPADUpdate(b, 2500000) }
+func BenchmarkPADUpdate5M(b *testing.B)   { benchPADUpdate(b, 5000000) }
+func BenchmarkPADUpdate7_5M(b *testing.B) { benchPADUpdate(b, 7500000) }
+func BenchmarkPADUpdate10M(b *testing.B)  { benchPADUpdate(b, 10000000) }
+
+func benchPADUpdate(b *testing.B, entries uint64) {
 	keyPrefix := "key"
 	valuePrefix := []byte("value")
 	snapLen := uint64(10)
-	entries := 100000
 	noUpdate := uint64(entries + 1)
 	pad, err := createPad(uint64(entries), keyPrefix, valuePrefix, snapLen, noUpdate)
 	if err != nil {
@@ -344,25 +363,42 @@ func BenchmarkPADUpdate100K(b *testing.B) {
 	}
 }
 
-func BenchmarkPADLookUpFromLargeDirectory(b *testing.B) {
+//
+// END Benchmarks for Figure 7. in Section 5
+//
+
+func BenchmarkPADLookUpFrom10K(b *testing.B)  { benchPADLookup(b, 10000) }
+func BenchmarkPADLookUpFrom50K(b *testing.B)  { benchPADLookup(b, 50000) }
+func BenchmarkPADLookUpFrom100K(b *testing.B) { benchPADLookup(b, 100000) }
+func BenchmarkPADLookUpFrom500K(b *testing.B) { benchPADLookup(b, 500000) }
+func BenchmarkPADLookUpFrom1M(b *testing.B)   { benchPADLookup(b, 1000000) }
+func BenchmarkPADLookUpFrom5M(b *testing.B)   { benchPADLookup(b, 5000000) }
+func BenchmarkPADLookUpFrom10M(b *testing.B)  { benchPADLookup(b, 10000000) }
+
+func benchPADLookup(b *testing.B, entries uint64) {
 	snapLen := uint64(10)
 	keyPrefix := "key"
 	valuePrefix := []byte("value")
-
-	NumEntries := 10000
-	updateOnce := uint64(NumEntries - 1)
-	pad, err := createPad(uint64(NumEntries), keyPrefix, valuePrefix,
-		snapLen, updateOnce)
+	updateOnce := uint64(entries - 1)
+	pad, err := createPad(entries, keyPrefix, valuePrefix, snapLen,
+		updateOnce)
 	if err != nil {
 		b.Fatal(err)
 	}
 	// ignore the tree creation:
 	b.ResetTimer()
-	fmt.Println("Done creating large pad/tree.")
+	//fmt.Println("Done creating large pad/tree.")
 
 	// measure LookUps in large tree (with NumEntries leafs)
-	for n := 0; n < b.N && n < NumEntries; n++ {
-		key := keyPrefix + string(n)
+	for n := 0; n < b.N; n++ {
+		b.StopTimer()
+		var key string
+		if n < int(entries) {
+			key = keyPrefix + string(n)
+		} else {
+			key = keyPrefix + string(n%int(entries))
+		}
+		b.StartTimer()
 		_, err := pad.Lookup(key)
 		if err != nil {
 			b.Fatalf("Coudldn't lookup key=%s", key)
@@ -389,7 +425,7 @@ func createPad(N uint64, keyPrefix string, valuePrefix []byte, snapLen uint64,
 			return nil, fmt.Errorf("Couldn't set key=%s and value=%s. Error: %v",
 				key, value, err)
 		}
-		if i != 0 && i%updateEvery == 0 {
+		if i != 0 && (i%updateEvery == 0) {
 			pad.Update(nil)
 		}
 	}
