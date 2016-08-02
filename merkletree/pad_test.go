@@ -285,8 +285,7 @@ func TestNewPADMissingPolicies(t *testing.T) {
 	}
 }
 
-// TODO move this to helper "mockRandReader" or sth like that; and provide a
-// an equivalent function to reset the original rand.Reader
+// TODO move the following to some (internal?) testutils package
 type testErrorRandReader struct{}
 
 func (er testErrorRandReader) Read([]byte) (int, error) {
@@ -319,14 +318,14 @@ func BenchmarkCreateLargePAD(b *testing.B) {
 	valuePrefix := []byte("value")
 
 	// total number of entries in tree:
-	NumEntries := 1000000
+	NumEntries := uint64(1000000)
 	// tree.Clone and update STR every:
 	noUpdate := uint64(NumEntries + 1)
 
 	b.ResetTimer()
 	// benchmark creating a large tree (don't Update tree)
-	for n := 0; n < b.N && n < NumEntries; n++ {
-		_, err := createPad(uint64(NumEntries), keyPrefix, valuePrefix, snapLen,
+	for n := 0; n < b.N; n++ {
+		_, err := createPad(NumEntries, keyPrefix, valuePrefix, snapLen,
 			noUpdate)
 		if err != nil {
 			b.Fatal(err)

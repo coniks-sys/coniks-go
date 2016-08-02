@@ -1,8 +1,6 @@
 package merkletree
 
 import (
-	"errors"
-
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/utils"
 )
@@ -23,9 +21,6 @@ type SignedTreeRoot struct {
 }
 
 func NewSTR(key sign.PrivateKey, policies Policies, m *MerkleTree, epoch uint64, prevHash []byte) *SignedTreeRoot {
-	if epoch < 0 {
-		panic(ErrorBadEpoch)
-	}
 	prevEpoch := epoch - 1
 	if epoch == 0 {
 		prevEpoch = 0
