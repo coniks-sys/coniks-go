@@ -253,15 +253,11 @@ func TestTB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// TODO shouldn't there be a serialize function?
-	tbb := pad.latestSTR.Signature
-	tbb = append(tbb, tb.Index...)
-	tbb = append(tbb, tb.Value...)
-
 	pk, ok := pad.signKey.Public()
 	if !ok {
 		t.Fatal("Couldn't retrieve public-key.")
 	}
+	tbb := tb.Serialize(pad.latestSTR.Signature)
 	if !pk.Verify(tbb, tb.Signature) {
 		t.Fatal("Couldn't validate signature")
 	}
