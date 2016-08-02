@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/coniks-sys/coniks-go/crypto"
+	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"io"
 )
 
@@ -259,7 +258,7 @@ func TestTB(t *testing.T) {
 	tbb = append(tbb, tb.Index...)
 	tbb = append(tbb, tb.Value...)
 
-	pk, ok := pad.key.Public()
+	pk, ok := pad.signKey.Public()
 	if !ok {
 		t.Fatal("Couldn't retrieve public-key.")
 	}
@@ -286,7 +285,8 @@ func TestNewPADMissingPolicies(t *testing.T) {
 	}
 }
 
-// TODO move the following to some (internal?) testutils package
+// TODO move this to helper "mockRandReader" or sth like that; and provide a
+// an equivalent function to reset the original rand.Reader
 type testErrorRandReader struct{}
 
 func (er testErrorRandReader) Read([]byte) (int, error) {
@@ -321,13 +321,13 @@ func BenchmarkCreateLargePAD(b *testing.B) {
 	// total number of entries in tree:
 	NumEntries := 1000000
 	// tree.Clone and update STR every:
-	updateOnce := uint64(NumEntries - 1)
+	noUpdate := uint64(NumEntries + 1)
 
 	b.ResetTimer()
-	// benchmark creating a large tree:
+	// benchmark creating a large tree (don't Update tree)
 	for n := 0; n < b.N && n < NumEntries; n++ {
 		_, err := createPad(uint64(NumEntries), keyPrefix, valuePrefix, snapLen,
-			updateOnce)
+			noUpdate)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -335,7 +335,7 @@ func BenchmarkCreateLargePAD(b *testing.B) {
 }
 
 //
-// Benchmarks which can be used produce data similar to Figure 7. in Section 5
+// Benchmarks which can be used produce data similar to Figure 7. in Section 5.
 //
 func BenchmarkPADUpdate100K(b *testing.B) { benchPADUpdate(b, 100000) }
 func BenchmarkPADUpdate500K(b *testing.B) { benchPADUpdate(b, 500000) }
@@ -410,7 +410,7 @@ func benchPADLookup(b *testing.B, entries uint64) {
 // each key value pair has the form (keyPrefix+string(i), valuePrefix+string(i))
 // for i = 0,...,N
 // The STR will get updated every epoch defined by every multiple of
-// `updateEvery`. If `updateEvery > N` createPAD won't update the STR
+// `updateEvery`. If `updateEvery > N` createPAD won't update the STR.
 func createPad(N uint64, keyPrefix string, valuePrefix []byte, snapLen uint64,
 	updateEvery uint64) (*PAD, error) {
 	pad, err := NewPAD(NewPolicies(3, vrfPrivKey1), signKey, snapLen)
