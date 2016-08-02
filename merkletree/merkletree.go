@@ -57,15 +57,15 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 			break
 		}
 		direction := lookupIndexBits[depth]
+		var hashArr [crypto.HashSizeByte]byte
 		if direction {
-			authPath.PrunedTree = append(authPath.PrunedTree,
-				nodePointer.(*interiorNode).leftHash)
+			copy(hashArr[:], nodePointer.(*interiorNode).leftHash)
 			nodePointer = nodePointer.(*interiorNode).rightChild
 		} else {
-			authPath.PrunedTree = append(authPath.PrunedTree,
-				nodePointer.(*interiorNode).rightHash)
+			copy(hashArr[:], nodePointer.(*interiorNode).rightHash)
 			nodePointer = nodePointer.(*interiorNode).leftChild
 		}
+		authPath.PrunedTree = append(authPath.PrunedTree, hashArr)
 		depth++
 	}
 
@@ -91,7 +91,6 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 }
 
 func (m *MerkleTree) Set(index []byte, key string, value []byte) error {
-
 	// generate random per user salt
 	salt, err := crypto.MakeRand()
 	if err != nil {
