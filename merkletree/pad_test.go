@@ -261,21 +261,23 @@ func TestTB(t *testing.T) {
 	if !pk.Verify(tbb, tb.Signature) {
 		t.Fatal("Couldn't validate signature")
 	}
+	// verify VRF index of TB
+	if !bytes.Equal(vrfPrivKey1.Compute([]byte(key)), tb.Index) {
+		t.Error("VRF verification returns false")
+	}
+
 	// create next epoch and see if the TB is inserted as promised:
 	pad.Update(nil)
 
 	ap, err := pad.Lookup(key)
-	if !bytes.Equal(ap.LookupIndex, tb.Index) || !bytes.Equal(ap.Leaf.Value(), tb.Value) {
+	// compare TB's index with authentication path's index (after Update):
+	if !bytes.Equal(ap.LookupIndex, tb.Index) ||
+		!bytes.Equal(ap.Leaf.Value(), tb.Value) {
 		t.Error("Value wasn't inserted as promised")
 	}
-	// step 1. verify VRF index
-	if !bytes.Equal(vrfPrivKey1.Compute([]byte(key)), ap.LookupIndex) {
-		t.Error("VRF verification returns false")
-	}
-	// step 2. verify auth path
-	if !VerifyAuthPath(ap,
-		ap.Leaf.Index(), ap.Leaf.Commitment(), ap.Leaf.Level(), ap.Leaf.IsEmpty(),
-		pad.GetLatestSTR().Root()) {
+	// verify auth path
+	if !VerifyAuthPath(ap, ap.Leaf.Index(), ap.Leaf.Commitment(),
+		ap.Leaf.Level(), ap.Leaf.IsEmpty(), pad.GetLatestSTR().Root()) {
 		t.Error("Proof of inclusion verification failed.")
 	}
 	if _, ok := ap.Leaf.(*userLeafNode); !ok {
