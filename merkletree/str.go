@@ -1,14 +1,8 @@
 package merkletree
 
 import (
-	"errors"
-
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/utils"
-)
-
-var (
-	ErrorBadEpoch = errors.New("[merkletree] Bad STR Epoch. STR's epoch must be nonzero")
 )
 
 // SignedTreeRoot represents a signed tree root, which is generated
@@ -27,9 +21,6 @@ type SignedTreeRoot struct {
 }
 
 func NewSTR(key sign.PrivateKey, policies Policies, m *MerkleTree, epoch uint64, prevHash []byte) *SignedTreeRoot {
-	if epoch < 0 {
-		panic(ErrorBadEpoch)
-	}
 	prevEpoch := epoch - 1
 	if epoch == 0 {
 		prevEpoch = 0

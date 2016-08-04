@@ -112,3 +112,11 @@ func TestVerifyProofSamePrefix(t *testing.T) {
 		t.Error("Proof of absence verification failed.")
 	}
 }
+
+func TestEmptyNodeCommitment(t *testing.T) {
+	n := node{parent: nil, level: 1}
+	e := emptyNode{node: n, index: []byte("some index")}
+	if c := e.Commitment(); c != nil {
+		t.Fatal("Commitment of emptyNode should be nil")
+	}
+}
