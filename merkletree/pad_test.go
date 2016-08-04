@@ -241,14 +241,14 @@ func TestPoliciesChange(t *testing.T) {
 }
 
 func TestTB(t *testing.T) {
-	key1 := "key"
-	val1 := []byte("value")
+	key := "key"
+	val := []byte("value")
 
 	pad, err := NewPAD(NewPolicies(3, vrfPrivKey1), signKey, 3)
 	if err != nil {
 		t.Fatal(err)
 	}
-	tb, err := pad.TB(key1, val1)
+	tb, err := pad.TB(key, val)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,9 +264,22 @@ func TestTB(t *testing.T) {
 	// create next epoch and see if the TB is inserted as promised:
 	pad.Update(nil)
 
-	ap, err := pad.Lookup(key1)
+	ap, err := pad.Lookup(key)
 	if !bytes.Equal(ap.LookupIndex, tb.Index) || !bytes.Equal(ap.Leaf.Value(), tb.Value) {
 		t.Error("Value wasn't inserted as promised")
+	}
+	// step 1. verify VRF index
+	if !bytes.Equal(vrfPrivKey1.Compute([]byte(key)), ap.LookupIndex) {
+		t.Error("VRF verification returns false")
+	}
+	// step 2. verify auth path
+	if !VerifyAuthPath(ap,
+		ap.Leaf.Index(), ap.Leaf.Commitment(), ap.Leaf.Level(), ap.Leaf.IsEmpty(),
+		pad.GetLatestSTR().Root()) {
+		t.Error("Proof of inclusion verification failed.")
+	}
+	if _, ok := ap.Leaf.(*userLeafNode); !ok {
+		t.Error("Invalid proof of inclusion. Expect a userLeafNode in returned path")
 	}
 }
 
