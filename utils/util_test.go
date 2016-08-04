@@ -35,13 +35,11 @@ func TestIntToBytes(t *testing.T) {
 	if int(binary.LittleEndian.Uint32(b)) != numInt {
 		t.Fatal("Conversion to bytes looks wrong!")
 	}
-	// TODO It is possible to call `IntToBytes` with a signed int < 0
-	// isn't that problematic?
-	// for instance this will fail:
-	// b := IntToBytes(-42)
-	// if int(binary.LittleEndian.Uint32(b)) != numInt {
-	// 	t.Fatal("Conversion to bytes looks wrong!")
-	// }
+	numInt = -42
+	b = IntToBytes(numInt)
+	if int32(binary.LittleEndian.Uint32(b)) != int32(numInt) {
+		t.Fatal("Conversion to bytes looks wrong!")
+	}
 }
 
 func TestULongToBytes(t *testing.T) {
@@ -58,5 +56,9 @@ func TestLongToBytes(t *testing.T) {
 	if int64(binary.LittleEndian.Uint64(b)) != numInt {
 		t.Fatal("Conversion to bytes looks wrong!")
 	}
-	// TODO similar problem as in TestIntToBytes
+	numInt = int64(-42)
+	b = LongToBytes(numInt)
+	if int64(binary.LittleEndian.Uint64(b)) != numInt {
+		t.Fatal("Conversion to bytes looks wrong!")
+	}
 }
