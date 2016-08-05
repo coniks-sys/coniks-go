@@ -21,6 +21,7 @@ import (
 type ServerConfig struct {
 	SigningKeyPath       string  `toml:"signing_key"`
 	DatabasePath         string  `toml:"database"`
+	RegistrationAddress  string  `toml:"reg_address"`
 	Address              string  `toml:"address"` // address:port
 	LoadedHistoryLength  uint64  `toml:"loaded_history_length"`
 	RegistrationCapacity uint64  `toml:"registration_capacity"`
@@ -109,19 +110,27 @@ func (server *ConiksServer) RunWithConfig(conf *ServerConfig) {
 	// server listener
 	cer, err := tls.LoadX509KeyPair(conf.TLS.TLSCertPath, conf.TLS.TLSKeyPath)
 	if err != nil {
-		log.Println(err)
-		return
+		panic(err)
 	}
 
 	config := &tls.Config{Certificates: []tls.Certificate{cer}}
-	ln, err := tls.Listen("tcp", conf.Address, config)
+	// server public port
+	clientLn, err := tls.Listen("tcp", conf.Address, config)
 	if err != nil {
-		log.Println(err)
-		return
+		panic(err)
+	}
+
+	// server registration port
+	botLn, err := tls.Listen("tcp", conf.RegistrationAddress, config)
+	if err != nil {
+		panic(err)
 	}
 
 	server.waitStop.Add(1)
-	go server.listenForRequests(ln)
+	go server.listenForRequests(clientLn, server.handleClientMessage)
+
+	server.waitStop.Add(1)
+	go server.listenForRequests(botLn, server.handleBotMessage)
 
 	server.waitStop.Add(1)
 	go server.updatePolicies()

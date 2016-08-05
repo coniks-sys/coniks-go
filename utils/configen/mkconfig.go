@@ -20,6 +20,7 @@ func main() {
 	var conf = keyserver.ServerConfig{
 		SigningKeyPath:       "ed25519.secret",
 		DatabasePath:         "coniks.db",
+		RegistrationAddress:  "127.0.0.1:3001",
 		Address:              "0.0.0.0:3000",
 		PoliciesPath:         "policies.toml",
 		LoadedHistoryLength:  1000000,

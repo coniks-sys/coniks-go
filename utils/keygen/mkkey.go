@@ -38,10 +38,10 @@ func main() {
 	var sign = flag.Bool("signing", false, "Generate Signing key pair")
 	flag.Parse()
 
-	switch true {
-	case *vrf:
+	if *vrf {
 		mkVrfKey()
-	case *sign:
+	}
+	if *sign {
 		mkSigningKey()
 	}
 }
@@ -49,51 +49,51 @@ func main() {
 func mkSigningKey() {
 	if _, err := os.Stat(SECRET_KEY); err == nil {
 		fmt.Fprintf(os.Stderr, "%s already exists\n", SECRET_KEY)
-		os.Exit(1)
+		return
 	}
 	if _, err := os.Stat(PUBLIC_KEY); err == nil {
 		fmt.Fprintf(os.Stderr, "%s already exists\n", PUBLIC_KEY)
-		os.Exit(1)
+		return
 	}
 
 	pk, sk, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+		log.Print(err)
+		return
 	}
 	if err := ioutil.WriteFile(SECRET_KEY, sk[:], 0600); err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+		log.Print(err)
+		return
 	}
 
 	if err = ioutil.WriteFile(PUBLIC_KEY, pk[:], 0644); err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+		log.Print(err)
+		return
 	}
 }
 
 func mkVrfKey() {
 	if _, err := os.Stat(VRF_SECRET); err == nil {
 		fmt.Fprintf(os.Stderr, "%s already exists\n", VRF_SECRET)
-		os.Exit(1)
+		return
 	}
 	if _, err := os.Stat(VRF_PUBLIC); err == nil {
 		fmt.Fprintf(os.Stderr, "%s already exists\n", VRF_PUBLIC)
-		os.Exit(1)
+		return
 	}
 
 	pk, sk, err := vrf.GenerateKey(rand.Reader)
 	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+		log.Print(err)
+		return
 	}
 	if err := ioutil.WriteFile(VRF_SECRET, sk[:], 0600); err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+		log.Print(err)
+		return
 	}
 
 	if err = ioutil.WriteFile(VRF_PUBLIC, pk[:], 0644); err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+		log.Print(err)
+		return
 	}
 }

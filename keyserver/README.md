@@ -8,7 +8,17 @@ go run utils/configen/mkconfig.go
 
 Generate new key pair for signing
 ``` 
-go run utils/keygen/mkkey.go 
+go run utils/keygen/mkkey.go -vrf -signing
+```
+
+Generate a private key for secure connection (TLS)
+```
+openssl ecparam -genkey -name prime256v1 -out server.key
+```
+
+Generation of self-signed(x509) public key (PEM-encodings `.pem`) based on the private (`.key`)
+```
+openssl req -new -x509 -sha256 -key server.key -out server.pem -days 3650
 ```
 
 Run the server

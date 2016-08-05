@@ -14,19 +14,29 @@ import (
 var b64en = base64.StdEncoding.EncodeToString
 
 func MarshalTemporaryBinding(tb *merkletree.TemporaryBinding) ([]byte, error) {
-	return json.Marshal(&struct {
-		Index     string `json:"index"`
-		Value     string `json:"value"`
-		Signature string `json:"signature"`
-	}{
-		Index:     b64en(tb.Index),
-		Value:     b64en(tb.Value),
-		Signature: b64en(tb.Signature),
-	})
+	return json.Marshal(tb)
 }
 
 func MarshalSTR(str *merkletree.SignedTreeRoot) ([]byte, error) {
-	return json.Marshal(str)
+	policies, err := json.Marshal(str.Policies)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(&struct {
+		TreeHash        []byte
+		Epoch           uint64
+		PreviousEpoch   uint64
+		PreviousSTRHash []byte
+		Policies        json.RawMessage
+		Signature       []byte
+	}{
+		TreeHash:        str.Root(),
+		Epoch:           str.Epoch,
+		PreviousEpoch:   str.PreviousEpoch,
+		PreviousSTRHash: str.PreviousSTRHash,
+		Policies:        policies,
+		Signature:       str.Signature,
+	})
 }
 
 func MarshalAuthenticationPath(ap *merkletree.AuthenticationPath) ([]byte, error) {
@@ -36,18 +46,18 @@ func MarshalAuthenticationPath(ap *merkletree.AuthenticationPath) ([]byte, error
 	}
 
 	type Leaf struct {
-		Level      int    `json:"level"`
-		Index      string `json:"index"`
-		Value      string `json:"value"`
-		IsEmpty    bool   `json:"is_empty"`
-		Commitment string `json:"commitment"`
+		Level      int
+		Index      string
+		Value      string
+		IsEmpty    bool
+		Commitment string
 	}
 
 	return json.Marshal(&struct {
-		TreeNonce   string   `json:"tree_nonce"`
-		LookupIndex string   `json:"lookup_index"`
-		VrfProof    string   `json:"vrf_proof"`
-		PrunedTree  []string `json:"pruned_tree"`
+		TreeNonce   string
+		LookupIndex string
+		VrfProof    string
+		PrunedTree  []string
 		Leaf        Leaf
 	}{
 		TreeNonce:   b64en(ap.TreeNonce),

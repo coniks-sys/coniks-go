@@ -1,8 +1,6 @@
 package keyserver
 
 import (
-	"encoding/base64"
-
 	"github.com/coniks-sys/coniks-go/merkletree"
 	p "github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/utils"
@@ -23,13 +21,6 @@ func (server *ConiksServer) handleRegistrationMessage(reg *p.RegistrationRequest
 			p.Error(p.ErrorMalformedClientMessage)
 	}
 
-	// decode key string
-	key, err := base64.StdEncoding.DecodeString(reg.Key)
-	if err != nil {
-		return p.NewErrorResponse(p.ErrorMalformedClientMessage),
-			p.Error(p.ErrorMalformedClientMessage)
-	}
-
 	server.Lock()
 	// check the temporary bindings array first
 	// currently the server allows only one registration/key change per epoch
@@ -39,7 +30,7 @@ func (server *ConiksServer) handleRegistrationMessage(reg *p.RegistrationRequest
 			p.Error(p.ErrorNameExisted)
 	}
 
-	ap, tb, errCode := server.directory.Register(reg.Username, key)
+	ap, tb, errCode := server.directory.Register(reg.Username, []byte(reg.Key))
 	if errCode != p.Success {
 		server.Unlock()
 		return p.NewErrorResponse(errCode),
@@ -49,7 +40,7 @@ func (server *ConiksServer) handleRegistrationMessage(reg *p.RegistrationRequest
 	server.Unlock()
 
 	// store the user policies into DB
-	err = server.StoreUserPoliciesToKV(&p.ConiksUserPolicies{
+	err := server.StoreUserPoliciesToKV(&p.ConiksUserPolicies{
 		AllowUnsignedKeychange: reg.AllowUnsignedKeychange,
 		AllowPublicLookup:      reg.AllowPublicLookup,
 	})

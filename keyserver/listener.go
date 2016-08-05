@@ -10,7 +10,7 @@ import (
 	p "github.com/coniks-sys/coniks-go/protocol"
 )
 
-func (server *ConiksServer) listenForRequests(ln net.Listener) {
+func (server *ConiksServer) listenForRequests(ln net.Listener, handler func(msg []byte) ([]byte, error)) {
 	defer server.waitStop.Done()
 	defer ln.Close()
 	go func() {
@@ -30,11 +30,11 @@ func (server *ConiksServer) listenForRequests(ln net.Listener) {
 			}
 		}
 		server.waitStop.Add(1)
-		go server.handleClient(conn)
+		go server.acceptClient(conn, handler)
 	}
 }
 
-func (server *ConiksServer) handleClient(conn net.Conn) {
+func (server *ConiksServer) acceptClient(conn net.Conn, handler func(msg []byte) ([]byte, error)) {
 	defer conn.Close()
 	defer server.waitStop.Done()
 	closed := make(chan struct{})
@@ -65,7 +65,7 @@ func (server *ConiksServer) handleClient(conn net.Conn) {
 			}
 		}
 
-		res, err := server.handleClientMessage(buf[:n])
+		res, err := handler(buf[:n])
 		if err != nil {
 			log.Printf("client handle %v: %v", conn.RemoteAddr(), err)
 		}
@@ -100,6 +100,37 @@ func (server *ConiksServer) handleClientMessage(msg []byte) ([]byte, error) {
 
 	// handle request
 	switch req.Type {
+	default:
+		log.Printf("unknown message type: %q", req.Type)
+		response = p.NewErrorResponse(p.ErrorMalformedClientMessage)
+		err = p.Error(p.ErrorMalformedClientMessage)
+	}
+
+marshalling:
+	res, e := json.Marshal(response)
+	if e != nil {
+		panic(p.Error(p.ErrorInternalServer))
+	}
+	return res, err
+}
+
+func (server *ConiksServer) handleBotMessage(msg []byte) ([]byte, error) {
+	var response p.Response
+	var err error
+
+	// get request message
+	var content json.RawMessage
+	req := p.Request{
+		Request: &content,
+	}
+	if e := json.Unmarshal(msg, &req); e != nil {
+		response = p.NewErrorResponse(p.ErrorMalformedClientMessage)
+		err = e
+		goto marshalling
+	}
+
+	// handle request
+	switch req.Type {
 	case p.RegistrationType:
 		var reg p.RegistrationRequest
 		if e := json.Unmarshal(content, &reg); e != nil {
@@ -108,7 +139,7 @@ func (server *ConiksServer) handleClientMessage(msg []byte) ([]byte, error) {
 		} else {
 			response, err = server.handleRegistrationMessage(&reg)
 			if err == nil {
-				tbEncoded, err := json.Marshal(response.(*RegistrationResponse).TB)
+				tbEncoded, err := p.MarshalTemporaryBinding(response.(*RegistrationResponse).TB)
 				if err != nil {
 					panic(err)
 				}
@@ -116,18 +147,20 @@ func (server *ConiksServer) handleClientMessage(msg []byte) ([]byte, error) {
 				if err != nil {
 					panic(err)
 				}
-				strEncoded, err := json.Marshal(response.(*RegistrationResponse).STR)
+				strEncoded, err := p.MarshalSTR(response.(*RegistrationResponse).STR)
 				if err != nil {
 					panic(err)
 				}
 				res, e := json.Marshal(&struct {
-					STR json.RawMessage `json:"str"`
-					AP  json.RawMessage `json:"ap"`
-					TB  json.RawMessage `json:"tb"`
+					Type int
+					STR  json.RawMessage `json:"str"`
+					AP   json.RawMessage `json:"ap"`
+					TB   json.RawMessage `json:"tb"`
 				}{
-					STR: strEncoded,
-					AP:  apEncoded,
-					TB:  tbEncoded,
+					Type: response.(*RegistrationResponse).Type,
+					STR:  strEncoded,
+					AP:   apEncoded,
+					TB:   tbEncoded,
 				})
 				if e != nil {
 					panic(e)
