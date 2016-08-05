@@ -2,7 +2,6 @@ package merkletree
 
 import (
 	"bytes"
-	"crypto/rand"
 	"errors"
 
 	"github.com/coniks-sys/coniks-go/crypto"
@@ -32,8 +31,8 @@ type MerkleTree struct {
 
 func NewMerkleTree() (*MerkleTree, error) {
 	root := NewInteriorNode(nil, 0, []bool{})
-	nonce := make([]byte, crypto.HashSizeByte)
-	if _, err := rand.Read(nonce); err != nil {
+	nonce, err := crypto.MakeRand()
+	if err != nil {
 		return nil, err
 	}
 	m := &MerkleTree{
@@ -50,8 +49,8 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 	nodePointer = m.root
 
 	authPath := &AuthenticationPath{
-		treeNonce:   m.nonce,
-		lookupIndex: lookupIndex,
+		TreeNonce:   m.nonce,
+		LookupIndex: lookupIndex,
 	}
 
 	for {
@@ -64,15 +63,15 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 			break
 		}
 		direction := lookupIndexBits[depth]
+		var hashArr [crypto.HashSizeByte]byte
 		if direction {
-			authPath.prunedHashes = append(authPath.prunedHashes,
-				nodePointer.(*interiorNode).leftHash)
+			copy(hashArr[:], nodePointer.(*interiorNode).leftHash)
 			nodePointer = nodePointer.(*interiorNode).rightChild
 		} else {
-			authPath.prunedHashes = append(authPath.prunedHashes,
-				nodePointer.(*interiorNode).rightHash)
+			copy(hashArr[:], nodePointer.(*interiorNode).rightHash)
 			nodePointer = nodePointer.(*interiorNode).leftChild
 		}
+		authPath.PrunedTree = append(authPath.PrunedTree, hashArr)
 		depth++
 	}
 
@@ -82,7 +81,7 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 	switch nodePointer.(type) {
 	case *userLeafNode:
 		pNode := nodePointer.(*userLeafNode).Clone(nil).(*userLeafNode)
-		authPath.leaf = pNode
+		authPath.Leaf = pNode
 		if bytes.Equal(nodePointer.(*userLeafNode).index, lookupIndex) {
 			return authPath
 		}
@@ -91,17 +90,16 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 		pNode.value = nil
 		return authPath
 	case *emptyNode:
-		authPath.leaf = nodePointer.(*emptyNode).Clone(nil).(*emptyNode)
+		authPath.Leaf = nodePointer.(*emptyNode).Clone(nil).(*emptyNode)
 		return authPath
 	}
 	panic(ErrorInvalidTree)
 }
 
 func (m *MerkleTree) Set(index []byte, key string, value []byte) error {
-
 	// generate random per user salt
-	salt := make([]byte, crypto.HashSizeByte)
-	if _, err := rand.Read(salt); err != nil {
+	salt, err := crypto.MakeRand()
+	if err != nil {
 		return err
 	}
 
@@ -216,10 +214,6 @@ func visitULNsInternal(nodePtr MerkleNode, callBack func(*userLeafNode)) {
 
 func (m *MerkleTree) recomputeHash() {
 	m.hash = m.root.Hash(m)
-}
-
-func (m *MerkleTree) GetHash() []byte {
-	return m.hash
 }
 
 func (m *MerkleTree) Clone() *MerkleTree {

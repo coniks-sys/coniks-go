@@ -43,10 +43,10 @@ func (p *ConiksPolicies) LoadFromKV(db kv.DB, epoch uint64) error {
 	buf = buf[l:]
 	p.EpochDeadline = TimeStamp(binary.LittleEndian.Uint64(buf[:8]))
 	buf = buf[8:]
-	vrfKey := new([vrf.SecretKeySize]byte)
-	copy(vrfKey[:], buf[:vrf.SecretKeySize])
+	vrfKey := new(vrf.PrivateKey)
+	copy(vrfKey[:], buf[:vrf.PrivateKeySize])
 	p.vrfPrivateKey = vrfKey
-	buf = buf[vrf.SecretKeySize:]
+	buf = buf[vrf.PrivateKeySize:]
 	if len(buf) != 0 {
 		panic(kv.ErrorBadBufferLength)
 	}

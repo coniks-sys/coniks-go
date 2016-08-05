@@ -1,6 +1,7 @@
 # CONIKS Go Library
 
 [![Build Status](https://travis-ci.org/coniks-sys/coniks-go.svg?branch=master)](https://travis-ci.org/coniks-sys/coniks-go)
+[![Coverage Status](https://coveralls.io/repos/github/coniks-sys/coniks-go/badge.svg?branch=master&dummy=1)](https://coveralls.io/github/coniks-sys/coniks-go)
 
 http://coniks.org
 
@@ -18,10 +19,12 @@ hijacking secure communications without getting caught.
 ## Golang Library
 The packages in this library implement the various components of the CONIKS system and may be imported individually.
 
+- ``client``: Client-side protocol cgo hooks
 - ``crypto``: Cryptographic algorithms and operations
 - ``merkletree``: Merkle prefix tree and related data structures
 - ``storage``: DB hooks for storage backend (currently the library supports key-value db only)
 - ``utils``: Utility functions 
+- ``storage``: DB hooks for storage backend (currently the library supports key-value db only)
 
 ## Disclaimer
 Please keep in mind that this CONIKS library is under active development. The repository may contain experimental features that aren't fully tested. We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/releases).

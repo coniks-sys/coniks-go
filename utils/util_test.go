@@ -1,6 +1,7 @@
 package util
 
 import (
+	"encoding/binary"
 	"math/rand"
 	"testing"
 	"time"
@@ -25,5 +26,39 @@ func TestBitsBytesConvert(t *testing.T) {
 		if GetNthBit(bytes, i) != bits[i] {
 			t.Error("Wrong conversion")
 		}
+	}
+}
+
+func TestIntToBytes(t *testing.T) {
+	numInt := 42
+	b := IntToBytes(numInt)
+	if int(binary.LittleEndian.Uint32(b)) != numInt {
+		t.Fatal("Conversion to bytes looks wrong!")
+	}
+	numInt = -42
+	b = IntToBytes(numInt)
+	if int32(binary.LittleEndian.Uint32(b)) != int32(numInt) {
+		t.Fatal("Conversion to bytes looks wrong!")
+	}
+}
+
+func TestULongToBytes(t *testing.T) {
+	numInt := uint64(42)
+	b := ULongToBytes(numInt)
+	if binary.LittleEndian.Uint64(b) != numInt {
+		t.Fatal("Conversion to bytes looks wrong!")
+	}
+}
+
+func TestLongToBytes(t *testing.T) {
+	numInt := int64(42)
+	b := LongToBytes(numInt)
+	if int64(binary.LittleEndian.Uint64(b)) != numInt {
+		t.Fatal("Conversion to bytes looks wrong!")
+	}
+	numInt = int64(-42)
+	b = LongToBytes(numInt)
+	if int64(binary.LittleEndian.Uint64(b)) != numInt {
+		t.Fatal("Conversion to bytes looks wrong!")
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/utils"
 )
@@ -20,11 +19,11 @@ func TestTreeStore(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		index1 := vrf.Compute([]byte(key1), vrfPrivKey1)
+		index1 := vrfPrivKey1.Compute([]byte(key1))
 		if err := m1.Set(index1, key1, val1); err != nil {
 			t.Fatal(err)
 		}
-		index2 := vrf.Compute([]byte(key2), vrfPrivKey1)
+		index2 := vrfPrivKey1.Compute([]byte(key2))
 		if err := m1.Set(index2, key2, val2); err != nil {
 			t.Fatal(err)
 		}
@@ -47,20 +46,20 @@ func TestTreeStore(t *testing.T) {
 		}
 
 		ap := m2.Get(index1)
-		if ap.Leaf().Value() == nil {
+		if ap.Leaf.Value() == nil {
 			t.Error("Cannot find key:", key1)
 			return
 		}
-		if !bytes.Equal(ap.Leaf().Value(), val1) {
+		if !bytes.Equal(ap.Leaf.Value(), val1) {
 			t.Error(key1, "value mismatch")
 		}
 
 		ap = m2.Get(index2)
-		if ap.Leaf().Value() == nil {
+		if ap.Leaf.Value() == nil {
 			t.Error("Cannot find key:", key2)
 			return
 		}
-		if !bytes.Equal(ap.Leaf().Value(), val2) {
+		if !bytes.Equal(ap.Leaf.Value(), val2) {
 			t.Error(key2, "value mismatch")
 		}
 	})
@@ -77,11 +76,11 @@ func TestReconstructBranch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		index1 := vrf.Compute([]byte(key1), vrfPrivKey1)
+		index1 := vrfPrivKey1.Compute([]byte(key1))
 		if err := m1.Set(index1, key1, val1); err != nil {
 			t.Fatal(err)
 		}
-		index2 := vrf.Compute([]byte(key2), vrfPrivKey1)
+		index2 := vrfPrivKey1.Compute([]byte(key2))
 		if err := m1.Set(index2, key2, val2); err != nil {
 			t.Fatal(err)
 		}
@@ -103,14 +102,14 @@ func TestReconstructBranch(t *testing.T) {
 			t.Fatal(err)
 		}
 		ap := m2_1.Get(index1)
-		if ap.Leaf().Value() == nil {
+		if ap.Leaf.Value() == nil {
 			t.Error("Cannot find key:", key1)
 			return
 		}
-		if !bytes.Equal(ap.Leaf().Value(), val1) {
+		if !bytes.Equal(ap.Leaf.Value(), val1) {
 			t.Error(key1, "value mismatch",
 				"want", val1,
-				"get", ap.Leaf().Value())
+				"get", ap.Leaf.Value())
 		}
 
 		m2_2, err := ReconstructBranch(db, 1, index2)
@@ -118,11 +117,11 @@ func TestReconstructBranch(t *testing.T) {
 			t.Fatal(err)
 		}
 		ap = m2_2.Get(index2)
-		if ap.Leaf().Value() == nil {
+		if ap.Leaf.Value() == nil {
 			t.Error("Cannot find key:", key2)
 			return
 		}
-		if !bytes.Equal(ap.Leaf().Value(), val2) {
+		if !bytes.Equal(ap.Leaf.Value(), val2) {
 			t.Error(key2, "value mismatch")
 		}
 	})

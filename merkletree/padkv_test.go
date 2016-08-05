@@ -40,7 +40,7 @@ func TestPadStore(t *testing.T) {
 			t.Fatal(err)
 		}
 		ap, err := padGot.Lookup(key1)
-		if ap.Leaf().Value() == nil {
+		if ap.Leaf.Value() == nil {
 			t.Fatalf("Cannot find key: %v", key1)
 		}
 		if !bytes.Equal(pad.tree.hash, padGot.tree.hash) ||
@@ -86,7 +86,7 @@ func _TestGetOldSTR(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ap.Leaf().Value() != nil {
+		if ap.Leaf.Value() != nil {
 			t.Fatal("Unexpected key lookup at epoch", 0)
 		}
 
@@ -94,14 +94,14 @@ func _TestGetOldSTR(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ap.Leaf().Value() != nil {
+		if ap.Leaf.Value() != nil {
 			t.Fatal("Unexpected key lookup at epoch", 1)
 		}
 		ap, err = pad.LookupInEpoch(key1, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ap.Leaf().Value() == nil {
+		if ap.Leaf.Value() == nil {
 			t.Fatal("Cannot find key", key1, "at epoch", 1)
 		}
 
@@ -109,14 +109,14 @@ func _TestGetOldSTR(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ap.Leaf().Value() != nil {
+		if ap.Leaf.Value() != nil {
 			t.Fatal("Unexpected key lookup at epoch", 2)
 		}
 		ap, err = pad.LookupInEpoch(key2, 2)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ap.Leaf().Value() == nil {
+		if ap.Leaf.Value() == nil {
 			t.Fatal("Cannot find key", key2, "at epoch", 2)
 		}
 
@@ -124,7 +124,7 @@ func _TestGetOldSTR(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if ap.Leaf().Value() == nil {
+		if ap.Leaf.Value() == nil {
 			t.Fatal("Cannot find key", key3, "at epoch", 3)
 		}
 

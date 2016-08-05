@@ -1,11 +1,11 @@
 package merkletree
 
 import (
-	"crypto/rand"
 	"crypto/subtle"
 	"errors"
 
 	"github.com/coniks-sys/coniks-go/crypto"
+	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/storage/kv"
 )
@@ -18,7 +18,7 @@ var (
 
 // PAD is an acronym for persistent authenticated dictionary
 type PAD struct {
-	key          crypto.SigningKey
+	signKey      sign.PrivateKey
 	tree         *MerkleTree // will be used to create the next STR
 	snapshots    map[uint64]*SignedTreeRoot
 	loadedEpochs []uint64 // slice of epochs in snapshots
@@ -29,13 +29,13 @@ type PAD struct {
 
 // NewPAD creates new PAD consisting of an array of hash chain
 // indexed by the epoch and its maximum length is length
-func NewPAD(policies Policies, db kv.DB, key crypto.SigningKey, length uint64) (*PAD, error) {
+func NewPAD(policies Policies, db kv.DB, signKey sign.PrivateKey, length uint64) (*PAD, error) {
 	if policies == nil {
 		panic(ErrorNilPolicies)
 	}
 	var err error
 	pad := new(PAD)
-	pad.key = key
+	pad.signKey = signKey
 	pad.tree, err = NewMerkleTree()
 	if err != nil {
 		return nil, err
@@ -50,17 +50,18 @@ func NewPAD(policies Policies, db kv.DB, key crypto.SigningKey, length uint64) (
 
 // if policies is nil, the previous policies will be used
 func (pad *PAD) signTreeRoot(m *MerkleTree, epoch uint64) {
-	var prevStrHash []byte
+	var prevHash []byte
 	if pad.latestSTR == nil {
-		prevStrHash = make([]byte, crypto.HashSizeByte)
-		if _, err := rand.Read(prevStrHash); err != nil {
+		var err error
+		prevHash, err = crypto.MakeRand()
+		if err != nil {
 			// panic here since if there is an error, it will break the PAD.
 			panic(err)
 		}
 	} else {
-		prevStrHash = crypto.Digest(pad.latestSTR.sig)
+		prevHash = crypto.Digest(pad.latestSTR.Signature)
 	}
-	pad.latestSTR = NewSTR(pad.key, pad.policies, m, epoch, prevStrHash)
+	pad.latestSTR = NewSTR(pad.signKey, pad.policies, m, epoch, prevHash)
 }
 
 func (pad *PAD) updateInternal(policies Policies, epoch uint64) {
@@ -95,31 +96,31 @@ func (pad *PAD) Update(policies Policies) {
 		pad.loadedEpochs = append(pad.loadedEpochs[:0], pad.loadedEpochs[n:]...)
 	}
 
-	pad.updateInternal(policies, pad.latestSTR.epoch+1)
+	pad.updateInternal(policies, pad.latestSTR.Epoch+1)
 }
 
-func (pad *PAD) Set(key string, value []byte) error {
-	index, _ := pad.computePrivateIndex(key, pad.policies.vrfPrivate())
-	return pad.tree.Set(index, key, value)
+func (pad *PAD) Set(name string, value []byte) error {
+	index, _ := pad.computePrivateIndex(name, pad.policies.vrfPrivate())
+	return pad.tree.Set(index, name, value)
 }
 
-func (pad *PAD) Lookup(key string) (*AuthenticationPath, error) {
-	return pad.LookupInEpoch(key, pad.latestSTR.epoch)
+func (pad *PAD) Lookup(name string) (*AuthenticationPath, error) {
+	return pad.LookupInEpoch(name, pad.latestSTR.Epoch)
 }
 
-func (pad *PAD) LookupInEpoch(key string, epoch uint64) (*AuthenticationPath, error) {
+func (pad *PAD) LookupInEpoch(name string, epoch uint64) (*AuthenticationPath, error) {
 	str := pad.GetSTR(epoch)
 	if str == nil {
 		return nil, ErrorSTRNotFound
 	}
-	lookupIndex, proof := pad.computePrivateIndex(key, str.policies.vrfPrivate())
+	lookupIndex, proof := pad.computePrivateIndex(name, str.Policies.vrfPrivate())
 	ap := str.tree.Get(lookupIndex)
-	ap.vrfProof = proof
+	ap.VrfProof = proof
 	return ap, nil
 }
 
 func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
-	if epoch >= pad.latestSTR.epoch {
+	if epoch >= pad.latestSTR.Epoch {
 		return pad.latestSTR
 	}
 	if pad.snapshots[epoch] != nil {
@@ -135,21 +136,15 @@ func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 	return nil // util we have a better way to construct the tree partially based on the lookup index.
 }
 
-func (pad *PAD) TB(key string, value []byte) (*TemporaryBinding, error) {
-	str := pad.latestSTR
-	index, _ := pad.computePrivateIndex(key, pad.policies.vrfPrivate())
-	tb := str.sig
-	tb = append(tb, index...)
-	tb = append(tb, value...)
-	sig := crypto.Sign(pad.key, tb)
+func (pad *PAD) GetLatestSTR() *SignedTreeRoot {
+	return pad.latestSTR
+}
 
-	err := pad.tree.Set(index, key, value)
-
-	return &TemporaryBinding{
-		index: index,
-		value: value,
-		sig:   sig,
-	}, err
+func (pad *PAD) TB(name string, value []byte) (*TemporaryBinding, error) {
+	index, _ := pad.computePrivateIndex(name, pad.policies.vrfPrivate())
+	tb := NewTB(pad.signKey, pad.latestSTR.Signature, index, value)
+	err := pad.tree.Set(index, name, value)
+	return tb, err
 }
 
 // reshuffle recomputes indices of keys and store them with their values in new
@@ -171,8 +166,8 @@ func (pad *PAD) reshuffle() {
 	pad.tree = newTree
 }
 
-func (pad *PAD) computePrivateIndex(key string,
-	vrfPrivKey *[vrf.SecretKeySize]byte) (index, proof []byte) {
-	index, proof = vrf.Prove([]byte(key), vrfPrivKey)
+func (pad *PAD) computePrivateIndex(name string,
+	vrfPrivKey *vrf.PrivateKey) (index, proof []byte) {
+	index, proof = vrfPrivKey.Prove([]byte(name))
 	return
 }

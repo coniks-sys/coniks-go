@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/coniks-sys/coniks-go/crypto"
+	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/utils"
 )
@@ -41,7 +42,7 @@ func (n *interiorNode) storeToKV(epoch uint64, prefixBits []bool, wb kv.Batch) {
 // storeToKV stores a userLeafNode into db as following scheme:
 // [identifier, level, key+len, value+len, salt, index, commitment]
 func (n *userLeafNode) storeToKV(epoch uint64, prefixBits []bool, wb kv.Batch) {
-	buf := make([]byte, 0, 1+4+crypto.HashSizeByte*2+crypto.PrivateIndexSize+len(n.key)+len(n.value)+4+4)
+	buf := make([]byte, 0, 1+4+crypto.HashSizeByte*2+vrf.Size+len(n.key)+len(n.value)+4+4)
 	buf = append(buf, LeafIdentifier)
 	buf = append(buf, util.IntToBytes(n.level)...)
 	buf = append(buf, util.IntToBytes(len(n.key))...)

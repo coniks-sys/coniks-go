@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/utils"
 )
@@ -20,12 +19,12 @@ func TestNodeSerializationAndDeserialization(t *testing.T) {
 		val1 := []byte("value1")
 		key2 := "key3"
 		val2 := []byte("value2")
-		index1 := vrf.Compute([]byte(key1), vrfPrivKey1)
+		index1 := vrfPrivKey1.Compute([]byte(key1))
 		if err := m.Set(index1, key1, val1); err != nil {
 			t.Fatal(err)
 		}
 
-		index2 := vrf.Compute([]byte(key2), vrfPrivKey1)
+		index2 := vrfPrivKey1.Compute([]byte(key2))
 		if err := m.Set(index2, key2, val2); err != nil {
 			t.Fatal(err)
 		}
@@ -33,7 +32,7 @@ func TestNodeSerializationAndDeserialization(t *testing.T) {
 		m.recomputeHash()
 
 		ap := m.Get(index1)
-		if ap.Leaf().Value() == nil {
+		if ap.Leaf.Value() == nil {
 			t.Fatal("Cannot find key:", key1)
 		}
 
@@ -45,7 +44,7 @@ func TestNodeSerializationAndDeserialization(t *testing.T) {
 		if !ok {
 			t.Fatal("Bad type insertion")
 		}
-		lnWant := ap.Leaf().(*userLeafNode)
+		lnWant := ap.Leaf.(*userLeafNode)
 
 		wb := db.NewBatch()
 		enWant.storeToKV(1, []bool{false}, wb)

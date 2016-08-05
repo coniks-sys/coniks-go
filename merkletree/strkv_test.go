@@ -33,15 +33,15 @@ func TestSTRStore(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !bytes.Equal(str1.tree.hash, strGot.tree.hash) ||
-			!bytes.Equal(str1.prevStrHash, strGot.prevStrHash) ||
-			str1.prevEpoch != strGot.prevEpoch ||
-			str1.epoch != strGot.epoch {
+			!bytes.Equal(str1.PreviousSTRHash, strGot.PreviousSTRHash) ||
+			str1.PreviousEpoch != strGot.PreviousEpoch ||
+			str1.Epoch != strGot.Epoch {
 			t.Fatal("Bad de/serialization",
 				"expect", str1,
 				"got", strGot)
 		}
 
-		str2 := NewSTR(signKey, p, m, 2, crypto.Digest(str1.sig))
+		str2 := NewSTR(signKey, p, m, 2, crypto.Digest(str1.Signature))
 		wb = db.NewBatch()
 		str2.StoreToKV(wb)
 		err = db.Write(wb)
@@ -54,9 +54,9 @@ func TestSTRStore(t *testing.T) {
 			t.Fatal(err)
 		}
 		if !bytes.Equal(str2.tree.hash, strGot.tree.hash) ||
-			!bytes.Equal(str2.prevStrHash, strGot.prevStrHash) ||
-			str2.prevEpoch != strGot.prevEpoch ||
-			str2.epoch != strGot.epoch {
+			!bytes.Equal(str2.PreviousSTRHash, strGot.PreviousSTRHash) ||
+			str2.PreviousEpoch != strGot.PreviousEpoch ||
+			str2.Epoch != strGot.Epoch {
 			t.Fatal("Bad de/serialization",
 				"expect", str2,
 				"got", strGot)

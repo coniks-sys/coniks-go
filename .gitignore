@@ -2,6 +2,10 @@
 *.o
 *.a
 *.so
+*.dylib
+
+# Cgo compiled headers
+libconiks.h
 
 # Folders
 _obj
