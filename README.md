@@ -30,3 +30,11 @@ Please keep in mind that this CONIKS library is under active development. The re
 
 ##Documentation
 Coming soon!
+
+## Current Core Developers
+Releases of coniks-go will be signed with one of the following GPG keys:
+
+- **Arlo Breault** &lt;arlo@torproject.org&gt; `4797E7E1069D84AC4040797A5E3A93B4D4DDCD8B`
+- **Ismail Khoffi** &lt;Ismail.Khoffi@gmail.com&gt; `2BC709FBD0E50EB2D7272AD8760DA7917109FB7B`
+- **Marcela Melara** &lt;msmelara@gmail.com&gt; `C0EB3C38F30F80AB6A12C9B78E556CF999AAFE`
+- **Vu Quoc Huy** &lt;huyvq.c633@gmail.com&gt; `533191CEEC406DFF360D19DEC6202750C2FA740E`
