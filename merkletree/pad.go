@@ -11,9 +11,8 @@ import (
 )
 
 var (
-	ErrorSTRNotFound    = errors.New("[merkletree] STR not found")
-	ErrorNilPolicies    = errors.New("[merkletree] Nil policies")
-	ErrorBadEpochLength = errors.New("[merkletree] Bad epoch length")
+	ErrorSTRNotFound = errors.New("[merkletree] STR not found")
+	ErrorNilPolicies = errors.New("[merkletree] Nil policies")
 )
 
 // PAD is an acronym for persistent authenticated dictionary

@@ -17,36 +17,24 @@ func (str *SignedTreeRoot) serializeKVKey(epoch uint64) []byte {
 }
 
 // StoreToKV stores a STR into db as following scheme:
-// [epoch, prevEpoch, prevStrHash]
+// [epoch, prevEpoch, prevStrHash, Signature]
 func (str *SignedTreeRoot) StoreToKV(wb kv.Batch) {
-	buf := make([]byte, 0, 8+8+crypto.HashSizeByte)
+	buf := make([]byte, 0, 8+8+crypto.HashSizeByte+sign.SignatureSize)
 	buf = append(buf, util.ULongToBytes(str.Epoch)...)
 	if str.Epoch > 0 {
 		buf = append(buf, util.ULongToBytes(str.PreviousEpoch)...)
 	}
 	buf = append(buf, str.PreviousSTRHash...)
+	buf = append(buf, str.Signature...)
 	wb.Put(str.serializeKVKey(str.Epoch), buf)
 
 	str.tree.StoreToKV(str.Epoch, wb)
 	str.Policies.StoreToKV(str.Epoch, wb)
 }
 
-func (str *SignedTreeRoot) LoadFromKV(db kv.DB, policies Policies, key sign.PrivateKey, epoch uint64) error {
-	err := policies.LoadFromKV(db, epoch)
-	if err != nil {
-		return err
-	}
-	str.Policies = policies
-	tree, err := NewMerkleTreeFromKV(db, epoch)
-	if err != nil {
-		return err
-	}
-	str.tree = tree
-
+func (str *SignedTreeRoot) LoadFromKV(db kv.DB, key sign.PrivateKey, epoch uint64) error {
 	buf, err := db.Get(str.serializeKVKey(epoch))
-	if err == db.ErrNotFound() {
-		return nil
-	} else if err != nil {
+	if err != nil {
 		return err
 	}
 	str.Epoch = uint64(binary.LittleEndian.Uint64(buf[:8]))
@@ -57,11 +45,11 @@ func (str *SignedTreeRoot) LoadFromKV(db kv.DB, policies Policies, key sign.Priv
 	}
 	str.PreviousSTRHash = buf[:crypto.HashSizeByte]
 	buf = buf[crypto.HashSizeByte:]
+	str.Signature = buf[:sign.SignatureSize]
+	buf = buf[sign.SignatureSize:]
 	if len(buf) != 0 {
 		panic(kv.ErrorBadBufferLength)
 	}
-	bytesPreSig := str.Serialize()
-	str.Signature = key.Sign(bytesPreSig)
 
 	return nil
 }

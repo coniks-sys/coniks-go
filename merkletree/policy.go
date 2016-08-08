@@ -19,14 +19,13 @@ type Policies interface {
 	// storage interface
 	StoreToKV(uint64, kv.Batch)
 	LoadFromKV(kv.DB, uint64) error
-	serializeKVKey(uint64) []byte
 }
 
 type ConiksPolicies struct {
 	LibVersion    string
 	HashID        string
-	vrfPrivateKey *vrf.PrivateKey
 	EpochDeadline TimeStamp
+	vrfPrivateKey *vrf.PrivateKey
 }
 
 var _ Policies = (*ConiksPolicies)(nil)

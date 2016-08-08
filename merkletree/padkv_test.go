@@ -130,3 +130,50 @@ func _TestGetOldSTR(t *testing.T) {
 
 	})
 }
+
+func BenchmarkStorePAD100K(b *testing.B) {
+	// total number of entries in tree:
+	NumEntries := uint64(100000)
+
+	keyPrefix := "key"
+	valuePrefix := []byte("value")
+	snapLen := uint64(10)
+	noUpdate := uint64(NumEntries + 1)
+	pad, err := createPad(NumEntries, keyPrefix, valuePrefix, snapLen, noUpdate)
+	if err != nil {
+		b.Fatal(err)
+	}
+	util.WithDB(func(db kv.DB) {
+		pad.db = db
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			pad.Update(nil)
+		}
+	})
+}
+
+func BenchmarkLoadPAD100K(b *testing.B) {
+	// total number of entries in tree:
+	NumEntries := uint64(100000)
+
+	keyPrefix := "key"
+	valuePrefix := []byte("value")
+	snapLen := uint64(10)
+	noUpdate := uint64(NumEntries + 1)
+	pad, err := createPad(NumEntries, keyPrefix, valuePrefix, snapLen, noUpdate)
+	if err != nil {
+		b.Fatal(err)
+	}
+	util.WithDB(func(db kv.DB) {
+		pad.db = db
+		pad.Update(nil)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			p := new(ConiksPolicies)
+			_, err := NewPADFromKV(db, p, signKey, snapLen)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+}

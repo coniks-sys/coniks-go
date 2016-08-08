@@ -2,14 +2,19 @@ package merkletree
 
 import (
 	"encoding/binary"
+	"errors"
 
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
+var (
+	ErrorBadEpochLength = errors.New("[merkletree] Bad epoch length")
+)
+
 // NewPADFromKV creates new PAD with a latest tree stored in the KV db
-func NewPADFromKV(db kv.DB, policies Policies, signKey sign.PrivateKey, length int64) (*PAD, error) {
+func NewPADFromKV(db kv.DB, policies Policies, signKey sign.PrivateKey, length uint64) (*PAD, error) {
 	var err error
 	pad := new(PAD)
 	pad.signKey = signKey
@@ -33,14 +38,22 @@ func NewPADFromKV(db kv.DB, policies Policies, signKey sign.PrivateKey, length i
 		return nil, err
 	}
 
+	// get policies from db
+	err = policies.LoadFromKV(db, ep)
+	if err != nil {
+		return nil, err
+	}
+
 	// get str from db
 	str := new(SignedTreeRoot)
-	err = str.LoadFromKV(db, policies, signKey, ep)
+	str.tree = pad.tree.Clone()
+	str.Policies = policies
+	err = str.LoadFromKV(db, signKey, ep)
 	if err != nil {
 		return nil, err
 	}
 	pad.latestSTR = str
-	pad.policies = str.Policies
+	pad.policies = policies
 	pad.snapshots[ep] = str
 	pad.loadedEpochs = append(pad.loadedEpochs, ep)
 
