@@ -42,7 +42,7 @@ func TestTB(t *testing.T) {
 	}
 	// verify auth path
 	if !VerifyAuthPath(ap, ap.Leaf.Index(), ap.Leaf.Commitment(),
-		ap.Leaf.Level(), ap.Leaf.IsEmpty(), pad.GetLatestSTR().Root()) {
+		ap.Leaf.Level(), ap.Leaf.IsEmpty(), pad.LatestSTR().Root()) {
 		t.Error("Proof of inclusion verification failed.")
 	}
 	if _, ok := ap.Leaf.(*userLeafNode); !ok {

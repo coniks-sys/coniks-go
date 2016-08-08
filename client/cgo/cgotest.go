@@ -166,7 +166,7 @@ func testVerifyAuthPath(t *testing.T) {
 	if proof.Leaf.IsEmpty() {
 		isLeafEmpty = 1
 	}
-	if v := C.testVerifyAuthPath(byteSliceToCpchar(pad.GetLatestSTR().Root()), C.int(len(pad.GetLatestSTR().Root())),
+	if v := C.testVerifyAuthPath(byteSliceToCpchar(pad.LatestSTR().Root()), C.int(len(pad.LatestSTR().Root())),
 		byteSliceToCpchar(proof.TreeNonce), C.int(len(proof.TreeNonce)),
 		byteSliceToCpchar(proof.LookupIndex), C.int(len(proof.LookupIndex)),
 		(**C.uchar)(unsafe.Pointer(&proof.PrunedTree[0][0])), C.int(len(proof.PrunedTree)), C.int(len(proof.PrunedTree[0])),
@@ -187,7 +187,7 @@ func testVerifyAuthPath(t *testing.T) {
 	if proof.Leaf.IsEmpty() {
 		isLeafEmpty = 1
 	}
-	if v := C.testVerifyAuthPath(byteSliceToCpchar(pad.GetLatestSTR().Root()), C.int(len(pad.GetLatestSTR().Root())),
+	if v := C.testVerifyAuthPath(byteSliceToCpchar(pad.LatestSTR().Root()), C.int(len(pad.LatestSTR().Root())),
 		byteSliceToCpchar(proof.TreeNonce), C.int(len(proof.TreeNonce)),
 		byteSliceToCpchar(proof.LookupIndex), C.int(len(proof.LookupIndex)),
 		(**C.uchar)(unsafe.Pointer(&proof.PrunedTree[0][0])), C.int(len(proof.PrunedTree)), C.int(len(proof.PrunedTree[0])),
@@ -232,7 +232,7 @@ func testVerifyProofOfAbsenceSamePrefix(t *testing.T) {
 	if proof.Leaf.IsEmpty() {
 		isLeafEmpty = 1
 	}
-	if v := C.testVerifyAuthPath(byteSliceToCpchar(pad.GetLatestSTR().Root()), C.int(len(pad.GetLatestSTR().Root())),
+	if v := C.testVerifyAuthPath(byteSliceToCpchar(pad.LatestSTR().Root()), C.int(len(pad.LatestSTR().Root())),
 		byteSliceToCpchar(proof.TreeNonce), C.int(len(proof.TreeNonce)),
 		byteSliceToCpchar(proof.LookupIndex), C.int(len(proof.LookupIndex)),
 		(**C.uchar)(unsafe.Pointer(&proof.PrunedTree[0][0])), C.int(len(proof.PrunedTree)), C.int(len(proof.PrunedTree[0])),

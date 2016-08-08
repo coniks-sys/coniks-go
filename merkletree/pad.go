@@ -120,7 +120,7 @@ func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 	return pad.snapshots[epoch]
 }
 
-func (pad *PAD) GetLatestSTR() *SignedTreeRoot {
+func (pad *PAD) LatestSTR() *SignedTreeRoot {
 	return pad.latestSTR
 }
 

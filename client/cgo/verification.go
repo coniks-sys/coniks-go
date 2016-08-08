@@ -3,7 +3,6 @@ package main
 import "C"
 
 import (
-	"bytes"
 	"unsafe"
 
 	"github.com/coniks-sys/coniks-go/crypto"
@@ -64,8 +63,7 @@ func cgoVerifyHashChain(prevHash unsafe.Pointer, hashSize C.int,
 	}
 	prevHashBytes := C.GoBytes(prevHash, hashSize)
 	sigBytes := C.GoBytes(savedStrSig, sigSize)
-	strHash := crypto.Digest(sigBytes)
-	if bytes.Equal(prevHashBytes, strHash) {
+	if merkletree.VerifyHashChain(prevHashBytes, sigBytes) {
 		return 1
 	}
 	return 0

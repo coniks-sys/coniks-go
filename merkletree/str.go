@@ -1,6 +1,9 @@
 package merkletree
 
 import (
+	"bytes"
+
+	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/utils"
 )
@@ -68,4 +71,9 @@ func (str *SignedTreeRoot) Root() []byte {
 func VerifySTR(pk sign.PublicKey, epochB, prevEpochB, root, prevStrHash, policiesB, strSig []byte) bool {
 	strBytes := innerSTRSerialize(epochB, prevEpochB, root, prevStrHash, policiesB)
 	return pk.Verify(strBytes, strSig)
+}
+
+func VerifyHashChain(prevHash, savedSTRSig []byte) bool {
+	hash := crypto.Digest(savedSTRSig)
+	return bytes.Equal(hash, prevHash)
 }
