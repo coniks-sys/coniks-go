@@ -153,9 +153,9 @@ func (server *ConiksServer) handleBotMessage(msg []byte) ([]byte, error) {
 				}
 				res, e := json.Marshal(&struct {
 					Type int
-					STR  json.RawMessage `json:"str"`
-					AP   json.RawMessage `json:"ap"`
-					TB   json.RawMessage `json:"tb"`
+					STR  json.RawMessage
+					AP   json.RawMessage
+					TB   json.RawMessage
 				}{
 					Type: response.(*RegistrationResponse).Type,
 					STR:  strEncoded,

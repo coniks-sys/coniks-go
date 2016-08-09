@@ -26,10 +26,10 @@ type ServerConfig struct {
 	LoadedHistoryLength  uint64  `toml:"loaded_history_length"`
 	RegistrationCapacity uint64  `toml:"registration_capacity"`
 	PoliciesPath         string  `toml:"policies"`
-	TLS                  tlsInfo `toml:"tls"`
+	TLS                  TLSInfo `toml:"tls"`
 }
 
-type tlsInfo struct {
+type TLSInfo struct {
 	TLSCertPath string `toml:"cert"`
 	TLSKeyPath  string `toml:"key"`
 }

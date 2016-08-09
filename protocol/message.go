@@ -15,6 +15,14 @@ type Request struct {
 
 type Response interface{}
 
+type ErrorResponse struct {
+	Error int
+}
+
+func NewErrorResponse(errCode int) Response {
+	return &ErrorResponse{Error: errCode}
+}
+
 type RegistrationRequest struct {
 	Username               string `json:"username"`
 	Key                    string `json:"key"`
@@ -22,16 +30,8 @@ type RegistrationRequest struct {
 	AllowPublicLookup      bool   `json:"allow_public_lookup,omitempty"`
 }
 
-type ErrorResponse struct {
-	Error int
-}
-
 type RegistrationResponse struct {
 	Type int
 	STR  *merkletree.SignedTreeRoot
 	AP   *merkletree.AuthenticationPath
-}
-
-func NewErrorResponse(errCode int) Response {
-	return &ErrorResponse{Error: errCode}
 }
