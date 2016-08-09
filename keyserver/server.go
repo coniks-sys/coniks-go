@@ -37,7 +37,6 @@ type TLSInfo struct {
 type ConiksServer struct {
 	sync.Mutex
 	directory *protocol.ConiksDirectory
-	tbs       map[string]*merkletree.TemporaryBinding
 
 	stop     chan struct{}
 	waitStop sync.WaitGroup
@@ -95,8 +94,7 @@ func New(conf *ServerConfig) *ConiksServer {
 	server.reloadChan = make(chan os.Signal, 1)
 	signal.Notify(server.reloadChan, syscall.SIGUSR2)
 	server.epochTimer = time.NewTimer(time.Duration(policies.EpDeadline()) * time.Second)
-	server.directory = protocol.InitDirectory(policies, sk, conf.LoadedHistoryLength)
-	server.tbs = make(map[string]*merkletree.TemporaryBinding, conf.RegistrationCapacity)
+	server.directory = protocol.InitDirectory(policies, sk, conf.LoadedHistoryLength, true, conf.RegistrationCapacity)
 
 	return server
 }
@@ -143,10 +141,6 @@ func (server *ConiksServer) EpochUpdate() {
 		case <-server.epochTimer.C:
 			server.Lock()
 			server.directory.Update(server.policies)
-			// clear issued temporary bindings
-			for key := range server.tbs {
-				delete(server.tbs, key)
-			}
 			server.Unlock()
 			server.policiesMutex.Lock()
 			server.epochTimer.Reset(time.Duration(server.policies.EpDeadline()) * time.Second)

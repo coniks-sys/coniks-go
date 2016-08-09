@@ -1,19 +1,9 @@
 package keyserver
 
 import (
-	"github.com/coniks-sys/coniks-go/merkletree"
 	. "github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/utils"
 )
-
-// RegistrationResponseWithTB is used to replace the protocol RegistrationResponse
-// with addition TB field
-type RegistrationResponseWithTB struct {
-	Type int
-	STR  *merkletree.SignedTreeRoot
-	AP   *merkletree.AuthenticationPath
-	TB   *merkletree.TemporaryBinding
-}
 
 func (server *ConiksServer) handleRegistrationMessage(reg *RegistrationRequest) (Response, error) {
 	if len(reg.Username) == 0 || len(reg.Key) == 0 {
@@ -22,13 +12,6 @@ func (server *ConiksServer) handleRegistrationMessage(reg *RegistrationRequest) 
 	}
 
 	server.Lock()
-	// check the temporary bindings array first
-	// currently the server allows only one registration/key change per epoch
-	if server.tbs[reg.Username] != nil {
-		server.Unlock()
-		return NewErrorResponse(ErrorNameExisted),
-			ErrorNameExisted.Error()
-	}
 
 	ap, tb, errCode := server.directory.Register(reg.Username, []byte(reg.Key))
 	if errCode != Success {
@@ -36,7 +19,6 @@ func (server *ConiksServer) handleRegistrationMessage(reg *RegistrationRequest) 
 		return NewErrorResponse(errCode),
 			errCode.Error()
 	}
-	server.tbs[reg.Username] = tb
 	server.Unlock()
 
 	// store the user policies into DB

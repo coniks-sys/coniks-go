@@ -43,8 +43,7 @@ func startServer(t *testing.T, kvdb kv.DB, epDeadline merkletree.TimeStamp, poli
 	server.reloadChan = make(chan os.Signal, 1)
 	signal.Notify(server.reloadChan, syscall.SIGUSR2)
 	server.epochTimer = time.NewTimer(time.Duration(policies.EpDeadline()) * time.Second)
-	server.directory = protocol.InitDirectory(policies, sk, loadedHistoryLength)
-	server.tbs = make(map[string]*merkletree.TemporaryBinding, registrationCapacity)
+	server.directory = protocol.InitDirectory(policies, sk, loadedHistoryLength, true, registrationCapacity)
 
 	conf := &ServerConfig{
 		Address:             testutil.PublicConnection,
@@ -152,9 +151,6 @@ func TestUpdateDirectory(t *testing.T) {
 				str1 := server.directory.LatestSTR()
 				if str0.Epoch != 0 || str1.Epoch != 1 || !merkletree.VerifyHashChain(str1.PreviousSTRHash, str0.Signature) {
 					t.Fatal("Expect next STR in hash chain")
-				}
-				if len(server.tbs) != 0 {
-					t.Fatal("Expect empty temporary binding array")
 				}
 				return
 			}
