@@ -6,7 +6,7 @@ Generate new config file with proper format
 go run utils/configen/mkconfig.go
 ```
 
-Generate new key pair for signing
+Generate new key pair for VRF and signing
 ``` 
 go run utils/keygen/mkkey.go -vrf -signing
 ```

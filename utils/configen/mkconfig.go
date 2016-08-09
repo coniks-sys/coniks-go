@@ -16,7 +16,6 @@ const ConfigFile = "config.toml"
 const PoliciesFile = "policies.toml"
 
 func main() {
-
 	var conf = keyserver.ServerConfig{
 		SigningKeyPath:       "ed25519.secret",
 		DatabasePath:         "coniks.db",

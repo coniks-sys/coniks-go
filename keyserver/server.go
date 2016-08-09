@@ -42,8 +42,7 @@ type ConiksServer struct {
 	stop     chan struct{}
 	waitStop sync.WaitGroup
 
-	db        kv.DB
-	secretKey sign.PrivateKey
+	db kv.DB
 
 	policies         merkletree.Policies
 	policiesFilePath string
@@ -91,7 +90,6 @@ func New(conf *ServerConfig) *ConiksServer {
 	server := new(ConiksServer)
 	server.stop = make(chan struct{})
 	server.db = kvdb
-	server.secretKey = sk
 	server.policies = policies
 	server.policiesFilePath = conf.PoliciesPath
 	server.reloadChan = make(chan os.Signal, 1)

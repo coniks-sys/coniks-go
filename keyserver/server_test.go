@@ -38,7 +38,6 @@ func startServer(t *testing.T, kvdb kv.DB, epDeadline merkletree.TimeStamp, poli
 	server := new(ConiksServer)
 	server.stop = make(chan struct{})
 	server.db = kvdb
-	server.secretKey = sk
 	server.policies = policies
 	server.policiesFilePath = policiesPath
 	server.reloadChan = make(chan os.Signal, 1)
@@ -136,7 +135,7 @@ func TestSendsRegistrationFromOutside(t *testing.T) {
 
 func TestUpdateDirectory(t *testing.T) {
 	util.WithDB(func(db kv.DB) {
-		server, teardown := startServer(t, db, 3, "")
+		server, teardown := startServer(t, db, 1, "")
 		defer teardown()
 		str0 := server.directory.LatestSTR()
 		rs := createMultiRegistrationRequests(10)
@@ -146,13 +145,19 @@ func TestUpdateDirectory(t *testing.T) {
 				t.Fatal("Error while submitting registration request number", i, "to server")
 			}
 		}
-		time.Sleep(4 * time.Second)
-		str1 := server.directory.LatestSTR()
-		if str0.Epoch != 0 || str1.Epoch != 1 || !merkletree.VerifyHashChain(str1.PreviousSTRHash, str0.Signature) {
-			t.Fatal("Expect next STR in hash chain")
-		}
-		if len(server.tbs) != 0 {
-			t.Fatal("Expect empty temporary binding array")
+		timer := time.NewTimer(1 * time.Second)
+		for {
+			select {
+			case <-timer.C:
+				str1 := server.directory.LatestSTR()
+				if str0.Epoch != 0 || str1.Epoch != 1 || !merkletree.VerifyHashChain(str1.PreviousSTRHash, str0.Signature) {
+					t.Fatal("Expect next STR in hash chain")
+				}
+				if len(server.tbs) != 0 {
+					t.Fatal("Expect empty temporary binding array")
+				}
+				return
+			}
 		}
 	})
 }

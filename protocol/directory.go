@@ -14,33 +14,23 @@ type ConiksUserPolicies struct {
 }
 
 type ConiksDirectory struct {
-	pad *merkletree.PAD
+	*merkletree.PAD
 }
 
-func InitDirectory(policies merkletree.Policies, secretKey sign.PrivateKey,
+func InitDirectory(policies merkletree.Policies, signKey sign.PrivateKey,
 	dirSize uint64) *ConiksDirectory {
-	pad, err := merkletree.NewPAD(policies, secretKey, dirSize)
+	pad, err := merkletree.NewPAD(policies, signKey, dirSize)
 	if err != nil {
 		panic(err)
 	}
-	d := new(ConiksDirectory)
-	d.pad = pad
-	return d
-}
-
-func (d *ConiksDirectory) Update(policies merkletree.Policies) {
-	d.pad.Update(policies)
-}
-
-func (d *ConiksDirectory) LatestSTR() *merkletree.SignedTreeRoot {
-	return d.pad.LatestSTR()
+	return &ConiksDirectory{pad}
 }
 
 func (d *ConiksDirectory) Register(uname string, key []byte) (
 	*merkletree.AuthenticationPath, *merkletree.TemporaryBinding, int) {
 	// check whether the name already exists
 	// in the directory before we register
-	ap, err := d.pad.Lookup(uname)
+	ap, err := d.Lookup(uname)
 	if err != nil {
 		return nil, nil, ErrorInternalServer
 	}
@@ -49,7 +39,7 @@ func (d *ConiksDirectory) Register(uname string, key []byte) (
 	}
 
 	// insert new data to the directory on-the-fly
-	tb, err := d.pad.TB(uname, key)
+	tb, err := d.TB(uname, key)
 	if err != nil {
 		log.Printf(err.Error())
 		return nil, nil, ErrorInternalServer
