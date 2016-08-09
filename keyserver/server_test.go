@@ -186,7 +186,7 @@ func TestRegisterDuplicateUserInOneEpoch(t *testing.T) {
 			t.Fatal("Error while submitting registration request")
 		}
 		_, err = server.handleRegistrationMessage(r1)
-		if err != protocol.Error(protocol.ErrorNameExisted) {
+		if err != protocol.ErrorNameExisted.Error() {
 			t.Fatal("Expect error code", protocol.ErrorNameExisted)
 		}
 	})
@@ -204,7 +204,7 @@ func TestRegisterDuplicateUserInDifferentEpoches(t *testing.T) {
 		time.Sleep(3 * time.Second)
 		r1 := createMultiRegistrationRequests(1)[0]
 		_, err = server.handleRegistrationMessage(r1)
-		if err != protocol.Error(protocol.ErrorNameExisted) {
+		if err != protocol.ErrorNameExisted.Error() {
 			t.Fatal("Expect error code", protocol.ErrorNameExisted)
 		}
 	})

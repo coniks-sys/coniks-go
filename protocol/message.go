@@ -16,11 +16,11 @@ type Request struct {
 type Response interface{}
 
 type ErrorResponse struct {
-	Error int
+	Error ErrorCode
 }
 
-func NewErrorResponse(errCode int) Response {
-	return &ErrorResponse{Error: errCode}
+func NewErrorResponse(e ErrorCode) Response {
+	return &ErrorResponse{Error: e}
 }
 
 type RegistrationRequest struct {

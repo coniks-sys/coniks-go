@@ -7,7 +7,7 @@ import (
 	"net"
 	"time"
 
-	p "github.com/coniks-sys/coniks-go/protocol"
+	. "github.com/coniks-sys/coniks-go/protocol"
 )
 
 func (server *ConiksServer) listenForRequests(ln net.Listener, handler func(msg []byte) ([]byte, error)) {
@@ -84,16 +84,16 @@ func (server *ConiksServer) acceptClient(conn net.Conn, handler func(msg []byte)
 }
 
 func (server *ConiksServer) handleClientMessage(msg []byte) ([]byte, error) {
-	var response p.Response
+	var response Response
 	var err error
 
 	// get request message
 	var content json.RawMessage
-	req := p.Request{
+	req := Request{
 		Request: &content,
 	}
 	if e := json.Unmarshal(msg, &req); e != nil {
-		response = p.NewErrorResponse(p.ErrorMalformedClientMessage)
+		response = NewErrorResponse(ErrorMalformedClientMessage)
 		err = e
 		goto marshalling
 	}
@@ -102,52 +102,52 @@ func (server *ConiksServer) handleClientMessage(msg []byte) ([]byte, error) {
 	switch req.Type {
 	default:
 		log.Printf("unknown message type: %q", req.Type)
-		response = p.NewErrorResponse(p.ErrorMalformedClientMessage)
-		err = p.Error(p.ErrorMalformedClientMessage)
+		response = NewErrorResponse(ErrorMalformedClientMessage)
+		err = ErrorMalformedClientMessage.Error()
 	}
 
 marshalling:
 	res, e := json.Marshal(response)
 	if e != nil {
-		panic(p.Error(p.ErrorInternalServer))
+		panic(ErrorInternalServer.Error())
 	}
 	return res, err
 }
 
 func (server *ConiksServer) handleBotMessage(msg []byte) ([]byte, error) {
-	var response p.Response
+	var response Response
 	var err error
 
 	// get request message
 	var content json.RawMessage
-	req := p.Request{
+	req := Request{
 		Request: &content,
 	}
 	if e := json.Unmarshal(msg, &req); e != nil {
-		response = p.NewErrorResponse(p.ErrorMalformedClientMessage)
+		response = NewErrorResponse(ErrorMalformedClientMessage)
 		err = e
 		goto marshalling
 	}
 
 	// handle request
 	switch req.Type {
-	case p.RegistrationType:
-		var reg p.RegistrationRequest
+	case RegistrationType:
+		var reg RegistrationRequest
 		if e := json.Unmarshal(content, &reg); e != nil {
-			response = p.NewErrorResponse(p.ErrorMalformedClientMessage)
+			response = NewErrorResponse(ErrorMalformedClientMessage)
 			err = e
 		} else {
 			response, err = server.handleRegistrationMessage(&reg)
 			if err == nil {
-				tbEncoded, err := p.MarshalTemporaryBinding(response.(*RegistrationResponse).TB)
+				tbEncoded, err := MarshalTemporaryBinding(response.(*RegistrationResponseWithTB).TB)
 				if err != nil {
 					panic(err)
 				}
-				apEncoded, err := p.MarshalAuthenticationPath(response.(*RegistrationResponse).AP)
+				apEncoded, err := MarshalAuthenticationPath(response.(*RegistrationResponseWithTB).AP)
 				if err != nil {
 					panic(err)
 				}
-				strEncoded, err := p.MarshalSTR(response.(*RegistrationResponse).STR)
+				strEncoded, err := MarshalSTR(response.(*RegistrationResponseWithTB).STR)
 				if err != nil {
 					panic(err)
 				}
@@ -157,7 +157,7 @@ func (server *ConiksServer) handleBotMessage(msg []byte) ([]byte, error) {
 					AP   json.RawMessage
 					TB   json.RawMessage
 				}{
-					Type: response.(*RegistrationResponse).Type,
+					Type: response.(*RegistrationResponseWithTB).Type,
 					STR:  strEncoded,
 					AP:   apEncoded,
 					TB:   tbEncoded,
@@ -171,14 +171,14 @@ func (server *ConiksServer) handleBotMessage(msg []byte) ([]byte, error) {
 
 	default:
 		log.Printf("unknown message type: %q", req.Type)
-		response = p.NewErrorResponse(p.ErrorMalformedClientMessage)
-		err = p.Error(p.ErrorMalformedClientMessage)
+		response = NewErrorResponse(ErrorMalformedClientMessage)
+		err = ErrorMalformedClientMessage.Error()
 	}
 
 marshalling:
 	res, e := json.Marshal(response)
 	if e != nil {
-		panic(p.Error(p.ErrorInternalServer))
+		panic(ErrorInternalServer.Error())
 	}
 	return res, err
 }

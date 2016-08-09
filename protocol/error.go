@@ -5,25 +5,26 @@ package protocol
 
 import "errors"
 
+type ErrorCode int
+
 const (
-	Success                     = 10
-	ErrorInternalServer         = 11
-	ErrorNameExisted            = 12
-	ErrorMalformedClientMessage = 14
+	Success                     ErrorCode = 10
+	ErrorInternalServer         ErrorCode = 11
+	ErrorNameExisted            ErrorCode = 12
+	ErrorMalformedClientMessage ErrorCode = 14
 )
 
 var (
-	errorMessages = map[int]error{
+	errorMessages = map[ErrorCode]error{
 		ErrorMalformedClientMessage: errors.New("[coniks] Malformed client request"),
 		ErrorNameExisted:            errors.New("[coniks] Registering identity is already registered"),
 		ErrorInternalServer:         errors.New("[coniks] Internal server error"),
 	}
 )
 
-func Error(errCode int) error {
-	e := errorMessages[errCode]
-	if e.Error() == "" {
-		e = errorMessages[ErrorInternalServer]
+func (e ErrorCode) Error() error {
+	if errorMessages[e] == nil {
+		return errorMessages[ErrorInternalServer]
 	}
-	return e
+	return errorMessages[e]
 }

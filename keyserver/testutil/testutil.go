@@ -23,7 +23,7 @@ const (
 	LocalConnection  = "127.0.0.1:3001"
 )
 
-func CreateTLSCert(t *testing.T) (dir string, teardown func()) {
+func CreateTLSCert(t *testing.T) (string, func()) {
 	dir, err := ioutil.TempDir("", TestDir)
 	if err != nil {
 		t.Fatal(err)

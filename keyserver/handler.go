@@ -2,23 +2,23 @@ package keyserver
 
 import (
 	"github.com/coniks-sys/coniks-go/merkletree"
-	p "github.com/coniks-sys/coniks-go/protocol"
+	. "github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
-// RegistrationResponse is used to replace the protocol RegistrationResponse
+// RegistrationResponseWithTB is used to replace the protocol RegistrationResponse
 // with addition TB field
-type RegistrationResponse struct {
+type RegistrationResponseWithTB struct {
 	Type int
 	STR  *merkletree.SignedTreeRoot
 	AP   *merkletree.AuthenticationPath
 	TB   *merkletree.TemporaryBinding
 }
 
-func (server *ConiksServer) handleRegistrationMessage(reg *p.RegistrationRequest) (p.Response, error) {
+func (server *ConiksServer) handleRegistrationMessage(reg *RegistrationRequest) (Response, error) {
 	if len(reg.Username) == 0 || len(reg.Key) == 0 {
-		return p.NewErrorResponse(p.ErrorMalformedClientMessage),
-			p.Error(p.ErrorMalformedClientMessage)
+		return NewErrorResponse(ErrorMalformedClientMessage),
+			ErrorMalformedClientMessage.Error()
 	}
 
 	server.Lock()
@@ -26,38 +26,38 @@ func (server *ConiksServer) handleRegistrationMessage(reg *p.RegistrationRequest
 	// currently the server allows only one registration/key change per epoch
 	if server.tbs[reg.Username] != nil {
 		server.Unlock()
-		return p.NewErrorResponse(p.ErrorNameExisted),
-			p.Error(p.ErrorNameExisted)
+		return NewErrorResponse(ErrorNameExisted),
+			ErrorNameExisted.Error()
 	}
 
 	ap, tb, errCode := server.directory.Register(reg.Username, []byte(reg.Key))
-	if errCode != p.Success {
+	if errCode != Success {
 		server.Unlock()
-		return p.NewErrorResponse(errCode),
-			p.Error(errCode)
+		return NewErrorResponse(errCode),
+			errCode.Error()
 	}
 	server.tbs[reg.Username] = tb
 	server.Unlock()
 
 	// store the user policies into DB
-	err := server.StoreUserPoliciesToKV(&p.ConiksUserPolicies{
+	err := server.StoreUserPoliciesToKV(&ConiksUserPolicies{
 		AllowUnsignedKeychange: reg.AllowUnsignedKeychange,
 		AllowPublicLookup:      reg.AllowPublicLookup,
 	})
 	if err != nil {
-		return p.NewErrorResponse(p.ErrorInternalServer),
+		return NewErrorResponse(ErrorInternalServer),
 			err
 	}
 
-	return &RegistrationResponse{
-		Type: p.RegistrationType,
+	return &RegistrationResponseWithTB{
+		Type: RegistrationType,
 		STR:  server.directory.LatestSTR(),
 		AP:   ap,
 		TB:   tb,
 	}, nil
 }
 
-func (server *ConiksServer) StoreUserPoliciesToKV(up *p.ConiksUserPolicies) error {
+func (server *ConiksServer) StoreUserPoliciesToKV(up *ConiksUserPolicies) error {
 	buf := make([]byte, 0, 1)
 	buf = append(util.ToBytes([]bool{up.AllowUnsignedKeychange, up.AllowPublicLookup}))
 	if err := server.db.Put([]byte(up.Username), buf); err != nil {

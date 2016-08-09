@@ -27,7 +27,7 @@ func InitDirectory(policies merkletree.Policies, signKey sign.PrivateKey,
 }
 
 func (d *ConiksDirectory) Register(uname string, key []byte) (
-	*merkletree.AuthenticationPath, *merkletree.TemporaryBinding, int) {
+	*merkletree.AuthenticationPath, *merkletree.TemporaryBinding, ErrorCode) {
 	// check whether the name already exists
 	// in the directory before we register
 	ap, err := d.Lookup(uname)
