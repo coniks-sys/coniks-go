@@ -5,6 +5,7 @@ import (
 
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
+	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
@@ -14,13 +15,17 @@ type Policies interface {
 	Iterate() map[string][]byte
 	Serialize() []byte
 	vrfPrivate() *vrf.PrivateKey
+
+	// storage interface
+	StoreToKV(uint64, kv.Batch)
+	LoadFromKV(kv.DB, uint64) error
 }
 
 type ConiksPolicies struct {
 	LibVersion    string
 	HashID        string
-	vrfPrivateKey *vrf.PrivateKey
 	EpochDeadline TimeStamp
+	vrfPrivateKey *vrf.PrivateKey
 }
 
 var _ Policies = (*ConiksPolicies)(nil)
@@ -29,8 +34,8 @@ func NewPolicies(epDeadline TimeStamp, vrfPrivKey *vrf.PrivateKey) Policies {
 	return &ConiksPolicies{
 		LibVersion:    Version,
 		HashID:        crypto.HashID,
-		vrfPrivateKey: vrfPrivKey,
 		EpochDeadline: epDeadline,
+		vrfPrivateKey: vrfPrivKey,
 	}
 }
 

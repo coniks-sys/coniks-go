@@ -7,6 +7,7 @@ import (
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
+	"github.com/coniks-sys/coniks-go/storage/kv"
 )
 
 var (
@@ -22,11 +23,12 @@ type PAD struct {
 	loadedEpochs []uint64 // slice of epochs in snapshots
 	latestSTR    *SignedTreeRoot
 	policies     Policies // the current policies in place
+	db           kv.DB
 }
 
 // NewPAD creates new PAD consisting of an array of hash chain
-// indexed by the epoch and its maximum length is len
-func NewPAD(policies Policies, signKey sign.PrivateKey, len uint64) (*PAD, error) {
+// indexed by the epoch and its maximum length is length
+func NewPAD(policies Policies, db kv.DB, signKey sign.PrivateKey, length uint64) (*PAD, error) {
 	if policies == nil {
 		panic(ErrorNilPolicies)
 	}
@@ -37,9 +39,10 @@ func NewPAD(policies Policies, signKey sign.PrivateKey, len uint64) (*PAD, error
 	if err != nil {
 		return nil, err
 	}
+	pad.db = db
 	pad.policies = policies
-	pad.snapshots = make(map[uint64]*SignedTreeRoot, len)
-	pad.loadedEpochs = make([]uint64, 0, len)
+	pad.snapshots = make(map[uint64]*SignedTreeRoot, length)
+	pad.loadedEpochs = make([]uint64, 0, length)
 	pad.updateInternal(nil, 0)
 	return pad, nil
 }
@@ -78,6 +81,8 @@ func (pad *PAD) updateInternal(policies Policies, epoch uint64) {
 			pad.reshuffle()
 		}
 	}
+
+	pad.StoreToKV(epoch)
 }
 
 func (pad *PAD) Update(policies Policies) {
@@ -117,7 +122,17 @@ func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 	if epoch >= pad.latestSTR.Epoch {
 		return pad.latestSTR
 	}
-	return pad.snapshots[epoch]
+	if pad.snapshots[epoch] != nil {
+		return pad.snapshots[epoch]
+	}
+	// look through persistent storage
+	// str := new(SignedTreeRoot)
+	// err := str.LoadFromKV(pad.db, pad.key, epoch)
+	// if err != nil {
+	// return nil
+	// }
+	// return str
+	return nil // util we have a better way to construct the tree partially based on the lookup index.
 }
 
 func (pad *PAD) LatestSTR() *SignedTreeRoot {

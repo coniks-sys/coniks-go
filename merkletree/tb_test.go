@@ -9,7 +9,7 @@ func TestTB(t *testing.T) {
 	key := "key"
 	val := []byte("value")
 
-	pad, err := NewPAD(NewPolicies(3, vrfPrivKey1), signKey, 3)
+	pad, err := NewPAD(NewPolicies(3, vrfPrivKey1), nil, signKey, 3)
 	if err != nil {
 		t.Fatal(err)
 	}

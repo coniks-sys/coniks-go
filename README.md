@@ -22,6 +22,7 @@ The packages in this library implement the various components of the CONIKS syst
 - ``client``: Client-side protocol cgo hooks
 - ``crypto``: Cryptographic algorithms and operations
 - ``merkletree``: Merkle prefix tree and related data structures
+- ``storage``: DB hooks for storage backend (currently the library supports key-value db only)
 - ``utils``: Utility functions 
 - ``storage``: DB hooks for storage backend (currently the library supports key-value db only)
 

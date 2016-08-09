@@ -103,7 +103,7 @@ func testVerifyHashChain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pad, err := merkletree.NewPAD(merkletree.NewPolicies(2, vrfPrivKey), signKey, 10)
+	pad, err := merkletree.NewPAD(merkletree.NewPolicies(2, vrfPrivKey), nil, signKey, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func testVerifyAuthPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pad, err := merkletree.NewPAD(merkletree.NewPolicies(2, vrfPrivKey), signKey, 10)
+	pad, err := merkletree.NewPAD(merkletree.NewPolicies(2, vrfPrivKey), nil, signKey, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +209,7 @@ func testVerifyProofOfAbsenceSamePrefix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pad, err := merkletree.NewPAD(merkletree.NewPolicies(2, vrfPrivKey), signKey, 10)
+	pad, err := merkletree.NewPAD(merkletree.NewPolicies(2, vrfPrivKey), nil, signKey, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
