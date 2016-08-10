@@ -3,7 +3,7 @@
 ## Usage
 Generate new config file with proper format
 ```
-go run utils/configen/mkconfig.go
+go run keyserver/coniksserver/main.go -genconfig
 ```
 
 Generate new key pair for VRF and signing

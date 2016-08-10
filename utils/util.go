@@ -1,6 +1,12 @@
 package util
 
-import "encoding/binary"
+import (
+	"bytes"
+	"encoding/binary"
+	"io/ioutil"
+	"log"
+	"os"
+)
 
 // GetNthBit finds the bit in the byte array bs
 // at offset offset, and determines whether it is 1 or 0.
@@ -41,4 +47,16 @@ func BoolToByte(b bool) byte {
 		return 1
 	}
 	return 0
+}
+
+func WriteFile(filename string, buf bytes.Buffer) {
+	if _, err := os.Stat(filename); err == nil {
+		log.Printf("%s already exists\n", filename)
+		return
+	}
+
+	if err := ioutil.WriteFile(filename, []byte(buf.String()), 0644); err != nil {
+		log.Printf(err.Error())
+		return
+	}
 }
