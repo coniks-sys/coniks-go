@@ -17,6 +17,7 @@ type AuthenticationPath struct {
 
 type ProofNode interface {
 	Level() int
+	Salt() []byte
 	Index() []byte
 	Value() []byte
 	IsEmpty() bool
@@ -88,11 +89,20 @@ func VerifyAuthPath(ap *AuthenticationPath,
 	return true
 }
 
+func VerifyCommitment(salt []byte, key string, value []byte, commitment []byte) bool {
+	got := crypto.Digest(salt, []byte(key), value)
+	return bytes.Equal(got, commitment)
+}
+
 var _ ProofNode = (*userLeafNode)(nil)
 var _ ProofNode = (*emptyNode)(nil)
 
 func (n *emptyNode) Level() int {
 	return n.level
+}
+
+func (n *emptyNode) Salt() []byte {
+	return nil
 }
 
 func (n *emptyNode) Index() []byte {
@@ -113,6 +123,10 @@ func (n *emptyNode) Commitment() []byte {
 
 func (n *userLeafNode) Level() int {
 	return n.level
+}
+
+func (n *userLeafNode) Salt() []byte {
+	return n.salt
 }
 
 func (n *userLeafNode) Index() []byte {

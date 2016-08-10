@@ -118,3 +118,22 @@ func cgoVerifyAuthPath(treeHash unsafe.Pointer, treeHashSize C.int,
 	}
 	return 0
 }
+
+//export cgoVerifyCommitment
+func cgoVerifyCommitment(salt unsafe.Pointer, saltSize C.int,
+	key *C.char, keySize C.int,
+	value unsafe.Pointer, valueSize C.int,
+	commitment unsafe.Pointer, commitmentSize C.int) C.int {
+	if saltSize != crypto.HashSizeByte || commitmentSize != crypto.HashSizeByte {
+		return 0
+	}
+
+	saltB := C.GoBytes(salt, saltSize)
+	keyS := C.GoStringN(key, keySize)
+	valueB := C.GoBytes(value, valueSize)
+	commitmentB := C.GoBytes(commitment, commitmentSize)
+	if merkletree.VerifyCommitment(saltB, keyS, valueB, commitmentB) {
+		return 1
+	}
+	return 0
+}

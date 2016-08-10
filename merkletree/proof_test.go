@@ -62,7 +62,11 @@ func TestVerifyProof(t *testing.T) {
 		!bytes.Equal(vrfPrivKey1.Compute([]byte(key3)), proof.LookupIndex) {
 		t.Fatal("Expect a proof of inclusion")
 	}
-	// step 2. verify auth path
+	// step 2. verify commitment
+	if !VerifyCommitment(proof.Leaf.Salt(), key3, proof.Leaf.Value(), proof.Leaf.Commitment()) {
+		t.Fatal("Commitment verification returns false")
+	}
+	// step 3. verify auth path
 	if !VerifyAuthPath(proof,
 		proof.Leaf.Index(), proof.Leaf.Commitment(), proof.Leaf.Level(), proof.Leaf.IsEmpty(),
 		m.hash) {
