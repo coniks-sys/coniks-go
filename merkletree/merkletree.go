@@ -80,8 +80,9 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 			return authPath
 		}
 		// reached a different leaf with a matching prefix
-		// return a auth path including the leaf node
+		// return a auth path including the leaf node without salt & value
 		pNode.value = nil
+		pNode.salt = nil
 		return authPath
 	case *emptyNode:
 		authPath.Leaf = nodePointer.(*emptyNode).Clone(nil).(*emptyNode)

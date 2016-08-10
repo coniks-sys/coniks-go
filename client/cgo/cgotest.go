@@ -1,6 +1,8 @@
 package main
 
 /*
+#include <stdlib.h>
+
 int testVerifyVrf(unsigned char *pk, int pkSize,
     unsigned char *m, int mSize,
     unsigned char *index, int indexSize,
@@ -38,6 +40,17 @@ int testVerifyAuthPath(
         leafIndex, leafIndexSize,
         leafCommitment, leafCommitmentSize,
         isLeafEmpty);
+}
+
+int testVerifyCommitment(
+	unsigned char *salt, int saltSize,
+	char *key, int keySize,
+	unsigned char *value, int valueSize,
+	unsigned char *commitment, int commitmentSize)  {
+	return cgoVerifyCommitment(salt, saltSize,
+		key, keySize,
+		value, valueSize,
+		commitment, commitmentSize);
 }
 
 #cgo CFLAGS: -Wno-implicit-function-declaration
@@ -166,6 +179,17 @@ func testVerifyAuthPath(t *testing.T) {
 	if proof.Leaf.IsEmpty() {
 		isLeafEmpty = 1
 	}
+	// verify commitment
+	key := C.CString(key3)
+	defer C.free(unsafe.Pointer(key))
+
+	if v := C.testVerifyCommitment(byteSliceToCpchar(proof.Leaf.Salt()), C.int(len(proof.Leaf.Salt())),
+		key, C.int(len(key3)),
+		byteSliceToCpchar(proof.Leaf.Value()), C.int(len(proof.Leaf.Value())),
+		byteSliceToCpchar(proof.Leaf.Commitment()), C.int(len(proof.Leaf.Commitment()))); v != 1 {
+		t.Fatal("Veify commitment failed")
+	}
+
 	if v := C.testVerifyAuthPath(byteSliceToCpchar(pad.LatestSTR().Root()), C.int(len(pad.LatestSTR().Root())),
 		byteSliceToCpchar(proof.TreeNonce), C.int(len(proof.TreeNonce)),
 		byteSliceToCpchar(proof.LookupIndex), C.int(len(proof.LookupIndex)),
