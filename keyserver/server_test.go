@@ -146,15 +146,10 @@ func TestUpdateDirectory(t *testing.T) {
 			}
 		}
 		timer := time.NewTimer(1 * time.Second)
-		for {
-			select {
-			case <-timer.C:
-				str1 := server.directory.LatestSTR()
-				if str0.Epoch != 0 || str1.Epoch != 1 || !merkletree.VerifyHashChain(str1.PreviousSTRHash, str0.Signature) {
-					t.Fatal("Expect next STR in hash chain")
-				}
-				return
-			}
+		<-timer.C
+		str1 := server.directory.LatestSTR()
+		if str0.Epoch != 0 || str1.Epoch != 1 || !merkletree.VerifyHashChain(str1.PreviousSTRHash, str0.Signature) {
+			t.Fatal("Expect next STR in hash chain")
 		}
 	})
 }
@@ -191,14 +186,15 @@ func TestRegisterDuplicateUserInOneEpoch(t *testing.T) {
 
 func TestRegisterDuplicateUserInDifferentEpoches(t *testing.T) {
 	util.WithDB(func(db kv.DB) {
-		server, teardown := startServer(t, db, 2, "")
+		server, teardown := startServer(t, db, 1, "")
 		defer teardown()
 		r0 := createMultiRegistrationRequests(1)[0]
 		_, err := server.handleRegistrationMessage(r0)
 		if err != nil {
 			t.Fatal("Error while submitting registration request")
 		}
-		time.Sleep(3 * time.Second)
+		timer := time.NewTimer(1 * time.Second)
+		<-timer.C
 		r1 := createMultiRegistrationRequests(1)[0]
 		_, err = server.handleRegistrationMessage(r1)
 		if err != protocol.ErrorNameExisted.Error() {
