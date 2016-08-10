@@ -6,14 +6,14 @@
 http://coniks.org
 
 ##Introduction
-CONIKS is a key management system that provides transparency and privacy 
+CONIKS is a key management system that provides transparency and privacy
 for end-user public keys.
-CONIKS protects end-to-end encrypted communications against malicious or 
-compromised communication providers and surveillance by storing users' 
-encryption keys in tamper-evident and publicly auditable 
-key directories on the server side. 
-This allows messaging clients to verify the identity of 
-users automatically, and prevents malicious/compromised servers from 
+CONIKS protects end-to-end encrypted communications against malicious or
+compromised communication providers and surveillance by storing users'
+encryption keys in tamper-evident and publicly auditable
+key directories on the server side.
+This allows messaging clients to verify the identity of
+users automatically, and prevents malicious/compromised servers from
 hijacking secure communications without getting caught.
 
 ## Golang Library
@@ -22,7 +22,7 @@ The packages in this library implement the various components of the CONIKS syst
 - ``client``: Client-side protocol cgo hooks
 - ``crypto``: Cryptographic algorithms and operations
 - ``merkletree``: Merkle prefix tree and related data structures
-- ``utils``: Utility functions 
+- ``utils``: Utility functions
 - ``storage``: DB hooks for storage backend (currently the library supports key-value db only)
 
 ## Disclaimer
@@ -36,5 +36,5 @@ Releases of coniks-go will be signed with one of the following GPG keys:
 
 - **Arlo Breault** &lt;arlo@torproject.org&gt; `4797E7E1069D84AC4040797A5E3A93B4D4DDCD8B`
 - **Ismail Khoffi** &lt;Ismail.Khoffi@gmail.com&gt; `2BC709FBD0E50EB2D7272AD8760DA7917109FB7B`
-- **Marcela Melara** &lt;msmelara@gmail.com&gt; `C0EB3C38F30F80AB6A12C9B78E556CF999AAFE`
+- **Marcela Melara** &lt;msmelara@gmail.com&gt; `C0EB3C38F30F80AB6A12C9B78E556CF999AAFE63`
 - **Vu Quoc Huy** &lt;huyvq.c633@gmail.com&gt; `533191CEEC406DFF360D19DEC6202750C2FA740E`
