@@ -73,3 +73,32 @@ func MarshalAuthenticationPath(ap *merkletree.AuthenticationPath) ([]byte, error
 		},
 	})
 }
+
+func MarshalRegResponseWithTB(Type int, strEnc, apEnc, tbEnc []byte) ([]byte, error) {
+	res, e := json.Marshal(&struct {
+		Type int
+		STR  json.RawMessage
+		AP   json.RawMessage
+		TB   json.RawMessage
+	}{
+		Type: Type,
+		STR:  strEnc,
+		AP:   apEnc,
+		TB:   tbEnc,
+	})
+	return res, e
+}
+
+func MarshalErrorResponse(response Response) ([]byte, error) {
+	res, err := json.Marshal(response)
+	return res, err
+}
+
+func UnmarshalRequest(msg []byte) (Request, json.RawMessage, error) {
+	var content json.RawMessage
+	req := Request{
+		Request: &content,
+	}
+	e := json.Unmarshal(msg, &req)
+	return req, content, e
+}
