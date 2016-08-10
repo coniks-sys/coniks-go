@@ -53,9 +53,14 @@ func TestVerifyProof(t *testing.T) {
 
 	// proof of inclusion
 	proof := m.Get(index3)
-	// step 1. verify VRF index
-	if !bytes.Equal(vrfPrivKey1.Compute([]byte(key3)), proof.LookupIndex) {
-		t.Error("VRF verification returns false")
+	if proof.Leaf.Value() == nil {
+		t.Fatal("Expect returned leaf's value is not nil")
+	}
+	// step 1. ensure this is a proof of inclusion by comparing the returned indices
+	// and verifying the VRF index as well.
+	if !bytes.Equal(proof.LookupIndex, proof.Leaf.Index()) ||
+		!bytes.Equal(vrfPrivKey1.Compute([]byte(key3)), proof.LookupIndex) {
+		t.Fatal("Expect a proof of inclusion")
 	}
 	// step 2. verify auth path
 	if !VerifyAuthPath(proof,
@@ -70,8 +75,13 @@ func TestVerifyProof(t *testing.T) {
 	// proof of absence
 	absentIndex := vrfPrivKey1.Compute([]byte("123"))
 	proof = m.Get(absentIndex) // shares the same prefix with an empty node
-	if !bytes.Equal(vrfPrivKey1.Compute([]byte("123")), proof.LookupIndex) {
-		t.Error("VRF verification returns false")
+	if proof.Leaf.Value() != nil {
+		t.Fatal("Expect returned leaf's value is nil")
+	}
+	// ensure this is a proof of absence
+	if bytes.Equal(proof.LookupIndex, proof.Leaf.Index()) ||
+		!bytes.Equal(vrfPrivKey1.Compute([]byte("123")), proof.LookupIndex) {
+		t.Fatal("Expect a proof of absence")
 	}
 	if !VerifyAuthPath(proof,
 		proof.Leaf.Index(), proof.Leaf.Commitment(), proof.Leaf.Level(), proof.Leaf.IsEmpty(),
@@ -98,13 +108,18 @@ func TestVerifyProofSamePrefix(t *testing.T) {
 	m.recomputeHash()
 	absentIndex := vrfPrivKey1.Compute([]byte("a"))
 	proof := m.Get(absentIndex) // shares the same prefix with leaf node key1
+	if proof.Leaf.Value() != nil {
+		t.Fatal("Expect returned leaf's value is nil")
+	}
+	// ensure this is a proof of absence
+	if bytes.Equal(proof.LookupIndex, proof.Leaf.Index()) ||
+		!bytes.Equal(vrfPrivKey1.Compute([]byte("a")), proof.LookupIndex) {
+		t.Fatal("Expect a proof of absence")
+	}
 	// assert these indices share the same prefix in the first bit
 	if !bytes.Equal(util.ToBytes(util.ToBits(index1)[:proof.Leaf.Level()]),
 		util.ToBytes(util.ToBits(absentIndex)[:proof.Leaf.Level()])) {
 		t.Fatal("Expect these indices share the same prefix in the first bit")
-	}
-	if !bytes.Equal(vrfPrivKey1.Compute([]byte("a")), proof.LookupIndex) {
-		t.Error("VRF verification returns false")
 	}
 	if !VerifyAuthPath(proof,
 		proof.Leaf.Index(), proof.Leaf.Commitment(), proof.Leaf.Level(), proof.Leaf.IsEmpty(),
