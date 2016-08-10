@@ -30,7 +30,6 @@ func startServer(t *testing.T, kvdb kv.DB, epDeadline merkletree.TimeStamp, poli
 	if err != nil {
 		t.Fatal(err)
 	}
-	policies := merkletree.NewPolicies(epDeadline, vrfKey)
 
 	var loadedHistoryLength uint64 = 100
 	var registrationCapacity uint64 = 100
@@ -38,12 +37,14 @@ func startServer(t *testing.T, kvdb kv.DB, epDeadline merkletree.TimeStamp, poli
 	server := new(ConiksServer)
 	server.stop = make(chan struct{})
 	server.db = kvdb
-	server.policies = policies
+	server.policies = &ServerPolicies{EpochDeadline: epDeadline}
 	server.policiesFilePath = policiesPath
 	server.reloadChan = make(chan os.Signal, 1)
 	signal.Notify(server.reloadChan, syscall.SIGUSR2)
-	server.epochTimer = time.NewTimer(time.Duration(policies.EpDeadline()) * time.Second)
-	server.directory = protocol.InitDirectory(policies, sk, loadedHistoryLength, true, registrationCapacity)
+	server.epochTimer = time.NewTimer(time.Duration(server.policies.EpochDeadline) * time.Second)
+	server.directory = protocol.InitDirectory(epDeadline, vrfKey,
+		sk, loadedHistoryLength,
+		true, registrationCapacity)
 
 	conf := &ServerConfig{
 		Address:             testutil.PublicConnection,

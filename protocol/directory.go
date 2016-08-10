@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/coniks-sys/coniks-go/crypto/sign"
+	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/merkletree"
 )
 
@@ -15,33 +16,39 @@ type ConiksUserPolicies struct {
 }
 
 type ConiksDirectory struct {
-	pad    *merkletree.PAD
-	useTBs bool
-	tbs    map[string]*merkletree.TemporaryBinding
+	pad      *merkletree.PAD
+	useTBs   bool
+	tbs      map[string]*merkletree.TemporaryBinding
+	policies merkletree.Policies
 }
 
-func InitDirectory(policies merkletree.Policies, signKey sign.PrivateKey,
-	dirSize uint64, useTBs bool, capacity uint64) *ConiksDirectory {
-	pad, err := merkletree.NewPAD(policies, signKey, dirSize)
+func InitDirectory(epDeadline merkletree.TimeStamp, vrfKey *vrf.PrivateKey,
+	signKey sign.PrivateKey, dirSize uint64,
+	useTBs bool, capacity uint64) *ConiksDirectory {
+	d := new(ConiksDirectory)
+	d.policies = merkletree.NewPolicies(epDeadline, vrfKey)
+	pad, err := merkletree.NewPAD(d.policies, signKey, dirSize)
 	if err != nil {
 		panic(err)
 	}
-	d := &ConiksDirectory{
-		pad:    pad,
-		useTBs: useTBs,
-	}
+	d.pad = pad
+	d.useTBs = useTBs
 	if useTBs {
 		d.tbs = make(map[string]*merkletree.TemporaryBinding, capacity)
 	}
 	return d
 }
 
-func (d *ConiksDirectory) Update(policies merkletree.Policies) {
-	d.pad.Update(policies)
+func (d *ConiksDirectory) Update() {
+	d.pad.Update(d.policies)
 	// clear issued temporary bindings
 	for key := range d.tbs {
 		delete(d.tbs, key)
 	}
+}
+
+func (d *ConiksDirectory) SetPolicies(epDeadline merkletree.TimeStamp, vrfKey *vrf.PrivateKey) {
+	d.policies = merkletree.NewPolicies(epDeadline, vrfKey)
 }
 
 func (d *ConiksDirectory) LatestSTR() *merkletree.SignedTreeRoot {

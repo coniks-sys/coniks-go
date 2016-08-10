@@ -12,7 +12,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
-	"github.com/coniks-sys/coniks-go/merkletree"
 	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/storage/kv/leveldbkv"
@@ -43,8 +42,8 @@ type ConiksServer struct {
 
 	db kv.DB
 
-	policies         merkletree.Policies
-	policiesFilePath string
+	policies         *ServerPolicies
+	policiesFilePath string // should be final
 	policiesMutex    sync.Mutex
 	reloadChan       chan os.Signal
 	epochTimer       *time.Timer
@@ -78,12 +77,11 @@ func New(conf *ServerConfig) *ConiksServer {
 	kvdb := leveldbkv.OpenDB(conf.DatabasePath)
 
 	// read server policies
-	p, err := readPolicies(conf.PoliciesPath)
+	policies, vrfKey, err := readPolicies(conf.PoliciesPath)
 	if err != nil {
 		log.Fatalf("Cannot read policies config: %v", err)
 		return nil
 	}
-	policies := merkletree.NewPolicies(p.EpochDeadline, p.VRFKey)
 
 	// create server instance
 	server := new(ConiksServer)
@@ -93,8 +91,11 @@ func New(conf *ServerConfig) *ConiksServer {
 	server.policiesFilePath = conf.PoliciesPath
 	server.reloadChan = make(chan os.Signal, 1)
 	signal.Notify(server.reloadChan, syscall.SIGUSR2)
-	server.epochTimer = time.NewTimer(time.Duration(policies.EpDeadline()) * time.Second)
-	server.directory = protocol.InitDirectory(policies, sk, conf.LoadedHistoryLength, true, conf.RegistrationCapacity)
+	server.epochTimer = time.NewTimer(time.Duration(policies.EpochDeadline) * time.Second)
+	server.directory = protocol.InitDirectory(
+		policies.EpochDeadline, vrfKey,
+		sk, conf.LoadedHistoryLength,
+		true, conf.RegistrationCapacity)
 
 	return server
 }
@@ -140,11 +141,9 @@ func (server *ConiksServer) EpochUpdate() {
 			return
 		case <-server.epochTimer.C:
 			server.Lock()
-			server.directory.Update(server.policies)
+			server.directory.Update()
+			server.epochTimer.Reset(time.Duration(server.policies.EpochDeadline) * time.Second)
 			server.Unlock()
-			server.policiesMutex.Lock()
-			server.epochTimer.Reset(time.Duration(server.policies.EpDeadline()) * time.Second)
-			server.policiesMutex.Unlock()
 		}
 	}
 }
@@ -162,13 +161,16 @@ func (server *ConiksServer) updatePolicies() {
 		case <-server.stop:
 			return
 		case <-server.reloadChan:
-			p, err := readPolicies(server.policiesFilePath)
+			// read server policies
+			policies, vrfKey, err := readPolicies(server.policiesFilePath)
 			if err != nil {
-				log.Println("open config: ", err)
+				log.Fatalf("Cannot read policies config: %v", err)
+				return
 			}
-			server.policiesMutex.Lock()
-			server.policies = merkletree.NewPolicies(p.EpochDeadline, p.VRFKey)
-			server.policiesMutex.Unlock()
+			server.Lock()
+			server.directory.SetPolicies(policies.EpochDeadline, vrfKey)
+			server.policies = policies
+			server.Unlock()
 			log.Println("Policies reloaded!")
 		}
 	}
