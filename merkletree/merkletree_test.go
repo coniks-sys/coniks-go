@@ -37,7 +37,7 @@ func TestOneEntry(t *testing.T) {
 	h.Write([]byte{EmptyBranchIdentifier})
 	h.Write(m.nonce)
 	h.Write(util.ToBytes([]bool{true}))
-	h.Write(util.IntToBytes(1))
+	h.Write(util.UInt32ToBytes(1))
 	h.Read(expect[:])
 	if !bytes.Equal(m.root.rightHash, expect[:]) {
 		t.Error("Wrong righ hash!",
@@ -66,7 +66,7 @@ func TestOneEntry(t *testing.T) {
 	h.Write([]byte{LeafIdentifier})
 	h.Write(m.nonce)
 	h.Write(index)
-	h.Write(util.IntToBytes(1))
+	h.Write(util.UInt32ToBytes(1))
 	h.Write(commit[:])
 	h.Read(expect[:])
 

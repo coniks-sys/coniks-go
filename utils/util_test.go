@@ -22,22 +22,17 @@ func TestBitsBytesConvert(t *testing.T) {
 
 	bytes := ToBytes(bits)
 
-	for i := 0; i < 16; i++ {
+	for i := uint32(0); i < 16; i++ {
 		if GetNthBit(bytes, i) != bits[i] {
 			t.Error("Wrong conversion")
 		}
 	}
 }
 
-func TestIntToBytes(t *testing.T) {
-	numInt := 42
-	b := IntToBytes(numInt)
-	if int(binary.LittleEndian.Uint32(b)) != numInt {
-		t.Fatal("Conversion to bytes looks wrong!")
-	}
-	numInt = -42
-	b = IntToBytes(numInt)
-	if int32(binary.LittleEndian.Uint32(b)) != int32(numInt) {
+func TestUInt32ToBytes(t *testing.T) {
+	numInt := uint32(42)
+	b := UInt32ToBytes(numInt)
+	if binary.LittleEndian.Uint32(b) != numInt {
 		t.Fatal("Conversion to bytes looks wrong!")
 	}
 }

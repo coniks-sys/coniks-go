@@ -7,7 +7,7 @@ import (
 
 type node struct {
 	parent MerkleNode
-	level  int
+	level  uint32
 }
 
 type interiorNode struct {
@@ -32,7 +32,7 @@ type emptyNode struct {
 	index []byte
 }
 
-func NewInteriorNode(parent MerkleNode, level int, prefixBits []bool) *interiorNode {
+func NewInteriorNode(parent MerkleNode, level uint32, prefixBits []bool) *interiorNode {
 	prefixLeft := append([]bool(nil), prefixBits...)
 	prefixLeft = append(prefixLeft, false)
 	prefixRight := append([]bool(nil), prefixBits...)
@@ -88,20 +88,20 @@ func (n *interiorNode) Hash(m *MerkleTree) []byte {
 
 func (n *userLeafNode) Hash(m *MerkleTree) []byte {
 	return crypto.Digest(
-		[]byte{LeafIdentifier},           // K_leaf
-		[]byte(m.nonce),                  // K_n
-		[]byte(n.index),                  // i
-		[]byte(util.IntToBytes(n.level)), // l
-		[]byte(n.commitment),             // commit(key|| value)
+		[]byte{LeafIdentifier},              // K_leaf
+		[]byte(m.nonce),                     // K_n
+		[]byte(n.index),                     // i
+		[]byte(util.UInt32ToBytes(n.level)), // l
+		[]byte(n.commitment),                // commit(key|| value)
 	)
 }
 
 func (n *emptyNode) Hash(m *MerkleTree) []byte {
 	return crypto.Digest(
-		[]byte{EmptyBranchIdentifier},    // K_empty
-		[]byte(m.nonce),                  // K_n
-		[]byte(n.index),                  // i
-		[]byte(util.IntToBytes(n.level)), // l
+		[]byte{EmptyBranchIdentifier},       // K_empty
+		[]byte(m.nonce),                     // K_n
+		[]byte(n.index),                     // i
+		[]byte(util.UInt32ToBytes(n.level)), // l
 	)
 }
 

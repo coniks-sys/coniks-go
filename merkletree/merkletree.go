@@ -112,7 +112,7 @@ func (m *MerkleTree) Set(index []byte, key string, value []byte) error {
 
 func (m *MerkleTree) insertNode(index []byte, toAdd *userLeafNode) {
 	indexBits := util.ToBits(index)
-	depth := 0
+	var depth uint32 // = 0
 	var nodePointer MerkleNode
 	nodePointer = m.root
 

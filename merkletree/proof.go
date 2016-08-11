@@ -16,7 +16,7 @@ type AuthenticationPath struct {
 }
 
 type ProofNode interface {
-	Level() int
+	Level() uint32
 	Salt() []byte
 	Index() []byte
 	Value() []byte
@@ -25,47 +25,47 @@ type ProofNode interface {
 }
 
 func computeLeafHash(ap *AuthenticationPath,
-	leafIndex, leafCommitment []byte, leafLevel int, isLeafEmpty bool) (leafHash []byte) {
+	leafIndex, leafCommitment []byte, leafLevel uint32, isLeafEmpty bool) (leafHash []byte) {
 	if isLeafEmpty {
 		// empty leaf node
 		leafHash = crypto.Digest(
-			[]byte{EmptyBranchIdentifier},      // K_empty
-			[]byte(ap.TreeNonce),               // K_n
-			[]byte(leafIndex),                  // i
-			[]byte(util.IntToBytes(leafLevel)), // l
+			[]byte{EmptyBranchIdentifier},         // K_empty
+			[]byte(ap.TreeNonce),                  // K_n
+			[]byte(leafIndex),                     // i
+			[]byte(util.UInt32ToBytes(leafLevel)), // l
 		)
 	} else {
 		// user leaf node
 		leafHash = crypto.Digest(
-			[]byte{LeafIdentifier},             // K_leaf
-			[]byte(ap.TreeNonce),               // K_n
-			[]byte(leafIndex),                  // i
-			[]byte(util.IntToBytes(leafLevel)), // l
-			[]byte(leafCommitment),             // commit(key|| value)
+			[]byte{LeafIdentifier},                // K_leaf
+			[]byte(ap.TreeNonce),                  // K_n
+			[]byte(leafIndex),                     // i
+			[]byte(util.UInt32ToBytes(leafLevel)), // l
+			[]byte(leafCommitment),                // commit(key|| value)
 		)
 	}
 	return
 }
 
 func authPathHash(ap *AuthenticationPath,
-	leafIndex, leafCommitment []byte, leafLevel int, isLeafEmpty bool) []byte {
+	leafIndex, leafCommitment []byte, leafLevel uint32, isLeafEmpty bool) []byte {
 	hash := computeLeafHash(ap, leafIndex, leafCommitment, leafLevel, isLeafEmpty)
-	depth := leafLevel - 1
 	indexBits := util.ToBits(leafIndex)
-	for depth > -1 {
+	depth := leafLevel
+	for depth > 0 {
+		depth -= 1
 		if indexBits[depth] { // right child
 			hash = crypto.Digest(ap.PrunedTree[depth][:], hash)
 		} else {
 			hash = crypto.Digest(hash, ap.PrunedTree[depth][:])
 		}
-		depth -= 1
 	}
 	return hash
 }
 
 // VerifyAuthPath should be called after the vrf index is verified successfully
 func VerifyAuthPath(ap *AuthenticationPath,
-	leafIndex, leafCommitment []byte, leafLevel int, isLeafEmpty bool,
+	leafIndex, leafCommitment []byte, leafLevel uint32, isLeafEmpty bool,
 	treeHash []byte) bool {
 	// step 1. Verify if it's a proof of inclusion/proof of absence
 	if !bytes.Equal(leafIndex, ap.LookupIndex) {
@@ -74,7 +74,7 @@ func VerifyAuthPath(ap *AuthenticationPath,
 		indexBits := util.ToBits(leafIndex)
 		lookupIndexBits := util.ToBits(ap.LookupIndex)
 
-		for i := 0; i < leafLevel; i++ {
+		for i := 0; i < int(leafLevel); i++ {
 			if indexBits[i] != lookupIndexBits[i] {
 				return false
 			}
@@ -97,7 +97,7 @@ func VerifyCommitment(salt []byte, key string, value []byte, commitment []byte) 
 var _ ProofNode = (*userLeafNode)(nil)
 var _ ProofNode = (*emptyNode)(nil)
 
-func (n *emptyNode) Level() int {
+func (n *emptyNode) Level() uint32 {
 	return n.level
 }
 
@@ -121,7 +121,7 @@ func (n *emptyNode) Commitment() []byte {
 	return nil
 }
 
-func (n *userLeafNode) Level() int {
+func (n *userLeafNode) Level() uint32 {
 	return n.level
 }
 
