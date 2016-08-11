@@ -1,8 +1,6 @@
 package main
 
 /*
-#include <stdlib.h>
-
 int testVerifyVrf(unsigned char *pk, int pkSize,
     unsigned char *m, int mSize,
     unsigned char *index, int indexSize,
@@ -66,9 +64,14 @@ import (
 	"github.com/coniks-sys/coniks-go/merkletree"
 )
 
-func byteSliceToCpchar(buf []byte) *C.uchar {
+func byteSliceToCucharPtr(buf []byte) *C.uchar {
 	ptr := unsafe.Pointer(&buf[0])
 	return (*C.uchar)(ptr)
+}
+
+func byteSliceToCcharPtr(buf []byte) *C.char {
+	ptr := unsafe.Pointer(&buf[0])
+	return (*C.char)(ptr)
 }
 
 func testVerifyVrf(t *testing.T) {
@@ -78,10 +81,10 @@ func testVerifyVrf(t *testing.T) {
 	}
 	alice := []byte("alice")
 	aliceVRF, aliceProof := sk.Prove(alice)
-	if v := C.testVerifyVrf(byteSliceToCpchar(pk[:]), C.int(len(pk)),
-		byteSliceToCpchar(alice), C.int(len(alice)),
-		byteSliceToCpchar(aliceVRF), C.int(len(aliceVRF)),
-		byteSliceToCpchar(aliceProof), C.int(len(aliceProof))); v != 1 {
+	if v := C.testVerifyVrf(byteSliceToCucharPtr(pk[:]), C.int(len(pk)),
+		byteSliceToCucharPtr(alice), C.int(len(alice)),
+		byteSliceToCucharPtr(aliceVRF), C.int(len(aliceVRF)),
+		byteSliceToCucharPtr(aliceProof), C.int(len(aliceProof))); v != 1 {
 		t.Error("cgoVrfVerify failed")
 	}
 }
@@ -100,9 +103,9 @@ func testVerifySignature(t *testing.T) {
 		t.Errorf("bad PK?")
 	}
 
-	if v := C.testVerifySignature(byteSliceToCpchar(pk), C.int(len(pk)),
-		byteSliceToCpchar(message), C.int(len(message)),
-		byteSliceToCpchar(sig), C.int(len(sig))); v != 1 {
+	if v := C.testVerifySignature(byteSliceToCucharPtr(pk), C.int(len(pk)),
+		byteSliceToCucharPtr(message), C.int(len(message)),
+		byteSliceToCucharPtr(sig), C.int(len(sig))); v != 1 {
 		t.Error("cgoVerifySignature failed")
 	}
 }
@@ -130,8 +133,8 @@ func testVerifyHashChain(t *testing.T) {
 	str0 := pad.GetSTR(0)
 	str1 := pad.GetSTR(1)
 
-	if v := C.testVerifyHashChain(byteSliceToCpchar(str1.PreviousSTRHash), C.int(len(str1.PreviousSTRHash)),
-		byteSliceToCpchar(str0.Signature), C.int(len(str0.Signature))); v != 1 {
+	if v := C.testVerifyHashChain(byteSliceToCucharPtr(str1.PreviousSTRHash), C.int(len(str1.PreviousSTRHash)),
+		byteSliceToCucharPtr(str0.Signature), C.int(len(str0.Signature))); v != 1 {
 		t.Error("cgoVerifyHashChain failed")
 	}
 }
@@ -180,23 +183,20 @@ func testVerifyAuthPath(t *testing.T) {
 		isLeafEmpty = 1
 	}
 	// verify commitment
-	key := C.CString(key3)
-	defer C.free(unsafe.Pointer(key))
-
-	if v := C.testVerifyCommitment(byteSliceToCpchar(proof.Leaf.Salt()), C.int(len(proof.Leaf.Salt())),
-		key, C.int(len(key3)),
-		byteSliceToCpchar(proof.Leaf.Value()), C.int(len(proof.Leaf.Value())),
-		byteSliceToCpchar(proof.Leaf.Commitment()), C.int(len(proof.Leaf.Commitment()))); v != 1 {
+	if v := C.testVerifyCommitment(byteSliceToCucharPtr(proof.Leaf.Salt()), C.int(len(proof.Leaf.Salt())),
+		byteSliceToCcharPtr([]byte(key3)), C.int(len(key3)),
+		byteSliceToCucharPtr(proof.Leaf.Value()), C.int(len(proof.Leaf.Value())),
+		byteSliceToCucharPtr(proof.Leaf.Commitment()), C.int(len(proof.Leaf.Commitment()))); v != 1 {
 		t.Fatal("Verify commitment failed")
 	}
 
-	if v := C.testVerifyAuthPath(byteSliceToCpchar(pad.LatestSTR().Root()), C.int(len(pad.LatestSTR().Root())),
-		byteSliceToCpchar(proof.TreeNonce), C.int(len(proof.TreeNonce)),
-		byteSliceToCpchar(proof.LookupIndex), C.int(len(proof.LookupIndex)),
+	if v := C.testVerifyAuthPath(byteSliceToCucharPtr(pad.LatestSTR().Root()), C.int(len(pad.LatestSTR().Root())),
+		byteSliceToCucharPtr(proof.TreeNonce), C.int(len(proof.TreeNonce)),
+		byteSliceToCucharPtr(proof.LookupIndex), C.int(len(proof.LookupIndex)),
 		(**C.uchar)(unsafe.Pointer(&proof.PrunedTree[0][0])), C.int(len(proof.PrunedTree)), C.int(len(proof.PrunedTree[0])),
 		C.int(proof.Leaf.Level()),
-		byteSliceToCpchar(proof.Leaf.Index()), C.int(len(proof.Leaf.Index())),
-		byteSliceToCpchar(proof.Leaf.Commitment()), C.int(len(proof.Leaf.Commitment())),
+		byteSliceToCucharPtr(proof.Leaf.Index()), C.int(len(proof.Leaf.Index())),
+		byteSliceToCucharPtr(proof.Leaf.Commitment()), C.int(len(proof.Leaf.Commitment())),
 		C.int(isLeafEmpty)); v != 1 {
 		t.Error("Verify proof of inclusion failed")
 	}
@@ -211,12 +211,12 @@ func testVerifyAuthPath(t *testing.T) {
 	if proof.Leaf.IsEmpty() {
 		isLeafEmpty = 1
 	}
-	if v := C.testVerifyAuthPath(byteSliceToCpchar(pad.LatestSTR().Root()), C.int(len(pad.LatestSTR().Root())),
-		byteSliceToCpchar(proof.TreeNonce), C.int(len(proof.TreeNonce)),
-		byteSliceToCpchar(proof.LookupIndex), C.int(len(proof.LookupIndex)),
+	if v := C.testVerifyAuthPath(byteSliceToCucharPtr(pad.LatestSTR().Root()), C.int(len(pad.LatestSTR().Root())),
+		byteSliceToCucharPtr(proof.TreeNonce), C.int(len(proof.TreeNonce)),
+		byteSliceToCucharPtr(proof.LookupIndex), C.int(len(proof.LookupIndex)),
 		(**C.uchar)(unsafe.Pointer(&proof.PrunedTree[0][0])), C.int(len(proof.PrunedTree)), C.int(len(proof.PrunedTree[0])),
 		C.int(proof.Leaf.Level()),
-		byteSliceToCpchar(proof.Leaf.Index()), C.int(len(proof.Leaf.Index())),
+		byteSliceToCucharPtr(proof.Leaf.Index()), C.int(len(proof.Leaf.Index())),
 		nil, C.int(0),
 		C.int(isLeafEmpty)); v != 1 {
 		t.Error("Verify proof of absence failed")
@@ -256,13 +256,13 @@ func testVerifyProofOfAbsenceSamePrefix(t *testing.T) {
 	if proof.Leaf.IsEmpty() {
 		isLeafEmpty = 1
 	}
-	if v := C.testVerifyAuthPath(byteSliceToCpchar(pad.LatestSTR().Root()), C.int(len(pad.LatestSTR().Root())),
-		byteSliceToCpchar(proof.TreeNonce), C.int(len(proof.TreeNonce)),
-		byteSliceToCpchar(proof.LookupIndex), C.int(len(proof.LookupIndex)),
+	if v := C.testVerifyAuthPath(byteSliceToCucharPtr(pad.LatestSTR().Root()), C.int(len(pad.LatestSTR().Root())),
+		byteSliceToCucharPtr(proof.TreeNonce), C.int(len(proof.TreeNonce)),
+		byteSliceToCucharPtr(proof.LookupIndex), C.int(len(proof.LookupIndex)),
 		(**C.uchar)(unsafe.Pointer(&proof.PrunedTree[0][0])), C.int(len(proof.PrunedTree)), C.int(len(proof.PrunedTree[0])),
 		C.int(proof.Leaf.Level()),
-		byteSliceToCpchar(proof.Leaf.Index()), C.int(len(proof.Leaf.Index())),
-		byteSliceToCpchar(proof.Leaf.Commitment()), C.int(len(proof.Leaf.Commitment())),
+		byteSliceToCucharPtr(proof.Leaf.Index()), C.int(len(proof.Leaf.Index())),
+		byteSliceToCucharPtr(proof.Leaf.Commitment()), C.int(len(proof.Leaf.Commitment())),
 		C.int(isLeafEmpty)); v != 1 {
 		t.Error("Verify proof of absence failed")
 	}
