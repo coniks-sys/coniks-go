@@ -89,9 +89,8 @@ func MarshalRegResponseWithTB(Type int, strEnc, apEnc, tbEnc []byte) ([]byte, er
 	return res, e
 }
 
-func MarshalErrorResponse(response Response) ([]byte, error) {
-	res, err := json.Marshal(response)
-	return res, err
+func MarshalErrorResponse(errCode ErrorCode) ([]byte, error) {
+	return json.Marshal(NewErrorResponse(errCode))
 }
 
 func UnmarshalRequest(msg []byte) (Request, json.RawMessage, error) {

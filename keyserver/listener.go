@@ -83,37 +83,28 @@ func (server *ConiksServer) acceptClient(conn net.Conn, handler func(msg []byte)
 	}
 }
 
-func malformedClientMsg(e error) ([]byte, error) {
-	// check if we're just propagating a message
-	var err error
-	if e == nil {
-		err = ErrorMalformedClientMessage.Error()
-	}
-
-	response := NewErrorResponse(ErrorMalformedClientMessage)
-
-	res, err := MarshalErrorResponse(response)
-
+func malformedClientMsg() []byte {
+	res, err := MarshalErrorResponse(ErrorMalformedClientMessage)
 	if err != nil {
-		panic(ErrorInternalServer.Error())
+		panic(err)
 	}
-
-	return res, err
+	return res
 }
 
+// handleClientMessage returns a byte slice of marshaled response
+// and an error for server logging
 func (server *ConiksServer) handleClientMessage(msg []byte) ([]byte, error) {
-
 	// get request message
 	req, _, err := UnmarshalRequest(msg)
 	if err != nil {
-		return malformedClientMsg(err)
+		return malformedClientMsg(), err
 	}
 
 	// handle request
 	switch req.Type {
 	default:
 		log.Printf("unknown message type: %q", req.Type)
-		return malformedClientMsg(nil)
+		return malformedClientMsg(), ErrorMalformedClientMessage.Error()
 	}
 }
 
@@ -124,45 +115,44 @@ func (server *ConiksServer) handleBotMessage(msg []byte) ([]byte, error) {
 	// get request message
 	req, content, err := UnmarshalRequest(msg)
 	if err != nil {
-		return malformedClientMsg(err)
+		return malformedClientMsg(), err
 	}
 
 	// handle request
 	switch req.Type {
 	case RegistrationType:
 		var reg RegistrationRequest
-		if e := json.Unmarshal(content, &reg); e != nil {
-			return malformedClientMsg(e)
-		} else {
-			response, err = server.handleRegistrationMessage(&reg)
-			if err == nil {
-				tbEncoded, err := MarshalTemporaryBinding(response.(*RegistrationResponseWithTB).TB)
-				if err != nil {
-					panic(err)
-				}
-				apEncoded, err := MarshalAuthenticationPath(response.(*RegistrationResponseWithTB).AP)
-				if err != nil {
-					panic(err)
-				}
-				strEncoded, err := MarshalSTR(response.(*RegistrationResponseWithTB).STR)
-				if err != nil {
-					panic(err)
-				}
-				res, e := MarshalRegResponseWithTB(response.(*RegistrationResponseWithTB).Type, strEncoded, apEncoded, tbEncoded)
-				if e != nil {
-					panic(e)
-				}
-				return res, nil
-			}
-			res, e := MarshalErrorResponse(response)
+		if err = json.Unmarshal(content, &reg); err != nil {
+			return malformedClientMsg(), err
+		}
+		response, err = server.handleRegistrationMessage(&reg)
+		if err == nil {
+			tbEncoded, e := MarshalTemporaryBinding(response.(*RegistrationResponseWithTB).TB)
 			if e != nil {
 				panic(e)
 			}
-			return res, err
+			apEncoded, e := MarshalAuthenticationPath(response.(*RegistrationResponseWithTB).AP)
+			if e != nil {
+				panic(e)
+			}
+			strEncoded, e := MarshalSTR(response.(*RegistrationResponseWithTB).STR)
+			if e != nil {
+				panic(e)
+			}
+			res, e := MarshalRegResponseWithTB(response.(*RegistrationResponseWithTB).Type, strEncoded, apEncoded, tbEncoded)
+			if e != nil {
+				panic(e)
+			}
+			return res, nil
 		}
+		res, e := MarshalErrorResponse(response.(*ErrorResponse).Error)
+		if e != nil {
+			panic(e)
+		}
+		return res, nil
 
 	default:
 		log.Printf("unknown message type: %q", req.Type)
-		return malformedClientMsg(nil)
+		return malformedClientMsg(), ErrorMalformedClientMessage.Error()
 	}
 }

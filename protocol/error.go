@@ -8,10 +8,10 @@ import "errors"
 type ErrorCode int
 
 const (
-	Success                     ErrorCode = 10
-	ErrorInternalServer         ErrorCode = 11
-	ErrorNameExisted            ErrorCode = 12
-	ErrorMalformedClientMessage ErrorCode = 14
+	Success ErrorCode = iota + 10
+	ErrorInternalServer
+	ErrorNameExisted
+	ErrorMalformedClientMessage
 )
 
 var (
