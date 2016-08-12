@@ -7,14 +7,6 @@ import (
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
-type AuthenticationPath struct {
-	TreeNonce   []byte
-	PrunedTree  [][crypto.HashSizeByte]byte
-	LookupIndex []byte
-	VrfProof    []byte
-	Leaf        *ProofNode
-}
-
 type ProofNode struct {
 	Level      uint32
 	Salt       []byte
@@ -24,34 +16,39 @@ type ProofNode struct {
 	Commitment []byte
 }
 
-func computeLeafHash(ap *AuthenticationPath,
-	leafIndex, leafCommitment []byte, leafLevel uint32, isLeafEmpty bool) (leafHash []byte) {
-	if isLeafEmpty {
+func (n *ProofNode) hash(treeNonce []byte) []byte {
+	if n.IsEmpty {
 		// empty leaf node
-		leafHash = crypto.Digest(
-			[]byte{EmptyBranchIdentifier},         // K_empty
-			[]byte(ap.TreeNonce),                  // K_n
-			[]byte(leafIndex),                     // i
-			[]byte(util.UInt32ToBytes(leafLevel)), // l
+		return crypto.Digest(
+			[]byte{EmptyBranchIdentifier},       // K_empty
+			[]byte(treeNonce),                   // K_n
+			[]byte(n.Index),                     // i
+			[]byte(util.UInt32ToBytes(n.Level)), // l
 		)
 	} else {
 		// user leaf node
-		leafHash = crypto.Digest(
-			[]byte{LeafIdentifier},                // K_leaf
-			[]byte(ap.TreeNonce),                  // K_n
-			[]byte(leafIndex),                     // i
-			[]byte(util.UInt32ToBytes(leafLevel)), // l
-			[]byte(leafCommitment),                // commit(key|| value)
+		return crypto.Digest(
+			[]byte{LeafIdentifier},              // K_leaf
+			[]byte(treeNonce),                   // K_n
+			[]byte(n.Index),                     // i
+			[]byte(util.UInt32ToBytes(n.Level)), // l
+			[]byte(n.Commitment),                // commit(key|| value)
 		)
 	}
-	return
 }
 
-func authPathHash(ap *AuthenticationPath,
-	leafIndex, leafCommitment []byte, leafLevel uint32, isLeafEmpty bool) []byte {
-	hash := computeLeafHash(ap, leafIndex, leafCommitment, leafLevel, isLeafEmpty)
-	indexBits := util.ToBits(leafIndex)
-	depth := leafLevel
+type AuthenticationPath struct {
+	TreeNonce   []byte
+	PrunedTree  [][crypto.HashSizeByte]byte
+	LookupIndex []byte
+	VrfProof    []byte
+	Leaf        *ProofNode
+}
+
+func (ap *AuthenticationPath) authPathHash() []byte {
+	hash := ap.Leaf.hash(ap.TreeNonce)
+	indexBits := util.ToBits(ap.Leaf.Index)
+	depth := ap.Leaf.Level
 	for depth > 0 {
 		depth -= 1
 		if indexBits[depth] { // right child
@@ -64,26 +61,21 @@ func authPathHash(ap *AuthenticationPath,
 }
 
 // VerifyAuthPath should be called after the vrf index is verified successfully
-func VerifyAuthPath(ap *AuthenticationPath,
-	leafIndex, leafCommitment []byte, leafLevel uint32, isLeafEmpty bool,
-	treeHash []byte) bool {
+func (ap *AuthenticationPath) VerifyAuthPath(treeHash []byte) bool {
 	// step 1. Verify if it's a proof of inclusion/proof of absence
-	if !bytes.Equal(leafIndex, ap.LookupIndex) {
+	if !bytes.Equal(ap.Leaf.Index, ap.LookupIndex) {
 		// proof of absence
 		// Check if i and j match in the first l bits
-		indexBits := util.ToBits(leafIndex)
+		indexBits := util.ToBits(ap.Leaf.Index)
 		lookupIndexBits := util.ToBits(ap.LookupIndex)
-
-		for i := 0; i < int(leafLevel); i++ {
+		for i := 0; i < int(ap.Leaf.Level); i++ {
 			if indexBits[i] != lookupIndexBits[i] {
 				return false
 			}
 		}
 	}
-
 	// step 2. Verify the auth path of the returned leaf
-	hash := authPathHash(ap, leafIndex, leafCommitment, leafLevel, isLeafEmpty)
-	if !bytes.Equal(treeHash, hash) {
+	if !bytes.Equal(treeHash, ap.authPathHash()) {
 		return false
 	}
 	return true

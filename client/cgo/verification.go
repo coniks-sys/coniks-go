@@ -111,8 +111,16 @@ func cgoVerifyAuthPath(treeHash unsafe.Pointer, treeHashSize C.int,
 	ap.TreeNonce = tn
 	ap.LookupIndex = li
 	ap.PrunedTree = pt
+	ap.Leaf = &merkletree.ProofNode{
+		Level:      uint32(leafLevel),
+		Salt:       nil,
+		Index:      leafi,
+		Value:      nil,
+		IsEmpty:    int(isLeafEmpty) == 1,
+		Commitment: leafc,
+	}
 
-	if merkletree.VerifyAuthPath(ap, leafi, leafc, uint32(leafLevel), int(isLeafEmpty) == 1, th) {
+	if ap.VerifyAuthPath(th) {
 		return 1
 	}
 	return 0
