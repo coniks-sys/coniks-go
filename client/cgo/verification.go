@@ -46,8 +46,7 @@ func cgoVerifyVrf(pk unsafe.Pointer, pkSize C.int,
 	mBytes := C.GoBytes(m, size)
 	vrfBytes := C.GoBytes(index, indexSize)
 	proofBytes := C.GoBytes(proof, proofSize)
-	var key vrf.PublicKey
-	copy(key[:], pkBytes)
+	key := vrf.PublicKey(pkBytes)
 	if key.Verify(mBytes, vrfBytes, proofBytes) {
 		return 1
 	}
