@@ -14,6 +14,15 @@
 
 package util
 
+import (
+	"io/ioutil"
+	"os"
+
+	"github.com/coniks-sys/coniks-go/storage/kv"
+	"github.com/coniks-sys/coniks-go/storage/kv/leveldbkv"
+	"github.com/syndtr/goleveldb/leveldb"
+)
+
 // In each byte, the bits are ordered MSB to LSB
 func ToBytes(bits []bool) []byte {
 	bs := make([]byte, (len(bits)+7)/8)
@@ -32,4 +41,18 @@ func ToBits(bs []byte) []bool {
 		bits[i] = (bs[i/8]<<uint(i%8))&(1<<7) > 0
 	}
 	return bits
+}
+
+func WithDB(f func(kv.DB)) {
+	dir, err := ioutil.TempDir("", "merkletree")
+	if err != nil {
+		panic(err)
+	}
+	defer os.RemoveAll(dir)
+	db, err := leveldb.OpenFile(dir, nil)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+	f(leveldbkv.Wrap(db))
 }
