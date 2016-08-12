@@ -2,6 +2,7 @@ package sign
 
 import (
 	"crypto/rand"
+	"io"
 
 	"golang.org/x/crypto/ed25519"
 )
@@ -15,8 +16,11 @@ const (
 type PrivateKey ed25519.PrivateKey
 type PublicKey ed25519.PublicKey
 
-func GenerateKey() (PrivateKey, error) {
-	_, sk, err := ed25519.GenerateKey(rand.Reader)
+func GenerateKey(rnd io.Reader) (PrivateKey, error) {
+	if rnd == nil {
+		rnd = rand.Reader
+	}
+	_, sk, err := ed25519.GenerateKey(rnd)
 	return PrivateKey(sk), err
 }
 

@@ -7,15 +7,16 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"io"
+
+	"github.com/coniks-sys/coniks-go/crypto/sign"
 )
 
 var signKey sign.PrivateKey
 
 func init() {
 	var err error
-	signKey, err = sign.GenerateKey()
+	signKey, err = sign.GenerateKey(nil)
 	if err != nil {
 		panic(err)
 	}

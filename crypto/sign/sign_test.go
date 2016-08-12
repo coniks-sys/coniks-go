@@ -6,7 +6,7 @@ import (
 
 // copied from official crypto.ed25519 tests
 func TestVerifySignature(t *testing.T) {
-	key, err := GenerateKey()
+	key, err := GenerateKey(nil)
 	if err != nil {
 		t.Fatal(err)
 	}

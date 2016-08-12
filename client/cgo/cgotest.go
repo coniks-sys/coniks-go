@@ -90,7 +90,7 @@ func testVerifyVrf(t *testing.T) {
 }
 
 func testVerifySignature(t *testing.T) {
-	key, err := sign.GenerateKey()
+	key, err := sign.GenerateKey(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func testVerifySignature(t *testing.T) {
 }
 
 func testVerifyHashChain(t *testing.T) {
-	signKey, err := sign.GenerateKey()
+	signKey, err := sign.GenerateKey(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func testVerifyHashChain(t *testing.T) {
 }
 
 func testVerifyAuthPath(t *testing.T) {
-	signKey, err := sign.GenerateKey()
+	signKey, err := sign.GenerateKey(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +224,7 @@ func testVerifyAuthPath(t *testing.T) {
 }
 
 func testVerifyProofOfAbsenceSamePrefix(t *testing.T) {
-	signKey, err := sign.GenerateKey()
+	signKey, err := sign.GenerateKey(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
