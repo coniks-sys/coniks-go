@@ -2,7 +2,6 @@ package protocol
 
 import (
 	"bytes"
-	"log"
 
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
@@ -26,7 +25,7 @@ func InitDirectory(epDeadline merkletree.TimeStamp, vrfKey *vrf.PrivateKey,
 	signKey sign.PrivateKey, dirSize uint64,
 	useTBs bool, capacity uint64) *ConiksDirectory {
 	d := new(ConiksDirectory)
-	d.policies = merkletree.NewPolicies(epDeadline, vrfKey)
+	d.SetPolicies(epDeadline, vrfKey)
 	pad, err := merkletree.NewPAD(d.policies, signKey, dirSize)
 	if err != nil {
 		panic(err)
@@ -76,7 +75,6 @@ func (d *ConiksDirectory) Register(uname string, key []byte) (
 		// insert new data to the directory on-the-fly
 		tb, err := d.pad.TB(uname, key)
 		if err != nil {
-			log.Printf(err.Error())
 			return nil, nil, ErrorInternalServer
 		}
 		d.tbs[uname] = tb
@@ -84,7 +82,6 @@ func (d *ConiksDirectory) Register(uname string, key []byte) (
 	}
 
 	if err = d.pad.Set(uname, key); err != nil {
-		log.Printf(err.Error())
 		return nil, nil, ErrorInternalServer
 	}
 

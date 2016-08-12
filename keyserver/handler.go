@@ -31,7 +31,7 @@ func (server *ConiksServer) handleRegistrationMessage(reg *RegistrationRequest) 
 			err
 	}
 
-	return &RegistrationResponseWithTB{
+	return &RegistrationResponse{
 		Type: RegistrationType,
 		STR:  server.directory.LatestSTR(),
 		AP:   ap,

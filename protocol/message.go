@@ -34,13 +34,5 @@ type RegistrationResponse struct {
 	Type int
 	STR  *merkletree.SignedTreeRoot
 	AP   *merkletree.AuthenticationPath
-}
-
-// RegistrationResponseWithTB is used to replace RegistrationResponse
-// with addition TB field
-type RegistrationResponseWithTB struct {
-	Type int
-	STR  *merkletree.SignedTreeRoot
-	AP   *merkletree.AuthenticationPath
-	TB   *merkletree.TemporaryBinding
+	TB   *merkletree.TemporaryBinding `json:",omitempty"`
 }

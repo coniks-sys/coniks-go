@@ -9,7 +9,6 @@ import (
 type TimeStamp uint64
 
 type Policies interface {
-	EpDeadline() TimeStamp
 	Serialize() []byte
 	vrfPrivate() *vrf.PrivateKey
 }
@@ -47,8 +46,4 @@ func (p *ConiksPolicies) Serialize() []byte {
 
 func (p *ConiksPolicies) vrfPrivate() *vrf.PrivateKey {
 	return p.vrfPrivateKey
-}
-
-func (p *ConiksPolicies) EpDeadline() TimeStamp {
-	return p.EpochDeadline
 }

@@ -26,7 +26,7 @@ func main() {
 
 	// set up a CONIKS server from config file
 	conf := keyserver.LoadServerConfig(*configPathPtr)
-	serv := keyserver.New(conf)
+	serv := keyserver.NewConiksServer(conf)
 
 	// run the server until receiving an interrupt signal
 	serv.RunWithConfig(conf)

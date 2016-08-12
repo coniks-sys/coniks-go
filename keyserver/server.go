@@ -34,7 +34,7 @@ type TLSInfo struct {
 }
 
 type ConiksServer struct {
-	sync.Mutex
+	sync.RWMutex
 	directory *protocol.ConiksDirectory
 
 	stop     chan struct{}
@@ -44,7 +44,6 @@ type ConiksServer struct {
 
 	policies         *ServerPolicies
 	policiesFilePath string // should be final
-	policiesMutex    sync.Mutex
 	reloadChan       chan os.Signal
 	epochTimer       *time.Timer
 }
@@ -58,7 +57,7 @@ func LoadServerConfig(path string) *ServerConfig {
 	return &conf
 }
 
-func New(conf *ServerConfig) *ConiksServer {
+func NewConiksServer(conf *ServerConfig) *ConiksServer {
 	// load signing key
 	skBytes, err := ioutil.ReadFile(conf.SigningKeyPath)
 	if err != nil {

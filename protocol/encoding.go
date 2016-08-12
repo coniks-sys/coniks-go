@@ -74,19 +74,35 @@ func MarshalAuthenticationPath(ap *merkletree.AuthenticationPath) ([]byte, error
 	})
 }
 
-func MarshalRegResponseWithTB(Type int, strEnc, apEnc, tbEnc []byte) ([]byte, error) {
-	res, e := json.Marshal(&struct {
+func MarshalRegistrationResponse(res *RegistrationResponse) ([]byte, error) {
+	tbEncoded, e := MarshalTemporaryBinding(res.TB)
+	if e != nil {
+		return nil, e
+	}
+	apEncoded, e := MarshalAuthenticationPath(res.AP)
+	if e != nil {
+		return nil, e
+	}
+	strEncoded, e := MarshalSTR(res.STR)
+	if e != nil {
+		return nil, e
+	}
+
+	encoded, e := json.Marshal(&struct {
 		Type int
 		STR  json.RawMessage
 		AP   json.RawMessage
-		TB   json.RawMessage
+		TB   json.RawMessage `json:",omitempty"`
 	}{
-		Type: Type,
-		STR:  strEnc,
-		AP:   apEnc,
-		TB:   tbEnc,
+		Type: res.Type,
+		STR:  strEncoded,
+		AP:   apEncoded,
+		TB:   tbEncoded,
 	})
-	return res, e
+	if e != nil {
+		return nil, e
+	}
+	return encoded, nil
 }
 
 func MarshalErrorResponse(errCode ErrorCode) ([]byte, error) {

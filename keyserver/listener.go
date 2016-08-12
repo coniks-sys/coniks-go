@@ -50,7 +50,7 @@ func (server *ConiksServer) acceptClient(conn net.Conn, handler func(msg []byte)
 	conn.SetDeadline(time.Now().Add(5 * time.Second))
 
 	// handle request
-	buf := make([]byte, 4<<10)
+	buf := make([]byte, 4096)
 	for {
 		n, err := conn.Read(buf)
 		if err != nil {
@@ -127,19 +127,7 @@ func (server *ConiksServer) handleBotMessage(msg []byte) ([]byte, error) {
 		}
 		response, err = server.handleRegistrationMessage(&reg)
 		if err == nil {
-			tbEncoded, e := MarshalTemporaryBinding(response.(*RegistrationResponseWithTB).TB)
-			if e != nil {
-				panic(e)
-			}
-			apEncoded, e := MarshalAuthenticationPath(response.(*RegistrationResponseWithTB).AP)
-			if e != nil {
-				panic(e)
-			}
-			strEncoded, e := MarshalSTR(response.(*RegistrationResponseWithTB).STR)
-			if e != nil {
-				panic(e)
-			}
-			res, e := MarshalRegResponseWithTB(response.(*RegistrationResponseWithTB).Type, strEncoded, apEncoded, tbEncoded)
+			res, e := MarshalRegistrationResponse(response.(*RegistrationResponse))
 			if e != nil {
 				panic(e)
 			}
