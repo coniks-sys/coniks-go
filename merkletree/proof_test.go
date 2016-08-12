@@ -67,9 +67,7 @@ func TestVerifyProof(t *testing.T) {
 		t.Fatal("Commitment verification returns false")
 	}
 	// step 3. verify auth path
-	if !VerifyAuthPath(proof,
-		proof.Leaf.Index, proof.Leaf.Commitment, proof.Leaf.Level, proof.Leaf.IsEmpty,
-		m.hash) {
+	if !proof.VerifyAuthPath(m.hash) {
 		t.Error("Proof of inclusion verification failed.")
 	}
 
@@ -84,9 +82,7 @@ func TestVerifyProof(t *testing.T) {
 		!bytes.Equal(vrfPrivKey1.Compute([]byte("123")), proof.LookupIndex) {
 		t.Fatal("Expect a proof of absence")
 	}
-	if !VerifyAuthPath(proof,
-		proof.Leaf.Index, proof.Leaf.Commitment, proof.Leaf.Level, proof.Leaf.IsEmpty,
-		m.hash) {
+	if !proof.VerifyAuthPath(m.hash) {
 		t.Error("Proof of absence verification failed.")
 	}
 }
@@ -119,9 +115,7 @@ func TestVerifyProofSamePrefix(t *testing.T) {
 		util.ToBytes(util.ToBits(absentIndex)[:proof.Leaf.Level])) {
 		t.Fatal("Expect these indices share the same prefix in the first bit")
 	}
-	if !VerifyAuthPath(proof,
-		proof.Leaf.Index, proof.Leaf.Commitment, proof.Leaf.Level, proof.Leaf.IsEmpty,
-		m.hash) {
+	if !proof.VerifyAuthPath(m.hash) {
 		t.Error("Proof of absence verification failed.")
 	}
 }

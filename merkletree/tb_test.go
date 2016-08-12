@@ -41,8 +41,7 @@ func TestTB(t *testing.T) {
 		t.Error("Value wasn't inserted as promised")
 	}
 	// verify auth path
-	if !VerifyAuthPath(ap, ap.Leaf.Index, ap.Leaf.Commitment,
-		ap.Leaf.Level, ap.Leaf.IsEmpty, pad.LatestSTR().TreeHash) {
+	if !ap.VerifyAuthPath(pad.LatestSTR().TreeHash) {
 		t.Error("Proof of inclusion verification failed.")
 	}
 }
