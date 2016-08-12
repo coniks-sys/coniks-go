@@ -9,11 +9,10 @@ import (
 
 type ProofNode struct {
 	Level      uint32
-	Salt       []byte
 	Index      []byte
 	Value      []byte
 	IsEmpty    bool
-	Commitment []byte
+	Commitment *crypto.Commit
 }
 
 func (n *ProofNode) hash(treeNonce []byte) []byte {
@@ -32,7 +31,7 @@ func (n *ProofNode) hash(treeNonce []byte) []byte {
 			[]byte(treeNonce),                   // K_n
 			[]byte(n.Index),                     // i
 			[]byte(util.UInt32ToBytes(n.Level)), // l
-			[]byte(n.Commitment),                // commit(key|| value)
+			[]byte(n.Commitment.Value),          // commit(key|| value)
 		)
 	}
 }
@@ -79,9 +78,4 @@ func (ap *AuthenticationPath) VerifyAuthPath(treeHash []byte) bool {
 		return false
 	}
 	return true
-}
-
-func VerifyCommitment(salt []byte, key string, value []byte, commitment []byte) bool {
-	got := crypto.Digest(salt, []byte(key), value)
-	return bytes.Equal(got, commitment)
 }

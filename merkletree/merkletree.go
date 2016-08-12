@@ -77,7 +77,6 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 		pNode := nodePointer.(*userLeafNode)
 		authPath.Leaf = &ProofNode{
 			Level:      pNode.level,
-			Salt:       pNode.salt,
 			Index:      pNode.index,
 			Value:      pNode.value,
 			IsEmpty:    false,
@@ -89,13 +88,12 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 		// reached a different leaf with a matching prefix
 		// return a auth path including the leaf node without salt & value
 		authPath.Leaf.Value = nil
-		authPath.Leaf.Salt = nil
+		authPath.Leaf.Commitment.Salt = nil
 		return authPath
 	case *emptyNode:
 		pNode := nodePointer.(*emptyNode)
 		authPath.Leaf = &ProofNode{
 			Level:      pNode.level,
-			Salt:       nil,
 			Index:      pNode.index,
 			Value:      nil,
 			IsEmpty:    true,
@@ -107,20 +105,16 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 }
 
 func (m *MerkleTree) Set(index []byte, key string, value []byte) error {
-	// generate random per user salt
-	salt, err := crypto.MakeRand()
+	commitment, err := crypto.NewCommit([]byte(key), value)
 	if err != nil {
 		return err
 	}
-
 	toAdd := userLeafNode{
 		key:        key,
 		value:      append([]byte{}, value...), // make a copy of value
 		index:      index,
-		salt:       salt,
-		commitment: crypto.Digest(salt, []byte(key), value),
+		commitment: commitment,
 	}
-
 	m.insertNode(index, &toAdd)
 	return nil
 }

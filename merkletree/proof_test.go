@@ -63,7 +63,7 @@ func TestVerifyProof(t *testing.T) {
 		t.Fatal("Expect a proof of inclusion")
 	}
 	// step 2. verify commitment
-	if !VerifyCommitment(proof.Leaf.Salt, key3, proof.Leaf.Value, proof.Leaf.Commitment) {
+	if !proof.Leaf.Commitment.Verify([]byte(key3), proof.Leaf.Value) {
 		t.Fatal("Commitment verification returns false")
 	}
 	// step 3. verify auth path
