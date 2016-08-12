@@ -20,7 +20,8 @@ script:
   - go test -coverprofile=vrf.coverprofile ./crypto/vrf
   - go test -coverprofile=merkletree.coverprofile ./merkletree
   - go test -coverprofile=utils.coverprofile ./utils
-
+  - go test -coverprofile=protocol.coverprofile ./protocol
+  
 after_success:
   - gover
   - goveralls -coverprofile=gover.coverprofile -service travis-ci
