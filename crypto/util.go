@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"bytes"
 	"crypto/rand"
 
 	"golang.org/x/crypto/sha3"
@@ -29,4 +30,28 @@ func MakeRand() ([]byte, error) {
 	}
 	// Do not directly reveal bytes from rand.Read on the wire
 	return Digest(r), nil
+}
+
+type Commit struct {
+	Salt  []byte
+	Value []byte
+}
+
+func NewCommit(stuff ...[]byte) (*Commit, error) {
+	salt, err := MakeRand()
+	if err != nil {
+		return nil, err
+	}
+	return &Commit{
+		Salt:  salt,
+		Value: Digest(append([][]byte{salt}, stuff...)...),
+	}, nil
+}
+
+func (c *Commit) Verify(stuff ...[]byte) bool {
+	return bytes.Equal(c.Value, Digest(append([][]byte{c.Salt}, stuff...)...))
+}
+
+func (c *Commit) Clone() *Commit {
+	return &Commit{Salt: c.Salt, Value: c.Value}
 }

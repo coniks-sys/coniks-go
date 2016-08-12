@@ -41,3 +41,14 @@ func TestMakeRand(t *testing.T) {
 	}
 	rand.Reader = orig
 }
+
+func TestCommit(t *testing.T) {
+	stuff := []byte("123")
+	commit, err := NewCommit(stuff)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !commit.Verify(stuff) {
+		t.Fatal("Commit doesn't verify!")
+	}
+}

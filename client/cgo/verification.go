@@ -113,11 +113,10 @@ func cgoVerifyAuthPath(treeHash unsafe.Pointer, treeHashSize C.int,
 	ap.PrunedTree = pt
 	ap.Leaf = &merkletree.ProofNode{
 		Level:      uint32(leafLevel),
-		Salt:       nil,
 		Index:      leafi,
 		Value:      nil,
 		IsEmpty:    int(isLeafEmpty) == 1,
-		Commitment: leafc,
+		Commitment: &crypto.Commit{nil, leafc},
 	}
 
 	if ap.VerifyAuthPath(th) {
@@ -139,7 +138,9 @@ func cgoVerifyCommitment(salt unsafe.Pointer, saltSize C.int,
 	keyS := C.GoStringN(key, keySize)
 	valueB := C.GoBytes(value, valueSize)
 	commitmentB := C.GoBytes(commitment, commitmentSize)
-	if merkletree.VerifyCommitment(saltB, keyS, valueB, commitmentB) {
+
+	commit := &crypto.Commit{saltB, commitmentB}
+	if commit.Verify([]byte(keyS), valueB) {
 		return 1
 	}
 	return 0

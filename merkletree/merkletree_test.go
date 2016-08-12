@@ -57,7 +57,7 @@ func TestOneEntry(t *testing.T) {
 
 	// Check leaf node hash
 	h.Reset()
-	h.Write(r.Leaf.Salt)
+	h.Write(r.Leaf.Commitment.Salt)
 	h.Write([]byte(key))
 	h.Write(val)
 	h.Read(commit[:])

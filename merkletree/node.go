@@ -22,9 +22,8 @@ type userLeafNode struct {
 	node
 	key        string
 	value      []byte
-	salt       []byte
 	index      []byte
-	commitment []byte
+	commitment *crypto.Commit
 }
 
 type emptyNode struct {
@@ -92,7 +91,7 @@ func (n *userLeafNode) Hash(m *MerkleTree) []byte {
 		[]byte(m.nonce),                     // K_n
 		[]byte(n.index),                     // i
 		[]byte(util.UInt32ToBytes(n.level)), // l
-		[]byte(n.commitment),                // commit(key|| value)
+		[]byte(n.commitment.Value),          // commit(key|| value)
 	)
 }
 
@@ -131,9 +130,8 @@ func (n *userLeafNode) Clone(parent *interiorNode) MerkleNode {
 		},
 		key:        n.key,
 		value:      n.value,
-		salt:       n.salt,
 		index:      append([]byte{}, n.index...), // make a copy of index
-		commitment: n.commitment,
+		commitment: n.commitment.Clone(),
 	}
 }
 
