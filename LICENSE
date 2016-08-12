@@ -1,6 +1,8 @@
 This license applies to all parts of the CONIKS Golang library and reference implementation except the following:
 - The ed25519 subpackage, located in crypto/ed25519
 This subpackage is copyrighted by the Go Authors.
+- The mkkey.go ultility, located in utils/keygen/mkkey.go
+This source code is copyrighted by the Dename Authors.
 - Coname utility functions, located in utils/coname.go
 - The vrf subpackage, located in crypto/vrf
 - The kv subpackage, located in storage/kv
