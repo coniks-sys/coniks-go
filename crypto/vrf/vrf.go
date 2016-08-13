@@ -62,8 +62,8 @@ func GenerateKey(rnd io.Reader) (sk PrivateKey, err error) {
 	return
 }
 
-func (sk *PrivateKey) Public() (PublicKey, bool) {
-	pk, ok := ed25519.PrivateKey(*sk).Public().(ed25519.PublicKey)
+func (sk PrivateKey) Public() (PublicKey, bool) {
+	pk, ok := ed25519.PrivateKey(sk).Public().(ed25519.PublicKey)
 	return PublicKey(pk), ok
 }
 
