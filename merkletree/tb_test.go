@@ -37,15 +37,12 @@ func TestTB(t *testing.T) {
 	ap, err := pad.Lookup(key)
 	// compare TB's index with authentication path's index (after Update):
 	if !bytes.Equal(ap.LookupIndex, tb.Index) ||
-		!bytes.Equal(ap.Leaf.Value(), tb.Value) {
+		!bytes.Equal(ap.Leaf.Value, tb.Value) {
 		t.Error("Value wasn't inserted as promised")
 	}
 	// verify auth path
-	if !VerifyAuthPath(ap, ap.Leaf.Index(), ap.Leaf.Commitment(),
-		ap.Leaf.Level(), ap.Leaf.IsEmpty(), pad.LatestSTR().Root()) {
+	if !VerifyAuthPath(ap, ap.Leaf.Index, ap.Leaf.Commitment,
+		ap.Leaf.Level, ap.Leaf.IsEmpty, pad.LatestSTR().TreeHash) {
 		t.Error("Proof of inclusion verification failed.")
-	}
-	if _, ok := ap.Leaf.(*userLeafNode); !ok {
-		t.Error("Invalid proof of inclusion. Expect a userLeafNode in returned path")
 	}
 }

@@ -67,7 +67,7 @@ func TestPADHashChain(t *testing.T) {
 		if str == nil {
 			t.Fatal("Cannot get STR #", i)
 		}
-		if !bytes.Equal(str.Root(), treeHashes[uint64(i)]) {
+		if !bytes.Equal(str.TreeHash, treeHashes[uint64(i)]) {
 			t.Fatal("Malformed PAD Update")
 		}
 
@@ -87,56 +87,56 @@ func TestPADHashChain(t *testing.T) {
 
 	// lookup
 	ap, _ := pad.Lookup(key1)
-	if ap.Leaf.Value() == nil {
+	if ap.Leaf.Value == nil {
 		t.Error("Cannot find key:", key1)
 		return
 	}
-	if !bytes.Equal(ap.Leaf.Value(), val1) {
+	if !bytes.Equal(ap.Leaf.Value, val1) {
 		t.Error(key1, "value mismatch")
 	}
 
 	ap, _ = pad.Lookup(key2)
-	if ap.Leaf.Value() == nil {
+	if ap.Leaf.Value == nil {
 		t.Error("Cannot find key:", key2)
 		return
 	}
-	if !bytes.Equal(ap.Leaf.Value(), val2) {
+	if !bytes.Equal(ap.Leaf.Value, val2) {
 		t.Error(key2, "value mismatch")
 	}
 
 	ap, _ = pad.Lookup(key3)
-	if ap.Leaf.Value() == nil {
+	if ap.Leaf.Value == nil {
 		t.Error("Cannot find key:", key3)
 		return
 	}
-	if !bytes.Equal(ap.Leaf.Value(), val3) {
+	if !bytes.Equal(ap.Leaf.Value, val3) {
 		t.Error(key3, "value mismatch")
 	}
 
 	ap, err = pad.LookupInEpoch(key2, 1)
 	if err != nil {
 		t.Error(err)
-	} else if ap.Leaf.Value() != nil {
+	} else if ap.Leaf.Value != nil {
 		t.Error("Found unexpected key", key2, "in STR #", 1)
 	}
 	ap, err = pad.LookupInEpoch(key2, 2)
 	if err != nil {
 		t.Error(err)
-	} else if ap.Leaf.Value() == nil {
+	} else if ap.Leaf.Value == nil {
 		t.Error("Cannot find key", key2, "in STR #", 2)
 	}
 
 	ap, err = pad.LookupInEpoch(key3, 2)
 	if err != nil {
 		t.Error(err)
-	} else if ap.Leaf.Value() != nil {
+	} else if ap.Leaf.Value != nil {
 		t.Error("Found unexpected key", key3, "in STR #", 2)
 	}
 
 	ap, err = pad.LookupInEpoch(key3, 3)
 	if err != nil {
 		t.Error(err)
-	} else if ap.Leaf.Value() == nil {
+	} else if ap.Leaf.Value == nil {
 		t.Error("Cannot find key", key3, "in STR #", 3)
 	}
 }
@@ -206,25 +206,25 @@ func TestPoliciesChange(t *testing.T) {
 	pad.Update(nil)
 
 	ap, _ := pad.Lookup(key1)
-	if ap.Leaf.Value() == nil {
+	if ap.Leaf.Value == nil {
 		t.Error("Cannot find key:", key1)
 	}
-	if !bytes.Equal(ap.Leaf.Value(), val1) {
+	if !bytes.Equal(ap.Leaf.Value, val1) {
 		t.Error(key1, "value mismatch")
 	}
 
 	ap, _ = pad.Lookup(key2)
-	if ap.Leaf.Value() == nil {
+	if ap.Leaf.Value == nil {
 		t.Error("Cannot find key:", key2)
 	}
-	if !bytes.Equal(ap.Leaf.Value(), val2) {
+	if !bytes.Equal(ap.Leaf.Value, val2) {
 		t.Error(key2, "value mismatch")
 	}
 
 	ap, err = pad.LookupInEpoch(key1, 1)
 	if err != nil {
 		t.Error(err)
-	} else if !bytes.Equal(ap.Leaf.Value(), val1) {
+	} else if !bytes.Equal(ap.Leaf.Value, val1) {
 		t.Error(key1, "value mismatch")
 	}
 	ap, err = pad.LookupInEpoch(key2, 2)
@@ -234,9 +234,9 @@ func TestPoliciesChange(t *testing.T) {
 	ap, err = pad.LookupInEpoch(key3, 3)
 	if err != nil {
 		t.Error(err)
-	} else if ap.Leaf.Value() == nil {
+	} else if ap.Leaf.Value == nil {
 		t.Error("Cannot find key", key3, "in STR #", 3)
-	} else if !bytes.Equal(ap.Leaf.Value(), val3) {
+	} else if !bytes.Equal(ap.Leaf.Value, val3) {
 		t.Error(key3, "value mismatch")
 	}
 }

@@ -46,18 +46,18 @@ func TestOneEntry(t *testing.T) {
 	}
 
 	r := m.Get(index)
-	if r.Leaf.Value() == nil {
+	if r.Leaf.Value == nil {
 		t.Error("Cannot find value of key:", key)
 		return
 	}
-	v := r.Leaf.Value()
+	v := r.Leaf.Value
 	if !bytes.Equal(v, val) {
 		t.Errorf("Value mismatch %v / %v", v, val)
 	}
 
 	// Check leaf node hash
 	h.Reset()
-	h.Write(r.Leaf.(*userLeafNode).salt)
+	h.Write(r.Leaf.Salt)
 	h.Write([]byte(key))
 	h.Write(val)
 	h.Read(commit[:])
@@ -77,7 +77,7 @@ func TestOneEntry(t *testing.T) {
 	}
 
 	r = m.Get([]byte("abc"))
-	if r.Leaf.Value() != nil {
+	if r.Leaf.Value != nil {
 		t.Error("Invalid look-up operation:", key)
 		return
 	}
@@ -104,21 +104,21 @@ func TestTwoEntries(t *testing.T) {
 	}
 
 	ap1 := m.Get(index1)
-	if ap1.Leaf.Value() == nil {
+	if ap1.Leaf.Value == nil {
 		t.Error("Cannot find key:", key1)
 		return
 	}
 
 	ap2 := m.Get(index2)
-	if ap2.Leaf.Value() == nil {
+	if ap2.Leaf.Value == nil {
 		t.Error("Cannot find key:", key2)
 		return
 	}
 
-	if !bytes.Equal(ap1.Leaf.Value(), []byte("value1")) {
+	if !bytes.Equal(ap1.Leaf.Value, []byte("value1")) {
 		t.Error(key1, "value mismatch")
 	}
-	if !bytes.Equal(ap2.Leaf.Value(), []byte("value2")) {
+	if !bytes.Equal(ap2.Leaf.Value, []byte("value2")) {
 		t.Error(key2, "value mismatch")
 	}
 }
@@ -150,17 +150,17 @@ func TestThreeEntries(t *testing.T) {
 	}
 
 	ap1 := m.Get(index1)
-	if ap1.Leaf.Value() == nil {
+	if ap1.Leaf.Value == nil {
 		t.Error("Cannot find key:", index1)
 		return
 	}
 	ap2 := m.Get(index2)
-	if ap2.Leaf.Value() == nil {
+	if ap2.Leaf.Value == nil {
 		t.Error("Cannot find key:", index2)
 		return
 	}
 	ap3 := m.Get(index3)
-	if ap3.Leaf.Value() == nil {
+	if ap3.Leaf.Value == nil {
 		t.Error("Cannot find key:", index3)
 		return
 	}
@@ -179,13 +179,13 @@ func TestThreeEntries(t *testing.T) {
 		}
 	*/
 
-	if !bytes.Equal(ap1.Leaf.Value(), []byte("value1")) {
+	if !bytes.Equal(ap1.Leaf.Value, []byte("value1")) {
 		t.Error(key1, "value mismatch")
 	}
-	if !bytes.Equal(ap2.Leaf.Value(), []byte("value2")) {
+	if !bytes.Equal(ap2.Leaf.Value, []byte("value2")) {
 		t.Error(key2, "value mismatch")
 	}
-	if !bytes.Equal(ap3.Leaf.Value(), []byte("value3")) {
+	if !bytes.Equal(ap3.Leaf.Value, []byte("value3")) {
 		t.Error(key3, "value mismatch")
 	}
 }
@@ -210,17 +210,17 @@ func TestInsertExistedKey(t *testing.T) {
 	}
 
 	ap := m.Get(index1)
-	if ap.Leaf.Value() == nil {
+	if ap.Leaf.Value == nil {
 		t.Error("Cannot find key:", key1)
 		return
 	}
 
-	if !bytes.Equal(ap.Leaf.Value(), []byte("new value")) {
+	if !bytes.Equal(ap.Leaf.Value, []byte("new value")) {
 		t.Error(index1, "value mismatch\n")
 	}
 
-	if !bytes.Equal(ap.Leaf.Value(), val2) {
-		t.Errorf("Value mismatch %v / %v", ap.Leaf.Value(), val2)
+	if !bytes.Equal(ap.Leaf.Value, val2) {
+		t.Errorf("Value mismatch %v / %v", ap.Leaf.Value, val2)
 	}
 
 	val3 := []byte("new value 2")
@@ -229,13 +229,13 @@ func TestInsertExistedKey(t *testing.T) {
 	}
 
 	ap = m.Get(index1)
-	if ap.Leaf.Value() == nil {
+	if ap.Leaf.Value == nil {
 		t.Error("Cannot find key:", key1)
 		return
 	}
 
-	if !bytes.Equal(ap.Leaf.Value(), val3) {
-		t.Errorf("Value mismatch %v / %v", ap.Leaf.Value(), val3)
+	if !bytes.Equal(ap.Leaf.Value, val3) {
+		t.Errorf("Value mismatch %v / %v", ap.Leaf.Value, val3)
 	}
 }
 
@@ -276,20 +276,20 @@ func TestTreeClone(t *testing.T) {
 
 	// lookup
 	ap := m2.Get(index1)
-	if ap.Leaf.Value() == nil {
+	if ap.Leaf.Value == nil {
 		t.Error("Cannot find key:", key1)
 		return
 	}
-	if !bytes.Equal(ap.Leaf.Value(), []byte("value1")) {
+	if !bytes.Equal(ap.Leaf.Value, []byte("value1")) {
 		t.Error(key1, "value mismatch\n")
 	}
 
 	ap = m2.Get(index2)
-	if ap.Leaf.Value() == nil {
+	if ap.Leaf.Value == nil {
 		t.Error("Cannot find key:", key2)
 		return
 	}
-	if !bytes.Equal(ap.Leaf.Value(), []byte("value2")) {
+	if !bytes.Equal(ap.Leaf.Value, []byte("value2")) {
 		t.Error(key2, "value mismatch\n")
 	}
 }

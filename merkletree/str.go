@@ -16,6 +16,7 @@ import (
 // STR should be final
 type SignedTreeRoot struct {
 	tree            *MerkleTree
+	TreeHash        []byte
 	Epoch           uint64
 	PreviousEpoch   uint64
 	PreviousSTRHash []byte
@@ -30,6 +31,7 @@ func NewSTR(key sign.PrivateKey, policies Policies, m *MerkleTree, epoch uint64,
 	}
 	str := &SignedTreeRoot{
 		tree:            m,
+		TreeHash:        m.hash,
 		Epoch:           epoch,
 		PreviousEpoch:   prevEpoch,
 		PreviousSTRHash: prevHash,
