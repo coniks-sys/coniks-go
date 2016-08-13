@@ -1,69 +1,135 @@
 /*
-Package bots implements the CONIKS third-party account verification
-protocol, which ensures that only legitimate users of third-party
-communication services (e.g. Twitter, IRC) are able to register and
-update CONIKS key directory entries.
+Package bots implements a third-party account verification
+system for CONIKS-backed secure communication services.
 
-At a high-level, a proxy server registers (or updates) a username-to-key
-mapping in the CONIKS key directory on behalf of the corresponding
-third-party account and relays these requests to the CONIKS server.
+bots ensures that only legitimate users of third-party
+communication services (e.g. Twitter, IRC) are registered in the
+secure service's CONIKS key directory.
 
-Overview
+Introduction
 
-CONIKS clients and a trusted proxy server participate in the third-party
-account verification protocol. The CONIKS client generates a new key pair
-for each username the user creates. If this username corresponds to a
-third-party account (e.g. a Twitter handle), the client will ask the user
-to connect to her account using her credentials, and will attempt to
-register the username and the public key with the CONIKS server.
+Many secure communication services do not provide first-party
+user accounts and instead allow users to register and communicate
+using existing third-party accounts.
+CONIKS is a key management system which ensures that the public keys
+maintained for users in a key directory remain consistent over time and
+across different vantage points in the system. But CONIKS makes no
+guarantees about the persons who own the registered accounts.
 
-The registration proxy is connected to reserved user account with the
-same third-party service, allowing the CONIKS client to send messages
-to the proxy using the service's communication system. Therefore, in
-order to register a new username-to-key mapping, the client must send
-the request to the proxy's reserved third-party account.
+bots bridges this gap by providing a proxy-based mechanism for CONIKS-backed
+secure communication services to verify that the third-party accounts
+and corresponding username-to-key mappings they manage with CONIKS are
+registered by the legitimate owners of those accounts.
+At a high-level, a bots proxy server verifies that
+all username-to-key mappings to be registered in the CONIKS key directory
+correspond to a legitimate third-party account.
 
-Privacy is a key feature of CONIKS, so the only piece of third-party
-account information that the CONIKS client and proxy store (or even see?),
-and send to the CONIKS server is the username.
+System Model and Assumptions
 
-Assumptions and Threat Model
+bots' security model includes four main principals, and is most concerned
+with an attacker attempting to impersonate a user of a third-party service
+(e.g. Twitter, IRC) by registering a name-to-key mapping for this user
+with a CONIKS server.
 
-We are most concerned with an attacker attempting to impersonate
-a user of a third-party service (e.g. Twitter, IRC)
-by registering a name-to-key mapping for this user with the CONIKS server.
+Users: For CONIKS-backed secure communication services that do not
+provide first-party user accounts, users must authorize the service
+to connect to their third-party account in order to use the service.
+bots leverages this authorization in its account verification protocol,
+and trusts that the service's clients use a secure authorization procotol
+such as OAuth.
 
-Requiring that the legitimate user connect to her third-party account
-using the correct credentials serves as a proof of ownership of
-the account, and we assume that obtaining this user's credentials is a
-sufficiently large burden to deter most adversaries from mounting the
-impersonation attack.
+CONIKS clients: Users run the communication client software with
+an integrated CONIKS client. The CONIKS client software generates and
+stores a key pair for each of the user's registered accounts.
+bots assumes that users authorize CONIKS clients to connect to their
+third-party accounts as part of the communication client's authorization.
+Much like these communication services, bots assumes that obtaining a user's
+credentials needed for the authorization is a sufficiently large burden
+to deter most adversaries from attempting an impersonation attack.
 
-By only accepting registration requests via a reserved account using
-the third-party communication, the proxy trusts that any requests sent
+Account proxies: The main component of bots are trusted proxy
+servers, each of which connect to a reserved account with a designated
+third-party service using an authorization protocol such as OAuth.
+This allows CONIKS clients and the proxies to communicate directly using a
+service's communication protocol.
+
+A proxy only accepts and relays CONIKS registration requests for accounts
+with its designated third-party service, and the requests must be sent by
+an authorized CONIKS client via the service's protocol to the proxy's
+reserved account. As a result, a proxy trusts that any requests sent
 by CONIKS clients to its account originated from uncompromised
 third-party accounts.
 
-To further restrict the allowable sources of registration requests, the
-CONIKS server only accepts incoming registration requests originating
-from the account proxy, and trusts that the proxy has
-performed the necessary third-party account verifications.
+CONIKS servers: bots proxies relay verified CONIKS registration requests
+to a designated CONIKS server. For authentication, proxies digitally
+sign all requests they relay. The server then only accepts incoming
+registration requests originating from authenticated account proxies.
+
+Privacy
+
+bots seeks to provide the same strong privacy guarantees as CONIKS.
+CONIKS clients using bots only store the generated key pairs and
+registered third-party usernames. bots only sends the username and
+the public key as an opaque data blob to the corresponding account proxy.
+bots also ensures that the clients do not gain access to any other
+third-party account information.
+
+The account proxies only have access to a user's username with their
+designated service and the received public key, and this is
+the only user information they send to the server.
+Proxies cannot access any other account information.
 
 Third-Party Account Verification Protocol
 
-1. The user adds her username to the CONIKS client, and connects to the corresponding account with the third-party service.
+1. The user registers her third-party account with her communication
+client, thereby authorizing the client and the integrated CONIKS client
+to connect to her third-party account.
 
-2. The client sends a registration request containing the generate public key to the proxy's account using the service's communication protocol using the added username.
+2. The CONIKS client generates a key pair for the new user account
+and stores the public and private key locally.
 
-3. The proxy verifies that the sender of the request is a legitimate account, and sends a registration request to the CONIKS server.
+3. On behalf of the connected account, the client sends a registration
+request
+    req = (username, opaque public key data blob)
+to the designated account proxy using the service's communication
+protocol.
 
-4. Once the server receives and processes the request, it sends its response (either success or an error) to the proxy, which relays the response back to the CONIKS client.
+4. The proxy receives the request at its reserved account via
+the service's protocol, and verifies that the sender
+is an authorized client.
+
+5. The proxy digitally signs the verified registration request,
+and sends it to its designated CONIKS server.
+
+6. Once the CONIKS server receives the request and authenticates the proxy,
+it registers the username-to-public key mapping in its CONIKS directory.
+The server sends a cryptographic proof of registration to the proxy,
+which relays the response back to the CONIKS client.
 
 Supported Third-Party Services
 
 The current implementation supports third-party account verification of
-Twitter handles. The registration bot must receive a CONIKS registration
-request via a Twitter direct message (DM) from a legitimate Twitter account in order to send a registration request to the CONIKS server.
+Twitter accounts. The account proxy connects to its reserved Twitter
+account using OAuth, and it only accepts CONIKS registration
+requests received as Twitter direct messages sent from CONIKS clients
+that have been authorized by a legitimate Twitter account.
+
+Limitations
+
+While bots provides strong security and privacy guarantees against
+modest attackers, our protocol is not reboust against motivated,
+resourceful attackers; these may be able to obtain the necessary
+credentials to authorize a malicious CONIKS client and impersonate a
+target user. Additionally, we avoid exposing the user's public key to
+the registration proxy, which favors user privacy, but this also limits
+the proxy's ability to verify explcitly the ownership of this public key
+via a digital signature of the message using the corresponding private key.
+
+Resources
+
+- CONIKS: http://coniks.org
+
+- Connecting to Twitter using OAuth: https://dev.twitter.com/oauth
 
 */
 package bots
