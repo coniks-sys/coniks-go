@@ -37,20 +37,19 @@ const (
 	ProofSize        = 32 + 32 + intermediateSize
 )
 
-type PrivateKey [PrivateKeySize]byte
-type PublicKey [PublicKeySize]byte
+type PrivateKey []byte
+type PublicKey []byte
 
 // GenerateKey creates a public/private key pair. rnd is used for randomness.
 // If it is nil, `crypto/rand` is used.
-func GenerateKey(rnd io.Reader) (pk *PublicKey, sk *PrivateKey, err error) {
+func GenerateKey(rnd io.Reader) (sk PrivateKey, err error) {
 	if rnd == nil {
 		rnd = rand.Reader
 	}
-	sk = new(PrivateKey)
-	pk = new(PublicKey)
+	sk = make([]byte, 64)
 	_, err = io.ReadFull(rnd, sk[:32])
 	if err != nil {
-		return nil, nil, err
+		return
 	}
 	x, _ := sk.expandSecret()
 
@@ -60,15 +59,15 @@ func GenerateKey(rnd io.Reader) (pk *PublicKey, sk *PrivateKey, err error) {
 	pkP.ToBytes(&pkBytes)
 
 	copy(sk[32:], pkBytes[:])
-	copy(pk[:], pkBytes[:])
-	return pk, sk, err
+	return
 }
 
-func (sk *PrivateKey) Public() []byte {
-	return ed25519.PrivateKey(sk[:]).Public().(ed25519.PublicKey)
+func (sk PrivateKey) Public() (PublicKey, bool) {
+	pk, ok := ed25519.PrivateKey(sk).Public().(ed25519.PublicKey)
+	return PublicKey(pk), ok
 }
 
-func (sk *PrivateKey) expandSecret() (x, skhr *[32]byte) {
+func (sk PrivateKey) expandSecret() (x, skhr *[32]byte) {
 	x, skhr = new([32]byte), new([32]byte)
 	hash := sha3.NewShake256()
 	hash.Write(sk[:32])
@@ -80,7 +79,7 @@ func (sk *PrivateKey) expandSecret() (x, skhr *[32]byte) {
 	return
 }
 
-func (sk *PrivateKey) Compute(m []byte) []byte {
+func (sk PrivateKey) Compute(m []byte) []byte {
 	x, _ := sk.expandSecret()
 	var ii edwards25519.ExtendedGroupElement
 	var iiB [32]byte
@@ -109,7 +108,7 @@ func hashToCurve(m []byte) *edwards25519.ExtendedGroupElement {
 
 // Prove returns the vrf value and a proof such that Verify(pk, m, vrf, proof)
 // == true. The vrf value is the same as returned by Compute(m, sk).
-func (sk *PrivateKey) Prove(m []byte) (vrf, proof []byte) {
+func (sk PrivateKey) Prove(m []byte) (vrf, proof []byte) {
 	x, skhr := sk.expandSecret()
 	var cH, rH [64]byte
 	var r, c, minusC, t, grB, hrB, iiB [32]byte
@@ -155,8 +154,8 @@ func (sk *PrivateKey) Prove(m []byte) (vrf, proof []byte) {
 }
 
 // Verify returns true iff vrf=Compute(m, sk) for the sk that corresponds to pk.
-func (pkBytes *PublicKey) Verify(m, vrfBytes, proof []byte) bool {
-	if len(proof) != ProofSize || len(vrfBytes) != Size || len(*pkBytes) != PublicKeySize {
+func (pkBytes PublicKey) Verify(m, vrfBytes, proof []byte) bool {
+	if len(proof) != ProofSize || len(vrfBytes) != Size || len(pkBytes) != PublicKeySize {
 		return false
 	}
 	var pk, c, cRef, t, vrf, iiB, ABytes, BBytes [32]byte

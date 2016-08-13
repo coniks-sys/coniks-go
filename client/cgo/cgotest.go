@@ -75,13 +75,17 @@ func byteSliceToCcharPtr(buf []byte) *C.char {
 }
 
 func testVerifyVrf(t *testing.T) {
-	pk, sk, err := vrf.GenerateKey(nil)
+	sk, err := vrf.GenerateKey(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	alice := []byte("alice")
 	aliceVRF, aliceProof := sk.Prove(alice)
-	if v := C.testVerifyVrf(byteSliceToCucharPtr(pk[:]), C.int(len(pk)),
+	pk, ok := sk.Public()
+	if !ok {
+		t.Fatal("Couldn't obtain public key!")
+	}
+	if v := C.testVerifyVrf(byteSliceToCucharPtr(pk), C.int(len(pk)),
 		byteSliceToCucharPtr(alice), C.int(len(alice)),
 		byteSliceToCucharPtr(aliceVRF), C.int(len(aliceVRF)),
 		byteSliceToCucharPtr(aliceProof), C.int(len(aliceProof))); v != 1 {
@@ -115,7 +119,7 @@ func testVerifyHashChain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, vrfPrivKey, err := vrf.GenerateKey(nil)
+	vrfPrivKey, err := vrf.GenerateKey(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +148,7 @@ func testVerifyAuthPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, vrfPrivKey, err := vrf.GenerateKey(bytes.NewReader(
+	vrfPrivKey, err := vrf.GenerateKey(bytes.NewReader(
 		[]byte("deterministic tests need 256 bit")))
 	if err != nil {
 		t.Fatal(err)
@@ -228,7 +232,7 @@ func testVerifyProofOfAbsenceSamePrefix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, vrfPrivKey, err := vrf.GenerateKey(bytes.NewReader(
+	vrfPrivKey, err := vrf.GenerateKey(bytes.NewReader(
 		[]byte("deterministic tests need 256 bit")))
 	if err != nil {
 		t.Fatal(err)

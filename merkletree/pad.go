@@ -70,9 +70,9 @@ func (pad *PAD) updateInternal(policies Policies, epoch uint64) {
 	pad.loadedEpochs = append(pad.loadedEpochs, epoch)
 
 	if policies != nil { // update the policies if necessary
-		vrfKeyChanged := 1 != (subtle.ConstantTimeCompare(
-			pad.policies.vrfPrivate()[:],
-			policies.vrfPrivate()[:]))
+		vrfKeyChanged := 1 != subtle.ConstantTimeCompare(
+			pad.policies.vrfPrivate(),
+			policies.vrfPrivate())
 		pad.policies = policies
 		if vrfKeyChanged {
 			pad.reshuffle()
@@ -151,7 +151,7 @@ func (pad *PAD) reshuffle() {
 }
 
 func (pad *PAD) computePrivateIndex(name string,
-	vrfPrivKey *vrf.PrivateKey) (index, proof []byte) {
+	vrfPrivKey vrf.PrivateKey) (index, proof []byte) {
 	index, proof = vrfPrivKey.Prove([]byte(name))
 	return
 }

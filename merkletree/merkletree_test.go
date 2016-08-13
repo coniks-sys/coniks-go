@@ -9,10 +9,10 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-var _, vrfPrivKey1, _ = vrf.GenerateKey(bytes.NewReader(
+var vrfPrivKey1, _ = vrf.GenerateKey(bytes.NewReader(
 	[]byte("deterministic tests need 256 bit")))
 
-var _, vrfPrivKey2, _ = vrf.GenerateKey(bytes.NewReader(
+var vrfPrivKey2, _ = vrf.GenerateKey(bytes.NewReader(
 	[]byte("deterministic tests need 32 byte")))
 
 func TestOneEntry(t *testing.T) {
