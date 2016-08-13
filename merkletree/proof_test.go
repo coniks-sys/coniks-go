@@ -36,64 +36,58 @@ func TestVerifyProof(t *testing.T) {
 	m.recomputeHash()
 
 	ap1 := m.Get(index1)
-	if ap1.Leaf.Value() == nil {
+	if ap1.Leaf.Value == nil {
 		t.Error("Cannot find key:", key1)
 		return
 	}
 	ap2 := m.Get(index2)
-	if ap2.Leaf.Value() == nil {
+	if ap2.Leaf.Value == nil {
 		t.Error("Cannot find key:", key2)
 		return
 	}
 	ap3 := m.Get(index3)
-	if ap3.Leaf.Value() == nil {
+	if ap3.Leaf.Value == nil {
 		t.Error("Cannot find key:", key3)
 		return
 	}
 
 	// proof of inclusion
 	proof := m.Get(index3)
-	if proof.Leaf.Value() == nil {
+	if proof.Leaf.Value == nil {
 		t.Fatal("Expect returned leaf's value is not nil")
 	}
 	// step 1. ensure this is a proof of inclusion by comparing the returned indices
 	// and verifying the VRF index as well.
-	if !bytes.Equal(proof.LookupIndex, proof.Leaf.Index()) ||
+	if !bytes.Equal(proof.LookupIndex, proof.Leaf.Index) ||
 		!bytes.Equal(vrfPrivKey1.Compute([]byte(key3)), proof.LookupIndex) {
 		t.Fatal("Expect a proof of inclusion")
 	}
 	// step 2. verify commitment
-	if !VerifyCommitment(proof.Leaf.Salt(), key3, proof.Leaf.Value(), proof.Leaf.Commitment()) {
+	if !VerifyCommitment(proof.Leaf.Salt, key3, proof.Leaf.Value, proof.Leaf.Commitment) {
 		t.Fatal("Commitment verification returns false")
 	}
 	// step 3. verify auth path
 	if !VerifyAuthPath(proof,
-		proof.Leaf.Index(), proof.Leaf.Commitment(), proof.Leaf.Level(), proof.Leaf.IsEmpty(),
+		proof.Leaf.Index, proof.Leaf.Commitment, proof.Leaf.Level, proof.Leaf.IsEmpty,
 		m.hash) {
 		t.Error("Proof of inclusion verification failed.")
-	}
-	if _, ok := proof.Leaf.(*userLeafNode); !ok {
-		t.Error("Invalid proof of inclusion. Expect a userLeafNode in returned path")
 	}
 
 	// proof of absence
 	absentIndex := vrfPrivKey1.Compute([]byte("123"))
 	proof = m.Get(absentIndex) // shares the same prefix with an empty node
-	if proof.Leaf.Value() != nil {
+	if proof.Leaf.Value != nil {
 		t.Fatal("Expect returned leaf's value is nil")
 	}
 	// ensure this is a proof of absence
-	if bytes.Equal(proof.LookupIndex, proof.Leaf.Index()) ||
+	if bytes.Equal(proof.LookupIndex, proof.Leaf.Index) ||
 		!bytes.Equal(vrfPrivKey1.Compute([]byte("123")), proof.LookupIndex) {
 		t.Fatal("Expect a proof of absence")
 	}
 	if !VerifyAuthPath(proof,
-		proof.Leaf.Index(), proof.Leaf.Commitment(), proof.Leaf.Level(), proof.Leaf.IsEmpty(),
+		proof.Leaf.Index, proof.Leaf.Commitment, proof.Leaf.Level, proof.Leaf.IsEmpty,
 		m.hash) {
 		t.Error("Proof of absence verification failed.")
-	}
-	if _, ok := proof.Leaf.(*emptyNode); !ok {
-		t.Error("Invalid proof of absence. Expect an empty node in returned path")
 	}
 }
 
@@ -112,30 +106,22 @@ func TestVerifyProofSamePrefix(t *testing.T) {
 	m.recomputeHash()
 	absentIndex := vrfPrivKey1.Compute([]byte("a"))
 	proof := m.Get(absentIndex) // shares the same prefix with leaf node key1
-	if proof.Leaf.Value() != nil {
+	if proof.Leaf.Value != nil {
 		t.Fatal("Expect returned leaf's value is nil")
 	}
 	// ensure this is a proof of absence
-	if bytes.Equal(proof.LookupIndex, proof.Leaf.Index()) ||
+	if bytes.Equal(proof.LookupIndex, proof.Leaf.Index) ||
 		!bytes.Equal(vrfPrivKey1.Compute([]byte("a")), proof.LookupIndex) {
 		t.Fatal("Expect a proof of absence")
 	}
 	// assert these indices share the same prefix in the first bit
-	if !bytes.Equal(util.ToBytes(util.ToBits(index1)[:proof.Leaf.Level()]),
-		util.ToBytes(util.ToBits(absentIndex)[:proof.Leaf.Level()])) {
+	if !bytes.Equal(util.ToBytes(util.ToBits(index1)[:proof.Leaf.Level]),
+		util.ToBytes(util.ToBits(absentIndex)[:proof.Leaf.Level])) {
 		t.Fatal("Expect these indices share the same prefix in the first bit")
 	}
 	if !VerifyAuthPath(proof,
-		proof.Leaf.Index(), proof.Leaf.Commitment(), proof.Leaf.Level(), proof.Leaf.IsEmpty(),
+		proof.Leaf.Index, proof.Leaf.Commitment, proof.Leaf.Level, proof.Leaf.IsEmpty,
 		m.hash) {
 		t.Error("Proof of absence verification failed.")
-	}
-}
-
-func TestEmptyNodeCommitment(t *testing.T) {
-	n := node{parent: nil, level: 1}
-	e := emptyNode{node: n, index: []byte("some index")}
-	if c := e.Commitment(); c != nil {
-		t.Fatal("Commitment of emptyNode should be nil")
 	}
 }

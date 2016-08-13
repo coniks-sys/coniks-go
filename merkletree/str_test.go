@@ -36,7 +36,7 @@ func TestVerifyHashChain(t *testing.T) {
 		str := pad.LatestSTR()
 		epoch := util.ULongToBytes(str.Epoch)
 		prevEpoch := util.ULongToBytes(str.PreviousEpoch)
-		if !VerifySTR(pk, epoch, prevEpoch, str.Root(), str.PreviousSTRHash, str.Policies.Serialize(), str.Signature) {
+		if !VerifySTR(pk, epoch, prevEpoch, str.TreeHash, str.PreviousSTRHash, str.Policies.Serialize(), str.Signature) {
 			t.Fatal("Invalid STR signature at epoch", i)
 		}
 

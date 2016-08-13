@@ -74,18 +74,33 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 	}
 	switch nodePointer.(type) {
 	case *userLeafNode:
-		pNode := nodePointer.(*userLeafNode).Clone(nil).(*userLeafNode)
-		authPath.Leaf = pNode
+		pNode := nodePointer.(*userLeafNode)
+		authPath.Leaf = &ProofNode{
+			Level:      pNode.level,
+			Salt:       pNode.salt,
+			Index:      pNode.index,
+			Value:      pNode.value,
+			IsEmpty:    false,
+			Commitment: pNode.commitment,
+		}
 		if bytes.Equal(nodePointer.(*userLeafNode).index, lookupIndex) {
 			return authPath
 		}
 		// reached a different leaf with a matching prefix
 		// return a auth path including the leaf node without salt & value
-		pNode.value = nil
-		pNode.salt = nil
+		authPath.Leaf.Value = nil
+		authPath.Leaf.Salt = nil
 		return authPath
 	case *emptyNode:
-		authPath.Leaf = nodePointer.(*emptyNode).Clone(nil).(*emptyNode)
+		pNode := nodePointer.(*emptyNode)
+		authPath.Leaf = &ProofNode{
+			Level:      pNode.level,
+			Salt:       nil,
+			Index:      pNode.index,
+			Value:      nil,
+			IsEmpty:    true,
+			Commitment: nil,
+		}
 		return authPath
 	}
 	panic(ErrorInvalidTree)

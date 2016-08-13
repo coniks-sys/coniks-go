@@ -12,16 +12,16 @@ type AuthenticationPath struct {
 	PrunedTree  [][crypto.HashSizeByte]byte
 	LookupIndex []byte
 	VrfProof    []byte
-	Leaf        ProofNode
+	Leaf        *ProofNode
 }
 
-type ProofNode interface {
-	Level() uint32
-	Salt() []byte
-	Index() []byte
-	Value() []byte
-	IsEmpty() bool
-	Commitment() []byte
+type ProofNode struct {
+	Level      uint32
+	Salt       []byte
+	Index      []byte
+	Value      []byte
+	IsEmpty    bool
+	Commitment []byte
 }
 
 func computeLeafHash(ap *AuthenticationPath,
@@ -92,55 +92,4 @@ func VerifyAuthPath(ap *AuthenticationPath,
 func VerifyCommitment(salt []byte, key string, value []byte, commitment []byte) bool {
 	got := crypto.Digest(salt, []byte(key), value)
 	return bytes.Equal(got, commitment)
-}
-
-var _ ProofNode = (*userLeafNode)(nil)
-var _ ProofNode = (*emptyNode)(nil)
-
-func (n *emptyNode) Level() uint32 {
-	return n.level
-}
-
-func (n *emptyNode) Salt() []byte {
-	return nil
-}
-
-func (n *emptyNode) Index() []byte {
-	return n.index
-}
-
-func (n *emptyNode) Value() []byte {
-	return nil
-}
-
-func (n *emptyNode) IsEmpty() bool {
-	return true
-}
-
-func (n *emptyNode) Commitment() []byte {
-	return nil
-}
-
-func (n *userLeafNode) Level() uint32 {
-	return n.level
-}
-
-func (n *userLeafNode) Salt() []byte {
-	return n.salt
-}
-
-func (n *userLeafNode) Index() []byte {
-	return n.index
-}
-
-func (n *userLeafNode) Value() []byte {
-	return n.value
-}
-
-func (n *userLeafNode) IsEmpty() bool {
-	return false
-}
-
-func (n *userLeafNode) Commitment() []byte {
-	return n.commitment
 }
