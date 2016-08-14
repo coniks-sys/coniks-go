@@ -67,7 +67,7 @@ func TestVerifyProof(t *testing.T) {
 		t.Fatal("Commitment verification returns false")
 	}
 	// step 3. verify auth path
-	if !proof.VerifyAuthPath(m.hash) {
+	if !proof.Verify(m.hash) {
 		t.Error("Proof of inclusion verification failed.")
 	}
 
@@ -82,7 +82,7 @@ func TestVerifyProof(t *testing.T) {
 		!bytes.Equal(vrfPrivKey1.Compute([]byte("123")), proof.LookupIndex) {
 		t.Fatal("Expect a proof of absence")
 	}
-	if !proof.VerifyAuthPath(m.hash) {
+	if !proof.Verify(m.hash) {
 		t.Error("Proof of absence verification failed.")
 	}
 }
@@ -115,7 +115,29 @@ func TestVerifyProofSamePrefix(t *testing.T) {
 		util.ToBytes(util.ToBits(absentIndex)[:proof.Leaf.Level])) {
 		t.Fatal("Expect these indices share the same prefix in the first bit")
 	}
-	if !proof.VerifyAuthPath(m.hash) {
+	if !proof.Verify(m.hash) {
 		t.Error("Proof of absence verification failed.")
+	}
+
+	// re-get proof of inclusion
+	// for testing the commitment assignment
+	proof = m.Get(index1)
+	if proof.Leaf.Value == nil {
+		t.Fatal("Expect returned leaf's value is not nil")
+	}
+	// step 1. ensure this is a proof of inclusion by comparing the returned indices
+	// and verifying the VRF index as well.
+	if !bytes.Equal(proof.LookupIndex, proof.Leaf.Index) ||
+		!bytes.Equal(vrfPrivKey1.Compute([]byte(key1)), proof.LookupIndex) {
+		t.Fatal("Expect a proof of inclusion")
+	}
+	// step 2. verify commitment
+	if !proof.Leaf.Commitment.Verify([]byte(key1), proof.Leaf.Value) {
+		t.Fatal("Commitment verification returns false",
+			"got commitment salt", proof.Leaf.Commitment.Salt)
+	}
+	// step 3. verify auth path
+	if !proof.Verify(m.hash) {
+		t.Error("Proof of inclusion verification failed.")
 	}
 }

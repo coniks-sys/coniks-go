@@ -51,7 +51,3 @@ func NewCommit(stuff ...[]byte) (*Commit, error) {
 func (c *Commit) Verify(stuff ...[]byte) bool {
 	return bytes.Equal(c.Value, Digest(append([][]byte{c.Salt}, stuff...)...))
 }
-
-func (c *Commit) Clone() *Commit {
-	return &Commit{Salt: c.Salt, Value: c.Value}
-}
