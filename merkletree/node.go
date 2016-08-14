@@ -131,7 +131,7 @@ func (n *userLeafNode) Clone(parent *interiorNode) MerkleNode {
 		key:        n.key,
 		value:      n.value,
 		index:      append([]byte{}, n.index...), // make a copy of index
-		commitment: n.commitment.Clone(),
+		commitment: n.commitment,
 	}
 }
 

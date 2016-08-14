@@ -119,7 +119,7 @@ func cgoVerifyAuthPath(treeHash unsafe.Pointer, treeHashSize C.int,
 		Commitment: &crypto.Commit{nil, leafc},
 	}
 
-	if ap.VerifyAuthPath(th) {
+	if ap.Verify(th) {
 		return 1
 	}
 	return 0
