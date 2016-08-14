@@ -20,8 +20,10 @@ script:
   - go test -coverprofile=vrf.coverprofile ./crypto/vrf
   - go test -coverprofile=merkletree.coverprofile ./merkletree
   - go test -coverprofile=utils.coverprofile ./utils
-  - $HOME/gopath/bin/gover
-  - $HOME/gopath/bin/goveralls -coverprofile=gover.coverprofile -service travis-ci
+
+after_success:
+  - gover
+  - goveralls -coverprofile=gover.coverprofile -service travis-ci
 
 notifications:
   email: false
