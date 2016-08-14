@@ -66,10 +66,6 @@ func (str *SignedTreeRoot) Serialize() []byte {
 	return innerSTRSerialize(util.ULongToBytes(str.Epoch), prevEpochBytes, str.tree.hash, str.PreviousSTRHash, str.Policies.Serialize())
 }
 
-func (str *SignedTreeRoot) Root() []byte {
-	return str.tree.hash
-}
-
 func VerifySTR(pk sign.PublicKey, epochB, prevEpochB, root, prevStrHash, policiesB, strSig []byte) bool {
 	strBytes := innerSTRSerialize(epochB, prevEpochB, root, prevStrHash, policiesB)
 	return pk.Verify(strBytes, strSig)
