@@ -58,11 +58,25 @@ func (d *ConiksDirectory) HandleOps(req *Request) (Response, ErrorCode) {
 	case RegistrationType:
 		if msg, ok := req.Request.(*RegistrationRequest); ok {
 			if len(msg.Username) > 0 && len(msg.Key) > 0 {
-				res, e := d.Register(msg)
-				if res == nil {
-					return NewErrorResponse(e), e
-				}
-				return res, e
+				return d.Register(msg)
+			}
+		}
+	case KeyLookupType:
+		if msg, ok := req.Request.(*KeyLookupRequest); ok {
+			if len(msg.Username) > 0 {
+				return d.KeyLookup(msg)
+			}
+		}
+	case KeyLookupInEpochType:
+		if msg, ok := req.Request.(*KeyLookupInEpochRequest); ok {
+			if len(msg.Username) > 0 {
+				return d.KeyLookupInEpoch(msg)
+			}
+		}
+	case MonitoringType:
+		if msg, ok := req.Request.(*MonitoringRequest); ok {
+			if len(msg.Username) > 0 && msg.StartEpoch <= msg.EndEpoch {
+				return d.Monitor(msg)
 			}
 		}
 	}
@@ -71,12 +85,12 @@ func (d *ConiksDirectory) HandleOps(req *Request) (Response, ErrorCode) {
 }
 
 func (d *ConiksDirectory) Register(req *RegistrationRequest) (
-	*DirectoryProof, ErrorCode) {
+	Response, ErrorCode) {
 	// check whether the name already exists
 	// in the directory before we register
 	ap, err := d.pad.Lookup(req.Username)
 	if err != nil {
-		return nil, ErrorDirectory
+		return NewErrorResponse(ErrorDirectory), ErrorDirectory
 	}
 	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
 		return NewRegistrationProof(ap, d.LatestSTR(), nil, ErrorNameExisted)
@@ -91,14 +105,76 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 		// insert new data to the directory on-the-fly
 		tb, err := d.pad.TB(req.Username, req.Key)
 		if err != nil {
-			return nil, ErrorDirectory
+			return NewErrorResponse(ErrorDirectory), ErrorDirectory
 		}
 		d.tbs[req.Username] = tb
 		return NewRegistrationProof(ap, d.LatestSTR(), tb, Success)
 	} else {
 		if err = d.pad.Set(req.Username, req.Key); err != nil {
-			return nil, ErrorDirectory
+			return NewErrorResponse(ErrorDirectory), ErrorDirectory
 		}
 		return NewRegistrationProof(ap, d.LatestSTR(), nil, Success)
 	}
+}
+
+func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
+	Response, ErrorCode) {
+	ap, err := d.pad.Lookup(req.Username)
+	if err != nil {
+		return NewErrorResponse(ErrorDirectory), ErrorDirectory
+	}
+
+	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
+		return NewKeyLookupProof(ap, d.LatestSTR(), nil, Success)
+	}
+	// if not found in the tree, do lookup in tb array
+	if d.useTBs {
+		if tb := d.tbs[req.Username]; tb != nil {
+			return NewKeyLookupProof(ap, d.LatestSTR(), tb, Success)
+		}
+	}
+	return NewKeyLookupProof(ap, d.LatestSTR(), nil, ErrorNameNotFound)
+}
+
+func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
+	Response, ErrorCode) {
+	var strs []*merkletree.SignedTreeRoot
+	startEp := req.Epoch
+	endEp := d.LatestSTR().Epoch
+
+	ap, err := d.pad.LookupInEpoch(req.Username, startEp)
+	if err != nil {
+		return NewErrorResponse(ErrorDirectory), ErrorDirectory
+	}
+	for ep := startEp; ep <= endEp; ep++ {
+		str := d.pad.GetSTR(ep)
+		strs = append(strs, str)
+	}
+
+	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
+		return NewKeyLookupInEpochProof(ap, strs, Success)
+	}
+	return NewKeyLookupInEpochProof(ap, strs, ErrorNameNotFound)
+}
+
+func (d *ConiksDirectory) Monitor(req *MonitoringRequest) (
+	Response, ErrorCode) {
+	var strs []*merkletree.SignedTreeRoot
+	var aps []*merkletree.AuthenticationPath
+	startEp := req.StartEpoch
+	endEp := req.EndEpoch
+	if endEp > d.LatestSTR().Epoch {
+		endEp = d.LatestSTR().Epoch
+	}
+	for ep := startEp; ep <= endEp; ep++ {
+		ap, err := d.pad.LookupInEpoch(req.Username, ep)
+		if err != nil {
+			return NewErrorResponse(ErrorDirectory), ErrorDirectory
+		}
+		aps = append(aps, ap)
+		str := d.pad.GetSTR(ep)
+		strs = append(strs, str)
+	}
+
+	return NewMonitoringProof(aps, strs, Success)
 }

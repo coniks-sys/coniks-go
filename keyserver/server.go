@@ -159,6 +159,9 @@ func (server *ConiksServer) Run(tc *TLSConnection) {
 
 	// acceptable types for public connection
 	publicTypes := make(map[int]bool)
+	publicTypes[protocol.KeyLookupType] = true
+	publicTypes[protocol.KeyLookupInEpochType] = true
+	publicTypes[protocol.MonitoringType] = true
 	server.waitStop.Add(1)
 	go func() {
 		server.listenForRequests(publicLn, server.makeHandler(publicTypes))

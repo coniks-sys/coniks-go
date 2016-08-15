@@ -93,11 +93,15 @@ func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(msg [
 		}
 
 		switch req.Type {
+		case KeyLookupType, KeyLookupInEpochType, MonitoringType:
+			server.RLock()
 		default:
 			server.Lock()
 		}
 		response, e := server.dir.HandleOps(req)
 		switch req.Type {
+		case KeyLookupType, KeyLookupInEpochType, MonitoringType:
+			server.RLock()
 		default:
 			server.Unlock()
 		}

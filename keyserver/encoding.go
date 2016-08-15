@@ -22,13 +22,20 @@ func UnmarshalRequest(msg []byte) (*Request, error) {
 	if err := json.Unmarshal(msg, &req); err != nil {
 		return nil, err
 	}
+	var request interface{}
 	switch req.Type {
 	case RegistrationType:
-		var request RegistrationRequest
-		if err := json.Unmarshal(content, &request); err != nil {
-			return nil, err
-		}
-		req.Request = &request
+		request = new(RegistrationRequest)
+	case KeyLookupType:
+		request = new(KeyLookupRequest)
+	case KeyLookupInEpochType:
+		request = new(KeyLookupInEpochRequest)
+	case MonitoringType:
+		request = new(MonitoringRequest)
 	}
+	if err := json.Unmarshal(content, &request); err != nil {
+		return nil, err
+	}
+	req.Request = request
 	return &req, nil
 }
