@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 // GetNthBit finds the bit in the byte array bs
@@ -59,4 +60,11 @@ func WriteFile(filename string, buf bytes.Buffer) {
 		log.Printf(err.Error())
 		return
 	}
+}
+
+func ResolvePath(file, other string) string {
+	if !filepath.IsAbs(file) {
+		file = filepath.Join(filepath.Dir(other), file)
+	}
+	return file
 }

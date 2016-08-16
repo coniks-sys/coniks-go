@@ -35,13 +35,14 @@ func NewErrorResponse(e ErrorCode) Response {
 }
 
 type DirectoryProof struct {
-	Type int
-	AP   *m.AuthenticationPath
-	STR  *m.SignedTreeRoot
-	TB   *m.TemporaryBinding `json:",omitempty"`
+	Type  int
+	AP    *m.AuthenticationPath
+	STR   *m.SignedTreeRoot
+	TB    *m.TemporaryBinding `json:",omitempty"`
+	Error ErrorCode           `json:",omitempty"`
 }
 
 func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
-	tb *m.TemporaryBinding) *DirectoryProof {
-	return &DirectoryProof{RegistrationType, ap, str, tb}
+	tb *m.TemporaryBinding, e ErrorCode) (*DirectoryProof, ErrorCode) {
+	return &DirectoryProof{RegistrationType, ap, str, tb, e}, e
 }

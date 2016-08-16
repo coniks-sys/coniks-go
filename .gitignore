@@ -29,3 +29,12 @@ _testmain.go
 
 # vscode
 .vscode
+
+# CONIKS server
+config.toml
+sign.priv
+vrf.priv
+server.key
+server.pem
+coniks.db/
+coniks.pid

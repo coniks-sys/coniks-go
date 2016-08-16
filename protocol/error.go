@@ -17,6 +17,7 @@ const (
 
 var (
 	errorMessages = map[ErrorCode]error{
+		Success:                     nil,
 		ErrorMalformedClientMessage: errors.New("[coniks] Malformed client request"),
 		ErrorNameExisted:            errors.New("[coniks] Registering identity is already registered"),
 		ErrorNameNotFound:           errors.New("[coniks] Name not found"),
@@ -25,8 +26,5 @@ var (
 )
 
 func (e ErrorCode) Error() error {
-	if errorMessages[e] == nil {
-		return errorMessages[ErrorDirectory]
-	}
 	return errorMessages[e]
 }

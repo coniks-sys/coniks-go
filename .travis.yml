@@ -21,6 +21,7 @@ script:
   - go test -coverprofile=merkletree.coverprofile ./merkletree
   - go test -coverprofile=utils.coverprofile ./utils
   - go test -coverprofile=protocol.coverprofile ./protocol
+  - go test -coverprofile=keyserver.coverprofile ./keyserver
   
 after_success:
   - gover

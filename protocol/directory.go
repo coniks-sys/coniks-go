@@ -43,6 +43,10 @@ func (d *ConiksDirectory) SetPolicies(epDeadline merkletree.TimeStamp, vrfKey vr
 	d.policies = merkletree.NewPolicies(epDeadline, vrfKey)
 }
 
+func (d *ConiksDirectory) EpochDeadline() merkletree.TimeStamp {
+	return d.policies.EpDeadline()
+}
+
 func (d *ConiksDirectory) LatestSTR() *merkletree.SignedTreeRoot {
 	return d.pad.LatestSTR()
 }
@@ -54,11 +58,16 @@ func (d *ConiksDirectory) HandleOps(req *Request) (Response, ErrorCode) {
 	case RegistrationType:
 		if msg, ok := req.Request.(*RegistrationRequest); ok {
 			if len(msg.Username) > 0 && len(msg.Key) > 0 {
-				return d.Register(msg)
+				res, e := d.Register(msg)
+				if res == nil {
+					return NewErrorResponse(e), e
+				}
+				return res, e
 			}
 		}
 	}
-	return nil, ErrorMalformedClientMessage
+	return NewErrorResponse(ErrorMalformedClientMessage),
+		ErrorMalformedClientMessage
 }
 
 func (d *ConiksDirectory) Register(req *RegistrationRequest) (
@@ -70,13 +79,13 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 		return nil, ErrorDirectory
 	}
 	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
-		return NewRegistrationProof(ap, d.LatestSTR(), nil), ErrorNameExisted
+		return NewRegistrationProof(ap, d.LatestSTR(), nil, ErrorNameExisted)
 	}
 	if d.useTBs {
 		// also check the temporary bindings array
 		// currently the server allows only one registration/key change per epoch
 		if tb := d.tbs[req.Username]; tb != nil {
-			return NewRegistrationProof(ap, d.LatestSTR(), tb), ErrorNameExisted
+			return NewRegistrationProof(ap, d.LatestSTR(), tb, ErrorNameExisted)
 		}
 
 		// insert new data to the directory on-the-fly
@@ -85,11 +94,11 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 			return nil, ErrorDirectory
 		}
 		d.tbs[req.Username] = tb
-		return NewRegistrationProof(ap, d.LatestSTR(), tb), Success
+		return NewRegistrationProof(ap, d.LatestSTR(), tb, Success)
 	} else {
 		if err = d.pad.Set(req.Username, req.Key); err != nil {
 			return nil, ErrorDirectory
 		}
-		return NewRegistrationProof(ap, d.LatestSTR(), nil), Success
+		return NewRegistrationProof(ap, d.LatestSTR(), nil, Success)
 	}
 }
