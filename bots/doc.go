@@ -61,9 +61,13 @@ by CONIKS clients to its account originated from uncompromised
 third-party accounts.
 
 CONIKS servers: bots proxies relay verified CONIKS registration requests
-to a designated CONIKS server. For authentication, proxies digitally
-sign all requests they relay. The server then only accepts incoming
-registration requests originating from authenticated account proxies.
+to a designated CONIKS server. The server and proxies may run as separate
+processes on the same machine, or on separate machines, depending on the
+communication service's infrastructure. For authentication, bots proxies
+can be configured to digitally sign all requests they relay, or to
+establish a secure network connection with the server. The server then
+only accepts incoming registration requests originating from authenticated
+account proxies.
 
 Privacy
 
@@ -98,8 +102,8 @@ protocol.
 the service's protocol, and verifies that the sender
 is an authorized client.
 
-5. The proxy digitally signs the verified registration request,
-and sends it to its designated CONIKS server.
+5. The proxy sends the verified registration request to its designated
+CONIKS server.
 
 6. Once the CONIKS server receives the request and authenticates the proxy,
 it registers the username-to-public key mapping in its CONIKS directory.
