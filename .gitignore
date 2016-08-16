@@ -32,6 +32,7 @@ _testmain.go
 
 # CONIKS server
 config.toml
+botconfig.toml
 sign.priv
 vrf.priv
 server.key

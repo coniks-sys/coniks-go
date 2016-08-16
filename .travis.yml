@@ -26,7 +26,8 @@ script:
   - go test -coverprofile=utils.coverprofile ./utils
   - go test -coverprofile=protocol.coverprofile ./protocol
   - go test -coverprofile=keyserver.coverprofile ./keyserver
-  
+  - go test -coverprofile=bots.coverprofile ./bots
+
 after_success:
   - gover
   - goveralls -coverprofile=gover.coverprofile -service travis-ci
