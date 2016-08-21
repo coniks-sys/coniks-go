@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -8,6 +9,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"io"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -96,25 +98,31 @@ func CreateTLSCertForTest(t *testing.T) (string, func()) {
 }
 
 func NewClient(t *testing.T, address string, msg []byte) ([]byte, error) {
-	conf := &tls.Config{
-		InsecureSkipVerify: true,
-	}
+	conf := &tls.Config{InsecureSkipVerify: true}
 
-	conn, err := tls.Dial("tcp", address, conf)
+	conn, err := net.Dial("tcp", address)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
-	_, err = conn.Write([]byte(msg))
+
+	tlsConn := tls.Client(conn, conf)
+
+	_, err = tlsConn.Write([]byte(msg))
 	if err != nil {
 		return nil, err
 	}
 
-	buf := make([]byte, 4096)
-	n, err := conn.Read(buf)
-	if err != nil {
+	if c, ok := conn.(interface {
+		CloseWrite() error
+	}); ok {
+		c.CloseWrite()
+	}
+
+	var buf bytes.Buffer
+	if _, err := io.CopyN(&buf, tlsConn, 8192); err != nil && err != io.EOF {
 		return nil, err
 	}
 
-	return buf[:n], nil
+	return buf.Bytes(), nil
 }
