@@ -32,7 +32,7 @@ type ServerConfig struct {
 
 type TLSConnection struct {
 	PublicAddress string `toml:"public_address"` // address:port
-	LocalAddress  string `toml:"local_address"`
+	LocalAddress  string `toml:"local_address"`  // unix socket
 	TLSCertPath   string `toml:"cert"`
 	TLSKeyPath    string `toml:"key"`
 }
@@ -127,32 +127,29 @@ func (server *ConiksServer) Run(tc *TLSConnection) {
 		server.waitStop.Done()
 	}()
 
-	// server listener
+	// Setup server public connection
+	// Setup the TLS config for public connection
 	cer, err := tls.LoadX509KeyPair(tc.TLSCertPath, tc.TLSKeyPath)
 	if err != nil {
 		panic(err)
 	}
-
 	server.tlsConfig = &tls.Config{Certificates: []tls.Certificate{cer}}
-
 	addr, err := net.ResolveTCPAddr("tcp", tc.PublicAddress)
 	if err != nil {
 		panic(err)
 	}
-
-	// server public port
 	publicLn, err := net.ListenTCP("tcp", addr)
 	if err != nil {
 		panic(err)
 	}
 
-	addr, err = net.ResolveTCPAddr("tcp", tc.LocalAddress)
+	// Setup server local connection
+	scheme := "unix"
+	unixaddr, err := net.ResolveUnixAddr(scheme, tc.LocalAddress)
 	if err != nil {
 		panic(err)
 	}
-
-	// server registration port
-	localLn, err := net.ListenTCP("tcp", addr)
+	localLn, err := net.ListenUnix(scheme, unixaddr)
 	if err != nil {
 		panic(err)
 	}

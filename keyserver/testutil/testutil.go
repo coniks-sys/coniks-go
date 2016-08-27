@@ -22,7 +22,7 @@ import (
 const (
 	TestDir          = "coniksServerTest"
 	PublicConnection = "127.0.0.1:3000"
-	LocalConnection  = "127.0.0.1:3001"
+	LocalConnection  = "/tmp/conikstest.sock"
 )
 
 func CreateTLSCert(dir string) error {
@@ -97,10 +97,10 @@ func CreateTLSCertForTest(t *testing.T) (string, func()) {
 	}
 }
 
-func NewClient(t *testing.T, address string, msg []byte) ([]byte, error) {
+func NewTCPClient(msg []byte) ([]byte, error) {
 	conf := &tls.Config{InsecureSkipVerify: true}
 
-	conn, err := net.Dial("tcp", address)
+	conn, err := net.Dial("tcp", PublicConnection)
 	if err != nil {
 		return nil, err
 	}
@@ -121,6 +121,30 @@ func NewClient(t *testing.T, address string, msg []byte) ([]byte, error) {
 
 	var buf bytes.Buffer
 	if _, err := io.CopyN(&buf, tlsConn, 8192); err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func NewUnixClient(msg []byte) ([]byte, error) {
+	scheme := "unix"
+	unixaddr := &net.UnixAddr{Name: LocalConnection, Net: scheme}
+
+	conn, err := net.DialUnix(scheme, nil, unixaddr)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	_, err = conn.Write([]byte(msg))
+	if err != nil {
+		return nil, err
+	}
+
+	conn.CloseWrite()
+	var buf bytes.Buffer
+	if _, err := io.CopyN(&buf, conn, 8192); err != nil && err != io.EOF {
 		return nil, err
 	}
 

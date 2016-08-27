@@ -11,11 +11,15 @@ import (
 	. "github.com/coniks-sys/coniks-go/protocol"
 )
 
-func (server *ConiksServer) listenForRequests(ln *net.TCPListener, handler func(msg []byte) ([]byte, error)) {
+func (server *ConiksServer) listenForRequests(ln net.Listener, handler func(msg []byte) ([]byte, error)) {
 	defer ln.Close()
 	go func() {
 		<-server.stop
-		ln.SetDeadline(time.Now())
+		if l, ok := ln.(interface {
+			SetDeadline(time.Time) error
+		}); ok {
+			l.SetDeadline(time.Now())
+		}
 	}()
 
 	for {
@@ -33,7 +37,9 @@ func (server *ConiksServer) listenForRequests(ln *net.TCPListener, handler func(
 			log.Printf("accept client: %s", err)
 			continue
 		}
-		conn = tls.Server(conn, server.tlsConfig)
+		if _, ok := ln.(*net.TCPListener); ok {
+			conn = tls.Server(conn, server.tlsConfig)
+		}
 		server.waitCloseConn.Add(1)
 		go func() {
 			server.acceptClient(conn, handler)

@@ -103,7 +103,7 @@ func TestBotSendsRegistration(t *testing.T) {
 		_, teardown := startServer(t, db, 60, "")
 		defer teardown()
 
-		rev, err := testutil.NewClient(t, testutil.LocalConnection, []byte(registrationMsg))
+		rev, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -133,7 +133,7 @@ func TestSendsRegistrationFromOutside(t *testing.T) {
 		_, teardown := startServer(t, db, 60, "")
 		defer teardown()
 
-		rev, err := testutil.NewClient(t, testutil.PublicConnection, []byte(registrationMsg))
+		rev, err := testutil.NewTCPClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -245,12 +245,12 @@ func TestBotSendsLookup(t *testing.T) {
 		_, teardown := startServer(t, db, 60, "")
 		defer teardown()
 
-		rev, err := testutil.NewClient(t, testutil.LocalConnection, []byte(registrationMsg))
+		rev, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		rev, err = testutil.NewClient(t, testutil.LocalConnection, []byte(keylookupMsg))
+		rev, err = testutil.NewUnixClient([]byte(keylookupMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -270,12 +270,12 @@ func TestRegisterAndLookupInTheSameEpoch(t *testing.T) {
 		_, teardown := startServer(t, db, 60, "")
 		defer teardown()
 
-		_, err := testutil.NewClient(t, testutil.LocalConnection, []byte(registrationMsg))
+		_, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		rev, err := testutil.NewClient(t, testutil.PublicConnection, []byte(keylookupMsg))
+		rev, err := testutil.NewTCPClient([]byte(keylookupMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -327,13 +327,13 @@ func TestRegisterAndLookup(t *testing.T) {
 		server, teardown := startServer(t, db, 1, "")
 		defer teardown()
 
-		_, err := testutil.NewClient(t, testutil.LocalConnection, []byte(registrationMsg))
+		_, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		server.dir.Update()
-		rev, err := testutil.NewClient(t, testutil.PublicConnection, []byte(keylookupMsg))
+		rev, err := testutil.NewTCPClient([]byte(keylookupMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -384,13 +384,13 @@ func TestKeyLookup(t *testing.T) {
 		server, teardown := startServer(t, db, 60, "")
 		defer teardown()
 
-		_, err := testutil.NewClient(t, testutil.LocalConnection, []byte(registrationMsg))
+		_, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		server.dir.Update()
-		rev, err := testutil.NewClient(t, testutil.PublicConnection, []byte(keylookupMsg))
+		rev, err := testutil.NewTCPClient([]byte(keylookupMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -444,7 +444,7 @@ func TestKeyLookupInEpoch(t *testing.T) {
 		for i := 0; i < 3; i++ {
 			server.dir.Update()
 		}
-		_, err := testutil.NewClient(t, testutil.LocalConnection, []byte(registrationMsg))
+		_, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -459,7 +459,7 @@ func TestKeyLookupInEpoch(t *testing.T) {
     }
 }
 `
-		rev, err := testutil.NewClient(t, testutil.PublicConnection, []byte(keylookupinepochMsg))
+		rev, err := testutil.NewTCPClient([]byte(keylookupinepochMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -493,7 +493,7 @@ func TestMonitoring(t *testing.T) {
 		server, teardown := startServer(t, db, 60, "")
 		defer teardown()
 
-		res, err := testutil.NewClient(t, testutil.LocalConnection, []byte(registrationMsg))
+		res, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -522,7 +522,7 @@ func TestMonitoring(t *testing.T) {
     }
 }
 `
-		rev, err := testutil.NewClient(t, testutil.PublicConnection, []byte(consistencyCheckMsg))
+		rev, err := testutil.NewTCPClient([]byte(consistencyCheckMsg))
 		if err != nil {
 			t.Fatal(err)
 		}

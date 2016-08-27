@@ -47,7 +47,7 @@ func mkConfig(dir string) {
 		DatabasePath:        "coniks.db",
 		LoadedHistoryLength: 1000000,
 		TLS: &keyserver.TLSConnection{
-			LocalAddress:  "127.0.0.1:3001",
+			LocalAddress:  "/tmp/coniks.sock",
 			PublicAddress: "0.0.0.0:3000",
 			TLSCertPath:   "server.pem",
 			TLSKeyPath:    "server.key",
