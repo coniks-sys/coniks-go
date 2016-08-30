@@ -3,6 +3,7 @@ package bots
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -41,6 +42,11 @@ func NewTwitterBot(path string) (Bot, error) {
 		return nil, fmt.Errorf("Failed to load config: %v", err)
 	}
 
+	// Notify if the CONIKS key server is down
+	if _, err := os.Stat(conf.CONIKSAddress); os.IsNotExist(err) {
+		return nil, fmt.Errorf("CONIKS Key Server is down")
+	}
+
 	auth := conf.TwitterOAuth
 	config := oauth1.NewConfig(auth.ConsumerKey, auth.ConsumerSecret)
 	token := oauth1.NewToken(auth.AccessToken, auth.AccessSecret)
@@ -49,6 +55,16 @@ func NewTwitterBot(path string) (Bot, error) {
 
 	// Twitter Client
 	client := twitter.NewClient(httpClient)
+	// Verify the tokens
+	handle, _, err := client.Accounts.VerifyCredentials(
+		&twitter.AccountVerifyParams{
+			IncludeEntities: twitter.Bool(false),
+			IncludeEmail:    twitter.Bool(true),
+		})
+	if err != nil ||
+		handle.ScreenName != conf.Handle {
+		return nil, fmt.Errorf("Could not authenticate you.")
+	}
 
 	bot := new(TwitterBot)
 	bot.client = client
@@ -104,7 +120,7 @@ func (bot *TwitterBot) HandleRegistration(username string, msg []byte) string {
 	} else {
 		request, ok := req.Request.(*p.RegistrationRequest)
 		if req.Type != p.RegistrationType || !ok ||
-			// issue: https://github.com/coniks-sys/coniks-go/issues/30
+			// FIXME: Agree on a convention in issues #17 / #30
 			!strings.EqualFold(strings.ToLower(username)+"@twitter", request.Username) {
 			invalid = true
 		}

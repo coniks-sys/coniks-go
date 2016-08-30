@@ -3,7 +3,6 @@ package cmd
 import (
 	"os"
 	"os/signal"
-	"path"
 
 	"github.com/coniks-sys/coniks-go/bots"
 	"github.com/spf13/cobra"
@@ -19,18 +18,14 @@ This will look for config files with default names (botconfig.toml)
 in the current directory if not specified differently.
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
-		dir := cmd.Flag("dir").Value.String()
 		config := cmd.Flag("config").Value.String()
-
-		confPath := path.Join(dir, config)
-		run(confPath)
+		run(config)
 	},
 }
 
 func init() {
 	RootCmd.AddCommand(runCmd)
-	runCmd.Flags().StringP("dir", "d", ".", "Location of bot working directory")
-	runCmd.Flags().StringP("config", "c", "botconfig.toml", "Configuration filename")
+	runCmd.Flags().StringP("config", "c", "botconfig.toml", "Path to bot configuration file")
 }
 
 func run(confPath string) {
