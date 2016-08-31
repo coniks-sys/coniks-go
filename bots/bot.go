@@ -6,6 +6,10 @@ import (
 	"net"
 )
 
+const (
+	messagePrefix = "?CONIKS?"
+)
+
 type BotHandleFunc func(string, []byte)
 
 type Bot interface {

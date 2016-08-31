@@ -81,13 +81,13 @@ func (bot *TwitterBot) Run() {
 			return
 		}
 		// check if received DM has proper format
-		if strings.HasPrefix(dm.Text, "?CONIKS?") {
-			msg := strings.TrimPrefix(dm.Text, "?CONIKS?")
+		if strings.HasPrefix(dm.Text, messagePrefix) {
+			msg := strings.TrimPrefix(dm.Text, messagePrefix)
 			res := bot.HandleRegistration(dm.SenderScreenName, []byte(msg))
 			// Hackity, hack, hack!
 			// Twitter APIs probably doesn't want people call them so fast
 			time.Sleep(5 * time.Second)
-			err := bot.SendDM(dm.SenderScreenName, "?CONIKS?"+res)
+			err := bot.SendDM(dm.SenderScreenName, messagePrefix+res)
 			if err != nil {
 				log.Printf("[registration bot] " + err.Error())
 			}
