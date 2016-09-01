@@ -49,7 +49,7 @@ func TestRegisterWithTB(t *testing.T) {
 	if d.tbs["alice"] == nil {
 		t.Fatal("Expect TBs array has registering user")
 	}
-	d.Update()
+	d.Update(nil)
 	if len(d.tbs) != 0 {
 		t.Fatal("Expect TBs array is empty")
 	}
@@ -81,7 +81,7 @@ func TestRegisterExistedUserWithTB(t *testing.T) {
 		t.Fatal("Expect returned TB is not nil")
 	}
 
-	d.Update()
+	d.Update(nil)
 	// register in different epochs
 	// expect return a proof of inclusion
 	// and error ErrorNameExisted
@@ -127,7 +127,7 @@ func TestRegisterExistedUserWithoutTB(t *testing.T) {
 		t.Fatal("Unable to register")
 	}
 
-	d.Update()
+	d.Update(nil)
 	// expect return a proof of inclusion
 	// and error ErrorNameExisted
 	res, err := d.Register(&RegistrationRequest{
@@ -174,7 +174,7 @@ func TestKeyLookupWithTB(t *testing.T) {
 		t.Fatal("Expect the same TB for the registration and lookup")
 	}
 
-	d.Update()
+	d.Update(nil)
 	// lookup in epoch after registering epoch
 	// expect a proof of inclusion
 	res, _ = d.KeyLookup(&KeyLookupRequest{Username: "alice"})
@@ -209,7 +209,7 @@ func TestKeyLookupWithoutTB(t *testing.T) {
 		t.Fatal("Expect returned TB is nil")
 	}
 
-	d.Update()
+	d.Update(nil)
 	// lookup in epoch after registering epoch
 	// expect a proof of inclusion
 	res, err = d.KeyLookup(&KeyLookupRequest{Username: "alice"})
@@ -230,10 +230,10 @@ func TestDirectoryMonitoring(t *testing.T) {
 		Username: "alice",
 		Key:      []byte("key")})
 
-	d.Update()
+	d.Update(nil)
 	savedSTR := d.LatestSTR().Signature
 	for i := 2; i < N; i++ {
-		d.Update()
+		d.Update(nil)
 	}
 
 	// missed from epoch 2
@@ -279,7 +279,7 @@ func TestDirectoryKeyLookupInEpoch(t *testing.T) {
 
 	d := newDirectory(t, false)
 	for i := 0; i < N; i++ {
-		d.Update()
+		d.Update(nil)
 	}
 
 	// lookup at epoch 1, expect a proof of absence & ErrorNameNotFound
@@ -302,7 +302,7 @@ func TestDirectoryKeyLookupInEpoch(t *testing.T) {
 		Username: "alice",
 		Key:      []byte("key")})
 	for i := 0; i < N; i++ {
-		d.Update()
+		d.Update(nil)
 	}
 
 	res, err = d.KeyLookupInEpoch(&KeyLookupInEpochRequest{"alice", uint64(5)})

@@ -332,7 +332,7 @@ func TestRegisterAndLookup(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		server.dir.Update()
+		server.dir.Update(nil)
 		rev, err := testutil.NewTCPClient([]byte(keylookupMsg))
 		if err != nil {
 			t.Fatal(err)
@@ -389,7 +389,7 @@ func TestKeyLookup(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		server.dir.Update()
+		server.dir.Update(nil)
 		rev, err := testutil.NewTCPClient([]byte(keylookupMsg))
 		if err != nil {
 			t.Fatal(err)
@@ -442,7 +442,7 @@ func TestKeyLookupInEpoch(t *testing.T) {
 		defer teardown()
 
 		for i := 0; i < 3; i++ {
-			server.dir.Update()
+			server.dir.Update(nil)
 		}
 		_, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
@@ -509,7 +509,7 @@ func TestMonitoring(t *testing.T) {
 		latestSTR, _, _ := getSTRFromResponse(t, regResponse.STR)
 
 		for i := 0; i < N; i++ {
-			server.dir.Update()
+			server.dir.Update(nil)
 		}
 
 		var consistencyCheckMsg = `

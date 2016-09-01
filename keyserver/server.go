@@ -59,6 +59,7 @@ type ConiksServer struct {
 	reloadChan     chan os.Signal
 	epochTimer     *time.Timer
 	tlsConfig      *tls.Config
+	up             *protocol.UpdatePolicies
 }
 
 func LoadServerConfig(file string) (*ServerConfig, error) {
@@ -188,7 +189,8 @@ func (server *ConiksServer) EpochUpdate() {
 			return
 		case <-server.epochTimer.C:
 			server.Lock()
-			server.dir.Update()
+			server.dir.Update(server.up)
+			server.up = nil
 			server.epochTimer.Reset(time.Duration(server.dir.EpochDeadline()) * time.Second)
 			server.Unlock()
 		}
@@ -215,9 +217,10 @@ func (server *ConiksServer) updatePolicies() {
 				// simply abort the reloading policies process
 				return
 			}
-			server.Lock()
-			server.dir.SetPolicies(conf.Policies.EpochDeadline, conf.Policies.vrfKey)
-			server.Unlock()
+			server.up = &protocol.UpdatePolicies{
+				conf.Policies.EpochDeadline,
+				conf.Policies.vrfKey,
+			}
 			log.Println("Policies reloaded!")
 		}
 	}
