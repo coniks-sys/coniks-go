@@ -1,35 +1,66 @@
 /*
-Package bots implements a third-party account verification
-system for CONIKS-backed secure communication services.
+Package bots implements an account verification
+system for third-party CONIKS key directory servers.
 
-bots ensures that only legitimate users of third-party
-communication services (e.g. Twitter, IRC) are registered in the
-secure service's CONIKS key directory.
+bots ensures that only legitimate users of communication services 
+(e.g. Twitter, IRC) are registered in a third-party CONIKS key directory.
 
 Introduction
 
-Many secure communication services do not provide first-party
-user accounts and instead allow users to register and communicate
-using existing third-party accounts.
-CONIKS is a key management system which ensures that the public keys
-maintained for users in a key directory remain consistent over time and
-across different vantage points in the system. But CONIKS makes no
-guarantees about the persons who own the registered accounts.
+Many communication services today do not yet provide built-in solutions
+for users wishing to secure their commnications using end-to-end encryption.
+Security-conscious users, therefore, often use third-party secure 
+communication services on top of their existing communication services.
+As a result, these third-party communication services must also provide
+encryption key management for their users.
 
-bots bridges this gap by providing a proxy-based mechanism for CONIKS-backed
-secure communication services to verify that the third-party accounts
-and corresponding username-to-key mappings they manage with CONIKS are
-registered by the legitimate owners of those accounts.
+CONIKS is a key management and verification system which ensures that 
+the public keys maintained for users in CONIKS key directories remain 
+consistent over time and across different vantage points in the system. 
+But CONIKS only ensures the consistency of online identities, and makes 
+no guarantees about the persons who own the usernames registered in the
+key directories.
+
+For third-party services running a CONIKS key directory, bots bridges 
+this gap by providing a proxy-based mechanism to verify that the key
+directory entries belong to the legitimate owners of the corresponding
+first-party communication service accounts.
 At a high-level, a bots proxy server verifies that
 all username-to-key mappings to be registered in the CONIKS key directory
-correspond to a legitimate third-party account.
+correspond to a legitimate first-party account.
 
 System Model and Assumptions
 
-bots' security model includes four main principals, and is most concerned
-with an attacker attempting to impersonate a user of a third-party service
+bots' security model includes five main principals, and is most concerned
+with an attacker attempting to impersonate a user of a communication service
 (e.g. Twitter, IRC) by registering a name-to-key mapping for this user
-with a CONIKS server.
+with a third-party CONIKS server.
+
+Identity Providers: Most communication services require users to register
+new usernames to participate, thereby providing a service-specific online 
+identity for each user. To do so, these services manage namespaces, which
+are disjoint from other identity providers' namespaces; in other words,
+two different persons may each register the same name with two different
+services and use these services without conflict. 
+
+bots assumes that identity providers do not run CONIKS servers themselves, 
+but that third-party secure communication services providing security on 
+behalf of identity providers run a CONIKS key directory. This also means
+that the third-party service must handle registering first-party usernames
+with the CONIKS key server on behalf of the identity provider.
+
+Account proxies: The main component of bots are trusted proxy
+servers, each of which connect to a reserved account with a designated
+third-party service using an authorization protocol such as OAuth.
+This allows CONIKS clients and the proxies to communicate directly using a
+service's communication protocol.
+
+A proxy only accepts and relays CONIKS registration requests for accounts
+with its designated third-party service, and the requests must be sent by
+an authorized CONIKS client via the service's protocol to the proxy's
+reserved account. As a result, a proxy trusts that any requests sent
+by CONIKS clients to its account originated from uncompromised
+third-party accounts.
 
 Users: For CONIKS-backed secure communication services that do not
 provide first-party user accounts, users must authorize the service
@@ -46,19 +77,6 @@ third-party accounts as part of the communication client's authorization.
 Much like these communication services, bots assumes that obtaining a user's
 credentials needed for the authorization is a sufficiently large burden
 to deter most adversaries from attempting an impersonation attack.
-
-Account proxies: The main component of bots are trusted proxy
-servers, each of which connect to a reserved account with a designated
-third-party service using an authorization protocol such as OAuth.
-This allows CONIKS clients and the proxies to communicate directly using a
-service's communication protocol.
-
-A proxy only accepts and relays CONIKS registration requests for accounts
-with its designated third-party service, and the requests must be sent by
-an authorized CONIKS client via the service's protocol to the proxy's
-reserved account. As a result, a proxy trusts that any requests sent
-by CONIKS clients to its account originated from uncompromised
-third-party accounts.
 
 CONIKS servers: bots proxies relay verified CONIKS registration requests
 to a designated CONIKS server. The server and proxies may run as separate
@@ -118,7 +136,7 @@ account using OAuth, and it only accepts CONIKS registration
 requests received as Twitter direct messages sent from CONIKS clients
 that have been authorized by a legitimate Twitter account.
 
-Limitations
+Challenges and Limitations
 
 While bots provides strong security and privacy guarantees against
 modest attackers, our protocol is not robust against motivated,
