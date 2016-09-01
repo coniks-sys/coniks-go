@@ -15,10 +15,15 @@ type ConiksDirectory struct {
 	policies merkletree.Policies
 }
 
+type UpdatePolicies struct {
+	EpDeadline merkletree.TimeStamp
+	VrfKey     vrf.PrivateKey
+}
+
 func InitDirectory(epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey,
 	signKey sign.PrivateKey, dirSize uint64, useTBs bool) *ConiksDirectory {
 	d := new(ConiksDirectory)
-	d.SetPolicies(epDeadline, vrfKey)
+	d.setPolicies(epDeadline, vrfKey)
 	pad, err := merkletree.NewPAD(d.policies, signKey, dirSize)
 	if err != nil {
 		panic(err)
@@ -31,15 +36,18 @@ func InitDirectory(epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey,
 	return d
 }
 
-func (d *ConiksDirectory) Update() {
+func (d *ConiksDirectory) Update(up *UpdatePolicies) {
 	d.pad.Update(d.policies)
 	// clear issued temporary bindings
 	for key := range d.tbs {
 		delete(d.tbs, key)
 	}
+	if up != nil {
+		d.setPolicies(up.EpDeadline, up.VrfKey)
+	}
 }
 
-func (d *ConiksDirectory) SetPolicies(epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey) {
+func (d *ConiksDirectory) setPolicies(epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey) {
 	d.policies = merkletree.NewPolicies(epDeadline, vrfKey)
 }
 
