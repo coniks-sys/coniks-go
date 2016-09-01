@@ -121,12 +121,12 @@ that have been authorized by a legitimate Twitter account.
 Limitations
 
 While bots provides strong security and privacy guarantees against
-modest attackers, our protocol is not reboust against motivated,
+modest attackers, our protocol is not robust against motivated,
 resourceful attackers; these may be able to obtain the necessary
 credentials to authorize a malicious CONIKS client and impersonate a
 target user. Additionally, we avoid exposing the user's public key to
 the registration proxy, which favors user privacy, but this also limits
-the proxy's ability to verify explcitly the ownership of this public key
+the proxy's ability to verify explicitly the ownership of this public key
 via a digital signature of the message using the corresponding private key.
 
 Resources
