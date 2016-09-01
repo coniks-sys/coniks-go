@@ -10,7 +10,7 @@ import (
 	. "github.com/coniks-sys/coniks-go/protocol"
 )
 
-func MarshalResponse(response Response) ([]byte, error) {
+func MarshalResponse(response *Response) ([]byte, error) {
 	return json.Marshal(response)
 }
 

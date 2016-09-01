@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/json"
 	"encoding/pem"
 	"io"
 	"io/ioutil"
@@ -17,6 +18,8 @@ import (
 	"path"
 	"testing"
 	"time"
+
+	"github.com/coniks-sys/coniks-go/protocol"
 )
 
 const (
@@ -24,6 +27,29 @@ const (
 	PublicConnection = "127.0.0.1:3000"
 	LocalConnection  = "/tmp/conikstest.sock"
 )
+
+type ExpectingDirProofResponse struct {
+	Error             protocol.ErrorCode
+	DirectoryResponse struct {
+		Type int
+		AP   json.RawMessage
+		STR  json.RawMessage
+		TB   json.RawMessage
+	}
+}
+
+type ExpectingDirProofsResponse struct {
+	Error             protocol.ErrorCode
+	DirectoryResponse struct {
+		Type int
+		AP   []json.RawMessage
+		STR  []json.RawMessage
+	}
+}
+
+type ExpectingSTR struct {
+	Epoch uint64
+}
 
 func CreateTLSCert(dir string) error {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)

@@ -33,7 +33,7 @@ func TestRegisterWithTB(t *testing.T) {
 	res, err := d.Register(&RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
-	df := res.(*DirectoryProof)
+	df := res.DirectoryResponse.(*DirectoryProof)
 	if df.Type != RegistrationType {
 		t.Fatal("Expect response type", RegistrationType, "got", df.Type)
 	}
@@ -70,7 +70,7 @@ func TestRegisterExistedUserWithTB(t *testing.T) {
 	res, err := d.Register(&RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
-	df := res.(*DirectoryProof)
+	df := res.DirectoryResponse.(*DirectoryProof)
 	if err != ErrorNameExisted {
 		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 	}
@@ -88,7 +88,7 @@ func TestRegisterExistedUserWithTB(t *testing.T) {
 	res, err = d.Register(&RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
-	df = res.(*DirectoryProof)
+	df = res.DirectoryResponse.(*DirectoryProof)
 	if err != ErrorNameExisted {
 		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 	}
@@ -106,7 +106,7 @@ func TestRegisterWithoutTB(t *testing.T) {
 	res, err := d.Register(&RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
-	df := res.(*DirectoryProof)
+	df := res.DirectoryResponse.(*DirectoryProof)
 	if err != Success {
 		t.Fatal("Unable to register")
 	}
@@ -133,7 +133,7 @@ func TestRegisterExistedUserWithoutTB(t *testing.T) {
 	res, err := d.Register(&RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
-	df := res.(*DirectoryProof)
+	df := res.DirectoryResponse.(*DirectoryProof)
 	if err != ErrorNameExisted {
 		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 	}
@@ -150,16 +150,16 @@ func TestKeyLookupWithTB(t *testing.T) {
 	res, _ := d.Register(&RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
-	tb := res.(*DirectoryProof).TB
+	tb := res.DirectoryResponse.(*DirectoryProof).TB
 	// lookup in the same epoch
 	// expect a proof of absence and the TB of looking up user
 	res, _ = d.KeyLookup(&KeyLookupRequest{Username: "alice"})
-	df := res.(*DirectoryProof)
+	df := res.DirectoryResponse.(*DirectoryProof)
 	if df.Type != KeyLookupType {
 		t.Fatal("Expect response type", KeyLookupType, "got", df.Type)
 	}
-	if df.Error != Success {
-		t.Fatal("Expect no error", "got", df.Error)
+	if res.Error != Success {
+		t.Fatal("Expect no error", "got", res.Error)
 	}
 	if ap := df.AP; ap == nil || bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
 		t.Fatal("Expect a proof of absence")
@@ -178,7 +178,7 @@ func TestKeyLookupWithTB(t *testing.T) {
 	// lookup in epoch after registering epoch
 	// expect a proof of inclusion
 	res, _ = d.KeyLookup(&KeyLookupRequest{Username: "alice"})
-	df = res.(*DirectoryProof)
+	df = res.DirectoryResponse.(*DirectoryProof)
 	if ap := df.AP; ap == nil || !bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
 		t.Fatal("Expect a proof of inclusion")
 	}
@@ -197,9 +197,9 @@ func TestKeyLookupWithoutTB(t *testing.T) {
 	// expect a proof of absence
 	// and error ErrorNameNotFound
 	res, err := d.KeyLookup(&KeyLookupRequest{Username: "alice"})
-	df := res.(*DirectoryProof)
+	df := res.DirectoryResponse.(*DirectoryProof)
 	if err != ErrorNameNotFound ||
-		df.Error != ErrorNameNotFound {
+		res.Error != ErrorNameNotFound {
 		t.Fatal("Expect error code", ErrorNameNotFound, "got", err)
 	}
 	if ap := df.AP; ap == nil || bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
@@ -213,7 +213,7 @@ func TestKeyLookupWithoutTB(t *testing.T) {
 	// lookup in epoch after registering epoch
 	// expect a proof of inclusion
 	res, err = d.KeyLookup(&KeyLookupRequest{Username: "alice"})
-	df = res.(*DirectoryProof)
+	df = res.DirectoryResponse.(*DirectoryProof)
 	if ap := df.AP; ap == nil || !bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
 		t.Fatal("Expect a proof of inclusion")
 	}
@@ -238,7 +238,7 @@ func TestDirectoryMonitoring(t *testing.T) {
 
 	// missed from epoch 2
 	res, err := d.Monitor(&MonitoringRequest{"alice", uint64(2), d.LatestSTR().Epoch})
-	df := res.(*DirectoryProofs)
+	df := res.DirectoryResponse.(*DirectoryProofs)
 	if df.Type != MonitoringType {
 		t.Fatal("Expect response type", MonitoringType, "got", df.Type)
 	}
@@ -262,7 +262,7 @@ func TestDirectoryMonitoring(t *testing.T) {
 
 	// assert the number of STRs returned is correct
 	res, err = d.Monitor(&MonitoringRequest{"alice", uint64(2), d.LatestSTR().Epoch + 5})
-	df = res.(*DirectoryProofs)
+	df = res.DirectoryResponse.(*DirectoryProofs)
 	if df.Type != MonitoringType {
 		t.Fatal("Expect response type", MonitoringType, "got", df.Type)
 	}
@@ -284,7 +284,7 @@ func TestDirectoryKeyLookupInEpoch(t *testing.T) {
 
 	// lookup at epoch 1, expect a proof of absence & ErrorNameNotFound
 	res, err := d.KeyLookupInEpoch(&KeyLookupInEpochRequest{"alice", uint64(1)})
-	df := res.(*DirectoryProofs)
+	df := res.DirectoryResponse.(*DirectoryProofs)
 	if df.Type != KeyLookupInEpochType {
 		t.Fatal("Expect response type", KeyLookupInEpochType, "got", df.Type)
 	}
@@ -306,7 +306,7 @@ func TestDirectoryKeyLookupInEpoch(t *testing.T) {
 	}
 
 	res, err = d.KeyLookupInEpoch(&KeyLookupInEpochRequest{"alice", uint64(5)})
-	df = res.(*DirectoryProofs)
+	df = res.DirectoryResponse.(*DirectoryProofs)
 	if df.Type != KeyLookupInEpochType {
 		t.Fatal("Expect response type", KeyLookupInEpochType, "got", df.Type)
 	}

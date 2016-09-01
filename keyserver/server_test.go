@@ -108,18 +108,13 @@ func TestBotSendsRegistration(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		type ExpectingResponse struct {
-			Type    int
-			Error   ErrorCode
-			Content json.RawMessage
-		}
-		var response ExpectingResponse
+		var response testutil.ExpectingDirProofResponse
 		err = json.Unmarshal(rev, &response)
 		if err != nil {
 			t.Log(string(rev))
 			t.Fatal(err)
 		}
-		if response.Type != RegistrationType {
+		if response.DirectoryResponse.Type != RegistrationType {
 			t.Fatal("Expect a registration response")
 		}
 		if response.Error != Success {
@@ -137,7 +132,7 @@ func TestSendsRegistrationFromOutside(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var response ErrorResponse
+		var response Response
 		err = json.Unmarshal(rev, &response)
 		if err != nil {
 			t.Fatal(err)
@@ -197,12 +192,12 @@ func TestRegisterDuplicateUserInOneEpoch(t *testing.T) {
 			t.Fatal("Error while submitting registration request")
 		}
 		rev, err := server.dir.HandleOps(r1)
-		response, ok := rev.(*DirectoryProof)
+		response, ok := rev.DirectoryResponse.(*DirectoryProof)
 		if !ok {
 			t.Fatal("Expect a directory proof response")
 		}
 		if err != ErrorNameExisted ||
-			response.Error != ErrorNameExisted {
+			rev.Error != ErrorNameExisted {
 			t.Fatal("Expect error code", ErrorNameExisted)
 		}
 		if response.STR == nil || response.AP == nil || response.TB == nil {
@@ -226,12 +221,12 @@ func TestRegisterDuplicateUserInDifferentEpoches(t *testing.T) {
 		timer := time.NewTimer(2 * time.Second)
 		<-timer.C
 		rev, err := server.dir.HandleOps(r0)
-		response, ok := rev.(*DirectoryProof)
+		response, ok := rev.DirectoryResponse.(*DirectoryProof)
 		if !ok {
 			t.Fatal("Expect a directory proof response")
 		}
 		if err != ErrorNameExisted ||
-			response.Error != ErrorNameExisted {
+			rev.Error != ErrorNameExisted {
 			t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 		}
 		if response.STR == nil || response.AP == nil || response.TB != nil {
@@ -254,7 +249,7 @@ func TestBotSendsLookup(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		var response ErrorResponse
+		var response Response
 		err = json.Unmarshal(rev, &response)
 		if err != nil {
 			t.Fatal(err)
@@ -280,43 +275,33 @@ func TestRegisterAndLookupInTheSameEpoch(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		type expectingResponse struct {
-			Type  int
-			Error ErrorCode
-			AP    json.RawMessage
-			STR   json.RawMessage
-			TB    json.RawMessage
-		}
-		var response expectingResponse
+		var response testutil.ExpectingDirProofResponse
 		err = json.Unmarshal(rev, &response)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if response.Type != KeyLookupType {
-			t.Fatal("Expect a key lookup response", "got", response.Type)
+		if response.DirectoryResponse.Type != KeyLookupType {
+			t.Fatal("Expect a key lookup response", "got", response.DirectoryResponse.Type)
 		}
 		if response.Error != Success {
 			t.Fatal("Expect no error", "got", response.Error)
 		}
-		if response.STR == nil {
+		if response.DirectoryResponse.STR == nil {
 			t.Fatal("Expect the latets STR")
 		}
-		type expectingSTR struct {
-			Epoch uint64
-			json.RawMessage
-		}
-		var str expectingSTR
-		err = json.Unmarshal(response.STR, &str)
+
+		var str testutil.ExpectingSTR
+		err = json.Unmarshal(response.DirectoryResponse.STR, &str)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if str.Epoch != 0 {
 			t.Fatal("Expect STR with epoch", 0)
 		}
-		if response.AP == nil {
+		if response.DirectoryResponse.AP == nil {
 			t.Fatal("Expect a proof of absence")
 		}
-		if response.TB == nil {
+		if response.DirectoryResponse.TB == nil {
 			t.Fatal("Expect a TB")
 		}
 	})
@@ -338,42 +323,33 @@ func TestRegisterAndLookup(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		type expectingResponse struct {
-			Type  int
-			Error ErrorCode
-			AP    json.RawMessage
-			STR   json.RawMessage
-			TB    json.RawMessage
-		}
-		var response expectingResponse
-		err = json.Unmarshal(rev, &response)
+		var res testutil.ExpectingDirProofResponse
+		err = json.Unmarshal(rev, &res)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if response.Type != KeyLookupType {
-			t.Fatal("Expect a key lookup response", "got", response.Type)
+		if res.DirectoryResponse.Type != KeyLookupType {
+			t.Fatal("Expect a key lookup response", "got", res.DirectoryResponse.Type)
 		}
-		if response.Error != Success {
-			t.Fatal("Expect no error", "got", response.Error)
+		if res.Error != Success {
+			t.Fatal("Expect no error", "got", res.Error)
 		}
-		if response.STR == nil {
+		if res.DirectoryResponse.STR == nil {
 			t.Fatal("Expect the latets STR")
 		}
-		type expectingSTR struct {
-			Epoch uint64
-		}
-		var str expectingSTR
-		err = json.Unmarshal(response.STR, &str)
+
+		var str testutil.ExpectingSTR
+		err = json.Unmarshal(res.DirectoryResponse.STR, &str)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if str.Epoch == 0 {
 			t.Fatal("Expect STR with epoch > 0")
 		}
-		if response.AP == nil {
+		if res.DirectoryResponse.AP == nil {
 			t.Fatal("Expect a proof of inclusion")
 		}
-		if response.TB != nil {
+		if res.DirectoryResponse.TB != nil {
 			t.Fatal("Expect returned TB is nil")
 		}
 	})
@@ -395,42 +371,33 @@ func TestKeyLookup(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		type expectingResponse struct {
-			Type  int
-			Error ErrorCode
-			AP    json.RawMessage
-			STR   json.RawMessage
-			TB    json.RawMessage
-		}
-		var response expectingResponse
+		var response testutil.ExpectingDirProofResponse
 		err = json.Unmarshal(rev, &response)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if response.Type != KeyLookupType {
-			t.Fatal("Expect a key lookup response", "got", response.Type)
+		if response.DirectoryResponse.Type != KeyLookupType {
+			t.Fatal("Expect a key lookup response", "got", response.DirectoryResponse.Type)
 		}
 		if response.Error != Success {
 			t.Fatal("Expect no error", "got", response.Error)
 		}
-		if response.STR == nil {
+		if response.DirectoryResponse.STR == nil {
 			t.Fatal("Expect the latets STR")
 		}
-		type expectingSTR struct {
-			Epoch uint64
-		}
-		var str expectingSTR
-		err = json.Unmarshal(response.STR, &str)
+
+		var str testutil.ExpectingSTR
+		err = json.Unmarshal(response.DirectoryResponse.STR, &str)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if str.Epoch == 0 {
 			t.Fatal("Expect STR with epoch > 0")
 		}
-		if response.AP == nil {
+		if response.DirectoryResponse.AP == nil {
 			t.Fatal("Expect a proof of inclusion")
 		}
-		if response.TB != nil {
+		if response.DirectoryResponse.TB != nil {
 			t.Fatal("Expect returned TB is nil")
 		}
 	})
@@ -464,24 +431,18 @@ func TestKeyLookupInEpoch(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		type expectingResponse struct {
-			Type  int
-			Error ErrorCode
-			AP    json.RawMessage
-			STR   []json.RawMessage
-		}
-		var response expectingResponse
+		var response testutil.ExpectingDirProofsResponse
 		err = json.Unmarshal(rev, &response)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if response.Type != KeyLookupInEpochType {
-			t.Fatal("Expect a key lookup in epoch response", "got", response.Type)
+		if response.DirectoryResponse.Type != KeyLookupInEpochType {
+			t.Fatal("Expect a key lookup in epoch response", "got", response.DirectoryResponse.Type)
 		}
 		if response.Error != ErrorNameNotFound {
 			t.Fatal("Expect error", ErrorNameNotFound, "got", response.Error)
 		}
-		if len(response.STR) != 3 {
+		if len(response.DirectoryResponse.STR) != 3 {
 			t.Fatal("Expect", 3, "STRs in reponse")
 		}
 	})
@@ -498,15 +459,11 @@ func TestMonitoring(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		// get the STR from the response
-		type registrationResponse struct {
-			STR json.RawMessage
-		}
-		var regResponse registrationResponse
+		var regResponse testutil.ExpectingDirProofResponse
 		if err := json.Unmarshal(res, &regResponse); err != nil {
 			t.Fatal(err)
 		}
-		latestSTR, _, _ := getSTRFromResponse(t, regResponse.STR)
+		latestSTR, _, _ := getSTRFromResponse(t, regResponse.DirectoryResponse.STR)
 
 		for i := 0; i < N; i++ {
 			server.dir.Update()
@@ -527,28 +484,23 @@ func TestMonitoring(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		type expectingResponse struct {
-			Type  int
-			Error ErrorCode
-			AP    []json.RawMessage
-			STR   []json.RawMessage
-		}
-		var response expectingResponse
+		var response testutil.ExpectingDirProofsResponse
 		err = json.Unmarshal(rev, &response)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if response.Type != MonitoringType {
-			t.Fatal("Expect a consistency check response", "got", response.Type)
+		if response.DirectoryResponse.Type != MonitoringType {
+			t.Fatal("Expect a consistency check response", "got", response.DirectoryResponse.Type)
 		}
 		if response.Error != Success {
 			t.Fatal("Expect error", Success, "got", response.Error)
 		}
-		if len(response.STR) != N || len(response.AP) != len(response.STR) {
-			t.Fatal("Expect", N, "STRs/APs in reponse", "got", len(response.STR))
+		if len(response.DirectoryResponse.STR) != N ||
+			len(response.DirectoryResponse.AP) != len(response.DirectoryResponse.STR) {
+			t.Fatal("Expect", N, "STRs/APs in reponse", "got", len(response.DirectoryResponse.STR))
 		}
 
-		for _, i := range response.STR {
+		for _, i := range response.DirectoryResponse.STR {
 			sig, prevHash, ep := getSTRFromResponse(t, i)
 			if !merkletree.VerifyHashChain(prevHash, latestSTR) {
 				t.Fatal("Cannot verify hash chain at", ep)

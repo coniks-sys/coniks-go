@@ -53,7 +53,7 @@ func (d *ConiksDirectory) LatestSTR() *merkletree.SignedTreeRoot {
 
 // HandleOps validates the request message and then pass it to
 // appropriate operation handler according to the request type.
-func (d *ConiksDirectory) HandleOps(req *Request) (Response, ErrorCode) {
+func (d *ConiksDirectory) HandleOps(req *Request) (*Response, ErrorCode) {
 	switch req.Type {
 	case RegistrationType:
 		if msg, ok := req.Request.(*RegistrationRequest); ok {
@@ -85,7 +85,7 @@ func (d *ConiksDirectory) HandleOps(req *Request) (Response, ErrorCode) {
 }
 
 func (d *ConiksDirectory) Register(req *RegistrationRequest) (
-	Response, ErrorCode) {
+	*Response, ErrorCode) {
 	// check whether the name already exists
 	// in the directory before we register
 	ap, err := d.pad.Lookup(req.Username)
@@ -118,7 +118,7 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 }
 
 func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
-	Response, ErrorCode) {
+	*Response, ErrorCode) {
 	ap, err := d.pad.Lookup(req.Username)
 	if err != nil {
 		return NewErrorResponse(ErrorDirectory), ErrorDirectory
@@ -137,7 +137,7 @@ func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 }
 
 func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
-	Response, ErrorCode) {
+	*Response, ErrorCode) {
 	var strs []*merkletree.SignedTreeRoot
 	startEp := req.Epoch
 	endEp := d.LatestSTR().Epoch
@@ -158,7 +158,7 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 }
 
 func (d *ConiksDirectory) Monitor(req *MonitoringRequest) (
-	Response, ErrorCode) {
+	*Response, ErrorCode) {
 	var strs []*merkletree.SignedTreeRoot
 	var aps []*merkletree.AuthenticationPath
 	startEp := req.StartEpoch

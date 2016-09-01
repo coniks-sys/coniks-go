@@ -52,48 +52,77 @@ type MonitoringRequest struct {
 }
 
 // Response messages
-type Response interface{}
-
-type ErrorResponse struct {
-	Error ErrorCode
+type Response struct {
+	Error             ErrorCode
+	DirectoryResponse `json:",omitempty"`
 }
 
-func NewErrorResponse(e ErrorCode) Response {
-	return &ErrorResponse{Error: e}
-}
+type DirectoryResponse interface{}
 
 type DirectoryProof struct {
-	Type  int
-	AP    *m.AuthenticationPath
-	STR   *m.SignedTreeRoot
-	TB    *m.TemporaryBinding `json:",omitempty"`
-	Error ErrorCode
+	Type int
+	AP   *m.AuthenticationPath
+	STR  *m.SignedTreeRoot
+	TB   *m.TemporaryBinding `json:",omitempty"`
 }
 
 type DirectoryProofs struct {
-	Type  int
-	AP    []*m.AuthenticationPath
-	STR   []*m.SignedTreeRoot
-	Error ErrorCode
+	Type int
+	AP   []*m.AuthenticationPath
+	STR  []*m.SignedTreeRoot
+}
+
+func NewErrorResponse(e ErrorCode) *Response {
+	return &Response{Error: e}
 }
 
 func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
-	tb *m.TemporaryBinding, e ErrorCode) (*DirectoryProof, ErrorCode) {
-	return &DirectoryProof{RegistrationType, ap, str, tb, e}, e
+	tb *m.TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
+	return &Response{
+		Error: e,
+		DirectoryResponse: &DirectoryProof{
+			Type: RegistrationType,
+			AP:   ap,
+			STR:  str,
+			TB:   tb,
+		},
+	}, e
 }
 
 func NewKeyLookupProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
-	tb *m.TemporaryBinding, e ErrorCode) (*DirectoryProof, ErrorCode) {
-	return &DirectoryProof{KeyLookupType, ap, str, tb, e}, e
+	tb *m.TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
+	return &Response{
+		Error: e,
+		DirectoryResponse: &DirectoryProof{
+			Type: KeyLookupType,
+			AP:   ap,
+			STR:  str,
+			TB:   tb,
+		},
+	}, e
 }
 
 func NewKeyLookupInEpochProof(ap *m.AuthenticationPath,
-	str []*m.SignedTreeRoot, e ErrorCode) (*DirectoryProofs, ErrorCode) {
+	str []*m.SignedTreeRoot, e ErrorCode) (*Response, ErrorCode) {
 	aps := append([]*m.AuthenticationPath{}, ap)
-	return &DirectoryProofs{KeyLookupInEpochType, aps, str, e}, e
+	return &Response{
+		Error: e,
+		DirectoryResponse: &DirectoryProofs{
+			Type: KeyLookupInEpochType,
+			AP:   aps,
+			STR:  str,
+		},
+	}, e
 }
 
 func NewMonitoringProof(ap []*m.AuthenticationPath,
-	str []*m.SignedTreeRoot, e ErrorCode) (*DirectoryProofs, ErrorCode) {
-	return &DirectoryProofs{MonitoringType, ap, str, e}, e
+	str []*m.SignedTreeRoot, e ErrorCode) (*Response, ErrorCode) {
+	return &Response{
+		Error: e,
+		DirectoryResponse: &DirectoryProofs{
+			Type: MonitoringType,
+			AP:   ap,
+			STR:  str,
+		},
+	}, e
 }
