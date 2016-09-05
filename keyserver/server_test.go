@@ -114,9 +114,6 @@ func TestBotSendsRegistration(t *testing.T) {
 			t.Log(string(rev))
 			t.Fatal(err)
 		}
-		if response.DirectoryResponse.Type != RegistrationType {
-			t.Fatal("Expect a registration response")
-		}
 		if response.Error != Success {
 			t.Fatal("Expect a successful registration", "got", response.Error)
 		}
@@ -280,9 +277,6 @@ func TestRegisterAndLookupInTheSameEpoch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if response.DirectoryResponse.Type != KeyLookupType {
-			t.Fatal("Expect a key lookup response", "got", response.DirectoryResponse.Type)
-		}
 		if response.Error != Success {
 			t.Fatal("Expect no error", "got", response.Error)
 		}
@@ -328,9 +322,6 @@ func TestRegisterAndLookup(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if res.DirectoryResponse.Type != KeyLookupType {
-			t.Fatal("Expect a key lookup response", "got", res.DirectoryResponse.Type)
-		}
 		if res.Error != Success {
 			t.Fatal("Expect no error", "got", res.Error)
 		}
@@ -375,9 +366,6 @@ func TestKeyLookup(t *testing.T) {
 		err = json.Unmarshal(rev, &response)
 		if err != nil {
 			t.Fatal(err)
-		}
-		if response.DirectoryResponse.Type != KeyLookupType {
-			t.Fatal("Expect a key lookup response", "got", response.DirectoryResponse.Type)
 		}
 		if response.Error != Success {
 			t.Fatal("Expect no error", "got", response.Error)
@@ -436,9 +424,6 @@ func TestKeyLookupInEpoch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if response.DirectoryResponse.Type != KeyLookupInEpochType {
-			t.Fatal("Expect a key lookup in epoch response", "got", response.DirectoryResponse.Type)
-		}
 		if response.Error != ErrorNameNotFound {
 			t.Fatal("Expect error", ErrorNameNotFound, "got", response.Error)
 		}
@@ -488,9 +473,6 @@ func TestMonitoring(t *testing.T) {
 		err = json.Unmarshal(rev, &response)
 		if err != nil {
 			t.Fatal(err)
-		}
-		if response.DirectoryResponse.Type != MonitoringType {
-			t.Fatal("Expect a consistency check response", "got", response.DirectoryResponse.Type)
 		}
 		if response.Error != Success {
 			t.Fatal("Expect error", Success, "got", response.Error)

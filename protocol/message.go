@@ -60,16 +60,14 @@ type Response struct {
 type DirectoryResponse interface{}
 
 type DirectoryProof struct {
-	Type int
-	AP   *m.AuthenticationPath
-	STR  *m.SignedTreeRoot
-	TB   *m.TemporaryBinding `json:",omitempty"`
+	AP  *m.AuthenticationPath
+	STR *m.SignedTreeRoot
+	TB  *m.TemporaryBinding `json:",omitempty"`
 }
 
 type DirectoryProofs struct {
-	Type int
-	AP   []*m.AuthenticationPath
-	STR  []*m.SignedTreeRoot
+	AP  []*m.AuthenticationPath
+	STR []*m.SignedTreeRoot
 }
 
 func NewErrorResponse(e ErrorCode) *Response {
@@ -81,10 +79,9 @@ func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProof{
-			Type: RegistrationType,
-			AP:   ap,
-			STR:  str,
-			TB:   tb,
+			AP:  ap,
+			STR: str,
+			TB:  tb,
 		},
 	}, e
 }
@@ -94,10 +91,9 @@ func NewKeyLookupProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProof{
-			Type: KeyLookupType,
-			AP:   ap,
-			STR:  str,
-			TB:   tb,
+			AP:  ap,
+			STR: str,
+			TB:  tb,
 		},
 	}, e
 }
@@ -108,9 +104,8 @@ func NewKeyLookupInEpochProof(ap *m.AuthenticationPath,
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProofs{
-			Type: KeyLookupInEpochType,
-			AP:   aps,
-			STR:  str,
+			AP:  aps,
+			STR: str,
 		},
 	}, e
 }
@@ -120,9 +115,8 @@ func NewMonitoringProof(ap []*m.AuthenticationPath,
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProofs{
-			Type: MonitoringType,
-			AP:   ap,
-			STR:  str,
+			AP:  ap,
+			STR: str,
 		},
 	}, e
 }

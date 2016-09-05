@@ -31,19 +31,17 @@ const (
 type ExpectingDirProofResponse struct {
 	Error             protocol.ErrorCode
 	DirectoryResponse struct {
-		Type int
-		AP   json.RawMessage
-		STR  json.RawMessage
-		TB   json.RawMessage
+		AP  json.RawMessage
+		STR json.RawMessage
+		TB  json.RawMessage
 	}
 }
 
 type ExpectingDirProofsResponse struct {
 	Error             protocol.ErrorCode
 	DirectoryResponse struct {
-		Type int
-		AP   []json.RawMessage
-		STR  []json.RawMessage
+		AP  []json.RawMessage
+		STR []json.RawMessage
 	}
 }
 
