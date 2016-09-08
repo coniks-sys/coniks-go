@@ -8,7 +8,6 @@ go:
 before_install:
   - go get github.com/mattn/goveralls
   - go get golang.org/x/tools/cmd/cover
-  - go get github.com/modocache/gover
 
 env:
   global:
@@ -16,21 +15,7 @@ env:
 
 script:
   - test -z "$(go fmt ./...)"
-  - go test -coverprofile=cgo.coverprofile ./client/cgo
-  - go test -coverprofile=crypto.coverprofile ./crypto
-  - go test -coverprofile=ed25519.coverprofile ./crypto/ed25519/edwards25519
-  - go test -coverprofile=extra25519.coverprofile ./crypto/ed25519/extra25519
-  - go test -coverprofile=sign.coverprofile ./crypto/sign
-  - go test -coverprofile=vrf.coverprofile ./crypto/vrf
-  - go test -coverprofile=merkletree.coverprofile ./merkletree
-  - go test -coverprofile=utils.coverprofile ./utils
-  - go test -coverprofile=protocol.coverprofile ./protocol
-  - go test -coverprofile=keyserver.coverprofile ./keyserver
-  - go test -coverprofile=bots.coverprofile ./bots
-
-after_success:
-  - gover
-  - goveralls -coverprofile=gover.coverprofile -service travis-ci
+  - ./coveralls.sh
 
 notifications:
   email: false
