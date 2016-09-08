@@ -44,7 +44,7 @@ func (d *ConiksDirectory) SetPolicies(epDeadline merkletree.TimeStamp, vrfKey vr
 }
 
 func (d *ConiksDirectory) EpochDeadline() merkletree.TimeStamp {
-	return d.policies.EpDeadline()
+	return d.pad.LatestSTR().Policies.EpDeadline()
 }
 
 func (d *ConiksDirectory) LatestSTR() *merkletree.SignedTreeRoot {
