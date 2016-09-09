@@ -19,6 +19,3 @@ do
         rm $dir/profile.tmp
     fi
 done
-
-# Submit the test coverage result to coveralls.io,
-goveralls -coverprofile=profile.cov -service=travis-ci -repotoken $COVERALLS_TOKEN
