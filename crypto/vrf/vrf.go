@@ -20,6 +20,7 @@ package vrf
 import (
 	"bytes"
 	"crypto/rand"
+	"errors"
 	"io"
 
 	"golang.org/x/crypto/sha3"
@@ -35,6 +36,10 @@ const (
 	Size             = 32
 	intermediateSize = 32
 	ProofSize        = 32 + 32 + intermediateSize
+)
+
+var (
+	ErrorGetPubKey = errors.New("[vrf] Couldn't get correspoding public-key from private-key")
 )
 
 type PrivateKey []byte

@@ -27,7 +27,7 @@ var _ Policies = (*ConiksPolicies)(nil)
 func NewPolicies(epDeadline TimeStamp, vrfPrivKey vrf.PrivateKey) Policies {
 	vrfPublicKey, ok := vrfPrivKey.Public()
 	if !ok {
-		panic("Couldn't get correspoding public-key from private-key")
+		panic(vrf.ErrorGetPubKey)
 	}
 	return &ConiksPolicies{
 		LibVersion:    Version,
@@ -43,7 +43,7 @@ func NewPolicies(epDeadline TimeStamp, vrfPrivKey vrf.PrivateKey) Policies {
 func (p *ConiksPolicies) Serialize() []byte {
 	vrfPublicKey, ok := p.vrfPrivateKey.Public()
 	if !ok {
-		panic("Couldn't get correspoding public-key from private-key")
+		panic(vrf.ErrorGetPubKey)
 	}
 	var bs []byte
 	bs = append(bs, []byte(p.LibVersion)...)                       // lib Version

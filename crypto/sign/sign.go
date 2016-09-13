@@ -2,6 +2,7 @@ package sign
 
 import (
 	"crypto/rand"
+	"errors"
 	"io"
 
 	"golang.org/x/crypto/ed25519"
@@ -11,6 +12,10 @@ const (
 	PrivateKeySize = 64
 	PublicKeySize  = 32
 	SignatureSize  = 64
+)
+
+var (
+	ErrorGetPubKey = errors.New("[sign] Couldn't get correspoding public-key from private-key")
 )
 
 type PrivateKey ed25519.PrivateKey
