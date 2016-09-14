@@ -26,7 +26,7 @@ type PAD struct {
 
 // NewPAD creates new PAD consisting of an array of hash chain
 // indexed by the epoch and its maximum length is len
-func NewPAD(policies Policies, signKey sign.PrivateKey, len uint64) (*PAD, error) {
+func NewPAD(policies *Policies, signKey sign.PrivateKey, len uint64) (*PAD, error) {
 	if policies == nil {
 		panic(ErrorNilPolicies)
 	}
@@ -37,15 +37,14 @@ func NewPAD(policies Policies, signKey sign.PrivateKey, len uint64) (*PAD, error
 	if err != nil {
 		return nil, err
 	}
-	pad.policies = policies
+	pad.policies = *policies
 	pad.snapshots = make(map[uint64]*SignedTreeRoot, len)
 	pad.loadedEpochs = make([]uint64, 0, len)
 	pad.updateInternal(nil, 0)
 	return pad, nil
 }
 
-// if policies is nil, the previous policies will be used
-func (pad *PAD) signTreeRoot(m *MerkleTree, epoch uint64) {
+func (pad *PAD) signTreeRoot(epoch uint64) {
 	var prevHash []byte
 	if pad.latestSTR == nil {
 		var err error
@@ -57,30 +56,29 @@ func (pad *PAD) signTreeRoot(m *MerkleTree, epoch uint64) {
 	} else {
 		prevHash = crypto.Digest(pad.latestSTR.Signature)
 	}
+	pad.tree.recomputeHash()
+	m := pad.tree.Clone()
 	pad.latestSTR = NewSTR(pad.signKey, pad.policies, m, epoch, prevHash)
 }
 
-func (pad *PAD) updateInternal(policies Policies, epoch uint64) {
-	pad.tree.recomputeHash()
-	m := pad.tree.Clone()
+func (pad *PAD) updateInternal(policies *Policies, epoch uint64) {
 	// create STR with the policies that were actually used in the prev.
 	// Set() operation
-	pad.signTreeRoot(m, epoch)
+	pad.signTreeRoot(epoch)
 	pad.snapshots[epoch] = pad.latestSTR
 	pad.loadedEpochs = append(pad.loadedEpochs, epoch)
-
 	if policies != nil { // update the policies if necessary
 		vrfKeyChanged := 1 != subtle.ConstantTimeCompare(
-			pad.policies.vrfPrivate(),
-			policies.vrfPrivate())
-		pad.policies = policies
+			pad.policies.vrfPrivateKey,
+			policies.vrfPrivateKey)
+		pad.policies = *policies
 		if vrfKeyChanged {
 			pad.reshuffle()
 		}
 	}
 }
 
-func (pad *PAD) Update(policies Policies) {
+func (pad *PAD) Update(policies *Policies) {
 	// delete older str(s) as needed
 	if len(pad.loadedEpochs) == cap(pad.loadedEpochs) {
 		n := cap(pad.loadedEpochs) / 2
@@ -89,12 +87,11 @@ func (pad *PAD) Update(policies Policies) {
 		}
 		pad.loadedEpochs = append(pad.loadedEpochs[:0], pad.loadedEpochs[n:]...)
 	}
-
 	pad.updateInternal(policies, pad.latestSTR.Epoch+1)
 }
 
 func (pad *PAD) Set(name string, value []byte) error {
-	index, _ := pad.computePrivateIndex(name, pad.policies.vrfPrivate())
+	index, _ := pad.computePrivateIndex(name, pad.policies.vrfPrivateKey)
 	return pad.tree.Set(index, name, value)
 }
 
@@ -107,7 +104,7 @@ func (pad *PAD) LookupInEpoch(name string, epoch uint64) (*AuthenticationPath, e
 	if str == nil {
 		return nil, ErrorSTRNotFound
 	}
-	lookupIndex, proof := pad.computePrivateIndex(name, str.Policies.vrfPrivate())
+	lookupIndex, proof := pad.computePrivateIndex(name, str.Policies.vrfPrivateKey)
 	ap := str.tree.Get(lookupIndex)
 	ap.VrfProof = proof
 	return ap, nil
@@ -125,7 +122,7 @@ func (pad *PAD) LatestSTR() *SignedTreeRoot {
 }
 
 func (pad *PAD) TB(name string, value []byte) (*TemporaryBinding, error) {
-	index, _ := pad.computePrivateIndex(name, pad.policies.vrfPrivate())
+	index, _ := pad.computePrivateIndex(name, pad.policies.vrfPrivateKey)
 	tb := NewTB(pad.signKey, pad.latestSTR.Signature, index, value)
 	err := pad.tree.Set(index, name, value)
 	return tb, err
@@ -142,7 +139,7 @@ func (pad *PAD) reshuffle() {
 		panic(err)
 	}
 	pad.tree.visitLeafNodes(func(n *userLeafNode) {
-		newIndex, _ := pad.computePrivateIndex(n.key, pad.policies.vrfPrivate())
+		newIndex, _ := pad.computePrivateIndex(n.key, pad.policies.vrfPrivateKey)
 		if err := newTree.Set(newIndex, n.key, n.value); err != nil {
 			panic(err)
 		}

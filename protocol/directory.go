@@ -12,7 +12,7 @@ type ConiksDirectory struct {
 	pad      *merkletree.PAD
 	useTBs   bool
 	tbs      map[string]*merkletree.TemporaryBinding
-	policies merkletree.Policies
+	policies *merkletree.Policies
 }
 
 func InitDirectory(epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey,
@@ -44,7 +44,7 @@ func (d *ConiksDirectory) SetPolicies(epDeadline merkletree.TimeStamp, vrfKey vr
 }
 
 func (d *ConiksDirectory) EpochDeadline() merkletree.TimeStamp {
-	return d.pad.LatestSTR().Policies.EpDeadline()
+	return d.pad.LatestSTR().Policies.EpochDeadline
 }
 
 func (d *ConiksDirectory) LatestSTR() *merkletree.SignedTreeRoot {

@@ -316,3 +316,34 @@ func TestHandleOps(t *testing.T) {
 		t.Fatal("Expect error", ErrorMalformedClientMessage, "got", err)
 	}
 }
+
+func TestPoliciesChanges(t *testing.T) {
+	d := newDirectory(t, false)
+	if p := d.LatestSTR().Policies.EpochDeadline; p != 1 {
+		t.Fatal("Unexpected policies", "want", 1, "got", p)
+	}
+
+	// change the policies
+	vrfKey, err := vrf.GenerateKey(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.SetPolicies(2, vrfKey)
+	d.Update()
+	// expect the policies doesn't change yet
+	if p := d.LatestSTR().Policies.EpochDeadline; p != 1 {
+		t.Fatal("Unexpected policies", "want", 1, "got", p)
+	}
+
+	d.Update()
+	// expect the new policies
+	if p := d.LatestSTR().Policies.EpochDeadline; p != 2 {
+		t.Fatal("Unexpected policies", "want", 2, "got", p)
+	}
+	p0 := d.pad.GetSTR(0).Policies.EpochDeadline
+	p1 := d.pad.GetSTR(1).Policies.EpochDeadline
+	p2 := d.pad.GetSTR(2).Policies.EpochDeadline
+	if p0 != 1 || p1 != 1 || p2 != 2 {
+		t.Fatal("Maybe the STR's policies were malformed")
+	}
+}
