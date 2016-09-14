@@ -18,19 +18,10 @@ func NewTB(key sign.PrivateKey, strSig, index, value []byte) *TemporaryBinding {
 	return tb
 }
 
-func innerTBSerialize(strSig, index, value []byte) []byte {
+func (tb *TemporaryBinding) Serialize(strSig []byte) []byte {
 	var tbBytes []byte
 	tbBytes = append(tbBytes, strSig...)
-	tbBytes = append(tbBytes, index...)
-	tbBytes = append(tbBytes, value...)
+	tbBytes = append(tbBytes, tb.Index...)
+	tbBytes = append(tbBytes, tb.Value...)
 	return tbBytes
-}
-
-func (tb *TemporaryBinding) Serialize(strSig []byte) []byte {
-	return innerTBSerialize(strSig, tb.Index, tb.Value)
-}
-
-func VerifyTB(pk sign.PublicKey, strSig, index, value, tbSig []byte) bool {
-	tbBytes := innerTBSerialize(strSig, index, value)
-	return pk.Verify(tbBytes, tbSig)
 }

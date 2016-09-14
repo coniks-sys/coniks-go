@@ -1,10 +1,6 @@
 package merkletree
 
-import (
-	"testing"
-
-	"github.com/coniks-sys/coniks-go/utils"
-)
+import "testing"
 
 func TestVerifyHashChain(t *testing.T) {
 	var N uint64 = 100
@@ -34,9 +30,7 @@ func TestVerifyHashChain(t *testing.T) {
 
 		// verify STR signature
 		str := pad.LatestSTR()
-		epoch := util.ULongToBytes(str.Epoch)
-		prevEpoch := util.ULongToBytes(str.PreviousEpoch)
-		if !VerifySTR(pk, epoch, prevEpoch, str.TreeHash, str.PreviousSTRHash, str.Policies.Serialize(), str.Signature) {
+		if !pk.Verify(str.Serialize(), str.Signature) {
 			t.Fatal("Invalid STR signature at epoch", i)
 		}
 

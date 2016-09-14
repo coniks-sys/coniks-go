@@ -42,33 +42,18 @@ func NewSTR(key sign.PrivateKey, policies Policies, m *MerkleTree, epoch uint64,
 	return str
 }
 
-func innerSTRSerialize(epochB, prevEpochB, root, prevStrHash, policiesB []byte) []byte {
-	var strBytes []byte
-	strBytes = append(strBytes, epochB...) // t - epoch number
-	if prevEpochB != nil {
-		strBytes = append(strBytes, prevEpochB...) // t_prev - previous epoch number
-	}
-	strBytes = append(strBytes, root...)        // root
-	strBytes = append(strBytes, prevStrHash...) // previous STR hash
-	strBytes = append(strBytes, policiesB...)   // P
-	return strBytes
-}
-
 // Serialize encodes the STR to a byte array with the following format:
 // [epoch, previous epoch, tree hash, previous STR hash, policies serialization]
 func (str *SignedTreeRoot) Serialize() []byte {
-	var prevEpochBytes []byte
+	var strBytes []byte
+	strBytes = append(strBytes, util.ULongToBytes(str.Epoch)...) // t - epoch number
 	if str.Epoch > 0 {
-		prevEpochBytes = util.ULongToBytes(str.PreviousEpoch)
-	} else {
-		prevEpochBytes = nil
+		strBytes = append(strBytes, util.ULongToBytes(str.PreviousEpoch)...) // t_prev - previous epoch number
 	}
-	return innerSTRSerialize(util.ULongToBytes(str.Epoch), prevEpochBytes, str.tree.hash, str.PreviousSTRHash, str.Policies.Serialize())
-}
-
-func VerifySTR(pk sign.PublicKey, epochB, prevEpochB, root, prevStrHash, policiesB, strSig []byte) bool {
-	strBytes := innerSTRSerialize(epochB, prevEpochB, root, prevStrHash, policiesB)
-	return pk.Verify(strBytes, strSig)
+	strBytes = append(strBytes, str.TreeHash...)             // root
+	strBytes = append(strBytes, str.PreviousSTRHash...)      // previous STR hash
+	strBytes = append(strBytes, str.Policies.Serialize()...) // P
+	return strBytes
 }
 
 func VerifyHashChain(prevHash, savedSTRSig []byte) bool {
