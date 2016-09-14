@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"io"
-	"log"
 	"net"
 	"time"
 
@@ -35,7 +34,7 @@ func (server *ConiksServer) handleRequests(ln net.Listener, tlsConfig *tls.Confi
 			if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
 				continue
 			}
-			log.Printf("accept client: %s", err)
+			server.logger.Error(err.Error())
 			continue
 		}
 		if _, ok := ln.(*net.TCPListener); ok {
@@ -55,7 +54,8 @@ func (server *ConiksServer) acceptClient(conn net.Conn, handler func(msg []byte)
 
 	var buf bytes.Buffer
 	if _, err := io.CopyN(&buf, conn, 8192); err != nil && err != io.EOF {
-		log.Printf("client read %v: %v", conn.RemoteAddr(), err)
+		server.logger.Error(err.Error(),
+			"address", conn.RemoteAddr().String())
 		return
 	}
 
@@ -63,13 +63,15 @@ func (server *ConiksServer) acceptClient(conn net.Conn, handler func(msg []byte)
 	// TODO: The `err` returned here is purely for logging purposes.  It
 	// would be better for `handler` not to return any error, and instead
 	// log if the error code in the `res` is not `ReqSuccess`.
-	if err != nil {
-		log.Printf("client handle %v: %v", conn.RemoteAddr(), err)
+	if err != ReqSuccess {
+		server.logger.Warn(err.Error(),
+			"address", conn.RemoteAddr().String())
 	}
 
 	_, err = conn.Write([]byte(res))
 	if err != nil {
-		log.Printf("client write %v: %v", conn.RemoteAddr(), err)
+		server.logger.Error(err.Error(),
+			"address", conn.RemoteAddr().String())
 		return
 	}
 }
@@ -120,7 +122,8 @@ func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(msg [
 			return malformedClientMsg(err)
 		}
 		if !acceptableTypes[req.Type] {
-			log.Printf("unacceptable message type: %q", req.Type)
+			server.logger.Error("Unacceptable message type",
+				"request type", req.Type)
 			return malformedClientMsg(ErrMalformedClientMessage)
 		}
 
