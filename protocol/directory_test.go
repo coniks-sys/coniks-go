@@ -4,31 +4,14 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/merkletree"
 )
 
-func newDirectory(t *testing.T, useTBs bool) *ConiksDirectory {
-	vrfKey, err := vrf.GenerateKey(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	signKey, err := sign.GenerateKey(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey,
-	// signKey sign.PrivateKey, dirSize uint64, useTBs bool
-	d := NewDirectory(1, vrfKey, signKey, 10, useTBs)
-	return d
-}
-
 func TestRegisterWithTB(t *testing.T) {
 	// expect return a proof of absence
 	// along with a TB of registering user
-	d := newDirectory(t, true)
+	d, _ := NewTestDirectory(t, true)
 
 	res, err := d.Register(&RegistrationRequest{
 		Username: "alice",
@@ -53,7 +36,7 @@ func TestRegisterWithTB(t *testing.T) {
 }
 
 func TestRegisterExistedUserWithTB(t *testing.T) {
-	d := newDirectory(t, true)
+	d, _ := NewTestDirectory(t, true)
 	_, err := d.Register(&RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
@@ -99,7 +82,7 @@ func TestRegisterExistedUserWithTB(t *testing.T) {
 
 func TestRegisterWithoutTB(t *testing.T) {
 	// expect return a proof of absence
-	d := newDirectory(t, false)
+	d, _ := NewTestDirectory(t, false)
 	res, err := d.Register(&RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
@@ -116,7 +99,7 @@ func TestRegisterWithoutTB(t *testing.T) {
 }
 
 func TestRegisterExistedUserWithoutTB(t *testing.T) {
-	d := newDirectory(t, false)
+	d, _ := NewTestDirectory(t, false)
 	_, err := d.Register(&RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
@@ -143,7 +126,7 @@ func TestRegisterExistedUserWithoutTB(t *testing.T) {
 }
 
 func TestKeyLookupWithTB(t *testing.T) {
-	d := newDirectory(t, true)
+	d, _ := NewTestDirectory(t, true)
 	res, _ := d.Register(&RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
@@ -182,7 +165,7 @@ func TestKeyLookupWithTB(t *testing.T) {
 }
 
 func TestKeyLookupWithoutTB(t *testing.T) {
-	d := newDirectory(t, false)
+	d, _ := NewTestDirectory(t, false)
 	_, err := d.Register(&RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
@@ -219,7 +202,7 @@ func TestKeyLookupWithoutTB(t *testing.T) {
 func TestDirectoryMonitoring(t *testing.T) {
 	N := 10
 
-	d := newDirectory(t, false)
+	d, _ := NewTestDirectory(t, false)
 	_, err := d.Register(&RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
@@ -265,7 +248,7 @@ func TestDirectoryMonitoring(t *testing.T) {
 func TestDirectoryKeyLookupInEpoch(t *testing.T) {
 	N := 3
 
-	d := newDirectory(t, false)
+	d, _ := NewTestDirectory(t, false)
 	for i := 0; i < N; i++ {
 		d.Update()
 	}
@@ -304,7 +287,7 @@ func TestDirectoryKeyLookupInEpoch(t *testing.T) {
 }
 
 func TestHandleOps(t *testing.T) {
-	d := newDirectory(t, false)
+	d, _ := NewTestDirectory(t, false)
 	// Send an invalid KeyLookupInEpochRequest
 	// Expect ErrorMalformedClientMessage
 	req := &Request{
@@ -318,7 +301,7 @@ func TestHandleOps(t *testing.T) {
 }
 
 func TestPoliciesChanges(t *testing.T) {
-	d := newDirectory(t, false)
+	d, _ := NewTestDirectory(t, false)
 	if p := d.LatestSTR().Policies.EpochDeadline; p != 1 {
 		t.Fatal("Unexpected policies", "want", 1, "got", p)
 	}
