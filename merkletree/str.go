@@ -56,7 +56,7 @@ func (str *SignedTreeRoot) Serialize() []byte {
 	return strBytes
 }
 
-func VerifyHashChain(prevHash, savedSTRSig []byte) bool {
+func (str *SignedTreeRoot) VerifyHashChain(savedSTRSig []byte) bool {
 	hash := crypto.Digest(savedSTRSig)
-	return bytes.Equal(hash, prevHash)
+	return bytes.Equal(hash, str.PreviousSTRHash)
 }

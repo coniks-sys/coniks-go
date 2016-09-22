@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
-	"github.com/coniks-sys/coniks-go/merkletree"
 )
 
 func TestRegisterWithTB(t *testing.T) {
@@ -226,7 +225,7 @@ func TestDirectoryMonitoring(t *testing.T) {
 
 	for i := 0; i < expectNumberOfSTR; i++ {
 		str := df.STR[i]
-		if !merkletree.VerifyHashChain(str.PreviousSTRHash, savedSTR) {
+		if !str.VerifyHashChain(savedSTR) {
 			t.Fatal("Hash chain does not verify at epoch", i)
 		}
 		// we can ignore the auth path verification

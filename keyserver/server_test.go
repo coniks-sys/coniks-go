@@ -2,7 +2,6 @@ package keyserver
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"path"
 	"syscall"
@@ -155,7 +154,7 @@ func TestUpdateDirectory(t *testing.T) {
 		timer := time.NewTimer(1 * time.Second)
 		<-timer.C
 		str1 := server.dir.LatestSTR()
-		if str0.Epoch != 0 || str1.Epoch != 1 || !merkletree.VerifyHashChain(str1.PreviousSTRHash, str0.Signature) {
+		if str0.Epoch != 0 || str1.Epoch != 1 || !str1.VerifyHashChain(str0.Signature) {
 			t.Fatal("Expect next STR in hash chain")
 		}
 	})
@@ -448,7 +447,6 @@ func TestMonitoring(t *testing.T) {
 		if err := json.Unmarshal(res, &regResponse); err != nil {
 			t.Fatal(err)
 		}
-		latestSTR, _, _ := getSTRFromResponse(t, regResponse.DirectoryResponse.STR)
 
 		for i := 0; i < N; i++ {
 			server.dir.Update()
@@ -481,34 +479,5 @@ func TestMonitoring(t *testing.T) {
 			len(response.DirectoryResponse.AP) != len(response.DirectoryResponse.STR) {
 			t.Fatal("Expect", N, "STRs/APs in reponse", "got", len(response.DirectoryResponse.STR))
 		}
-
-		for _, i := range response.DirectoryResponse.STR {
-			sig, prevHash, ep := getSTRFromResponse(t, i)
-			if !merkletree.VerifyHashChain(prevHash, latestSTR) {
-				t.Fatal("Cannot verify hash chain at", ep)
-			}
-			latestSTR = sig
-		}
 	})
-}
-
-func getSTRFromResponse(t *testing.T, msg []byte) ([]byte, []byte, uint64) {
-	type STR struct {
-		Epoch           uint64
-		PreviousSTRHash string
-		Signature       string
-	}
-	var str STR
-	if err := json.Unmarshal(msg, &str); err != nil {
-		t.Fatal(err)
-	}
-	sig, err := base64.StdEncoding.DecodeString(str.Signature)
-	if err != nil {
-		t.Fatal(err)
-	}
-	prevHash, err := base64.StdEncoding.DecodeString(str.PreviousSTRHash)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return sig, prevHash, str.Epoch
 }

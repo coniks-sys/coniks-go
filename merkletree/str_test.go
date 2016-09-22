@@ -35,7 +35,7 @@ func TestVerifyHashChain(t *testing.T) {
 		}
 
 		// verify hash chain
-		if !VerifyHashChain(str.PreviousSTRHash, savedSTR) {
+		if !str.VerifyHashChain(savedSTR) {
 			t.Fatal("Spurious STR at epoch", i)
 		}
 		savedSTR = str.Signature
