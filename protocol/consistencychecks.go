@@ -165,12 +165,11 @@ func (cc *ConsistencyChecks) verifyRegistration(msg *Response,
 	df := msg.DirectoryResponse.(*DirectoryProof)
 	ap := df.AP
 	str := df.STR
-	tb := df.TB
 
 	proofType := ap.ProofType()
 	switch {
-	case msg.Error == ErrorNameExisted && proofType == m.ProofOfInclusion && tb == nil:
-	case msg.Error == ErrorNameExisted && proofType == m.ProofOfAbsence:
+	case msg.Error == ErrorNameExisted && proofType == m.ProofOfInclusion:
+	case msg.Error == ErrorNameExisted && proofType == m.ProofOfAbsence && cc.useTBs:
 	case msg.Error == Success && proofType == m.ProofOfAbsence:
 	default:
 		return ErrorMalformedDirectoryMessage
@@ -188,14 +187,13 @@ func (cc *ConsistencyChecks) verifyKeyLookup(msg *Response,
 	df := msg.DirectoryResponse.(*DirectoryProof)
 	ap := df.AP
 	str := df.STR
-	tb := df.TB
 
 	proofType := ap.ProofType()
 	switch {
 	case msg.Error == ErrorNameNotFound && proofType == m.ProofOfAbsence:
 	// FIXME: This would be changed when we support key changes
-	case msg.Error == Success && proofType == m.ProofOfInclusion && tb == nil:
-	case msg.Error == Success && proofType == m.ProofOfAbsence:
+	case msg.Error == Success && proofType == m.ProofOfInclusion:
+	case msg.Error == Success && proofType == m.ProofOfAbsence && cc.useTBs:
 	default:
 		return ErrorMalformedDirectoryMessage
 	}
