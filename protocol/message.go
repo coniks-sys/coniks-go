@@ -1,6 +1,8 @@
 package protocol
 
 import (
+	"bytes"
+
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	m "github.com/coniks-sys/coniks-go/merkletree"
 )
@@ -133,6 +135,32 @@ func NewMonitoringProof(ap []*m.AuthenticationPath,
 
 func (df *DirectoryProof) Verify(uname string, key []byte,
 	curEp uint64, savedSTR []byte, signKey sign.PublicKey) ErrorCode {
+	ap := df.AP
+	str := df.STR
+	tb := df.TB
+
+	if e := verifySTR(signKey, str, curEp, savedSTR); e != Passed {
+		return e
+	}
+
+	// verify TB's Signature
+	if tb != nil {
+		if !signKey.Verify(tb.Serialize(str.Signature), tb.Signature) {
+			return ErrorBadSignature
+		}
+	}
+
+	if e := verifyAuthPath(uname, key, ap, str); e != Passed {
+		return e
+	}
+
+	// verify TB's VRF index
+	if tb != nil {
+		if !bytes.Equal(tb.Index, ap.LookupIndex) {
+			return ErrorBadIndex
+		}
+	}
+
 	return Passed
 }
 
