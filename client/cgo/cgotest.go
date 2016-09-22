@@ -98,7 +98,7 @@ func testVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 	v = C.testVerify(protocol.KeyLookupType,
-		byteSliceToCcharPtr([]byte(uname)), C.int(len(uname)),
+		byteSliceToCcharPtr([]byte("bob")), C.int(len("bob")),
 		byteSliceToCucharPtr([]byte(key)), C.int(len(key)),
 		0,
 		byteSliceToCucharPtr(savedSTR), C.int(len(savedSTR)),

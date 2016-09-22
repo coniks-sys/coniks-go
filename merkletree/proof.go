@@ -59,6 +59,10 @@ func (ap *AuthenticationPath) authPathHash() []byte {
 	return hash
 }
 
+func (ap *AuthenticationPath) VerifyBinding(key []byte) bool {
+	return bytes.Equal(ap.Leaf.Value, key)
+}
+
 // Verify should be called after the vrf index is verified successfully
 func (ap *AuthenticationPath) Verify(treeHash []byte) bool {
 	// step 1. Verify if it's a proof of inclusion/proof of absence
