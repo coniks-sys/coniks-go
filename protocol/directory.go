@@ -15,7 +15,7 @@ type ConiksDirectory struct {
 	policies *merkletree.Policies
 }
 
-func InitDirectory(epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey,
+func NewDirectory(epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey,
 	signKey sign.PrivateKey, dirSize uint64, useTBs bool) *ConiksDirectory {
 	d := new(ConiksDirectory)
 	d.SetPolicies(epDeadline, vrfKey)

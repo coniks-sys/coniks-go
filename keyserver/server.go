@@ -104,7 +104,7 @@ func NewConiksServer(conf *ServerConfig) *ConiksServer {
 
 	// create server instance
 	server := new(ConiksServer)
-	server.dir = protocol.InitDirectory(
+	server.dir = protocol.NewDirectory(
 		conf.Policies.EpochDeadline,
 		conf.Policies.vrfKey,
 		conf.Policies.signKey,

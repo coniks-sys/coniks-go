@@ -21,7 +21,7 @@ func newDirectory(t *testing.T, useTBs bool) *ConiksDirectory {
 
 	// epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey,
 	// signKey sign.PrivateKey, dirSize uint64, useTBs bool
-	d := InitDirectory(1, vrfKey, signKey, 10, useTBs)
+	d := NewDirectory(1, vrfKey, signKey, 10, useTBs)
 	return d
 }
 
