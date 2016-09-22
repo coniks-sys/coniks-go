@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"github.com/coniks-sys/coniks-go/crypto/sign"
 	m "github.com/coniks-sys/coniks-go/merkletree"
 )
 
@@ -57,7 +58,11 @@ type Response struct {
 	DirectoryResponse `json:",omitempty"`
 }
 
-type DirectoryResponse interface{}
+// DirectoryResponse messages
+type DirectoryResponse interface {
+	// TODO: refactor the function signature after resolving #47
+	Verify(string, []byte, uint64, []byte, sign.PublicKey) ErrorCode
+}
 
 type DirectoryProof struct {
 	AP  *m.AuthenticationPath
@@ -73,6 +78,9 @@ type DirectoryProofs struct {
 func NewErrorResponse(e ErrorCode) *Response {
 	return &Response{Error: e}
 }
+
+var _ DirectoryResponse = (*DirectoryProof)(nil)
+var _ DirectoryResponse = (*DirectoryProofs)(nil)
 
 func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 	tb *m.TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
@@ -119,4 +127,16 @@ func NewMonitoringProof(ap []*m.AuthenticationPath,
 			STR: str,
 		},
 	}, e
+}
+
+// Verify implementations
+
+func (df *DirectoryProof) Verify(uname string, key []byte,
+	curEp uint64, savedSTR []byte, signKey sign.PublicKey) ErrorCode {
+	return Passed
+}
+
+func (df *DirectoryProofs) Verify(uname string, key []byte,
+	curEp uint64, savedSTR []byte, signKey sign.PublicKey) ErrorCode {
+	return Passed
 }

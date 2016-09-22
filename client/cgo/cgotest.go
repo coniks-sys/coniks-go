@@ -1,67 +1,30 @@
 package main
 
 /*
-int testVerifyVrf(unsigned char *pk, int pkSize,
-    unsigned char *m, int mSize,
-    unsigned char *index, int indexSize,
-    unsigned char *proof, int proofSize) {
-    return cgoVerifyVrf(pk, pkSize, m, mSize, index, indexSize, proof, proofSize);
-}
-
-int testVerifySignature(
-    unsigned char *pk, int pkSize,
-    unsigned char *m, int mSize,
-    unsigned char *sig, int sigSize) {
-    return cgoVerifySignature(pk, pkSize, m, mSize, sig, sigSize);
-}
-
-int testVerifyHashChain(
-	unsigned char *prevHash, int hashSize,
-    unsigned char *strSig, int sigSize) {
-    return cgoVerifyHashChain(prevHash, hashSize, strSig, sigSize);
-}
-
-int testVerifyAuthPath(
-    unsigned char *treeHash, int treeHashSize,
-    unsigned char *treeNonce, int treeNonceSize,
-    unsigned char *lookupIndex, int lookupIndexSize,
-    unsigned char **prunedTree, int prunedTreeSize, int hashSize,
-    int leafLevel,
-    unsigned char *leafIndex, int leafIndexSize,
-    unsigned char *leafCommitment, int leafCommitmentSize,
-    int isLeafEmpty) {
-    return cgoVerifyAuthPath(treeHash, treeHashSize,
-        treeNonce, treeNonceSize,
-        lookupIndex, lookupIndexSize,
-        prunedTree, prunedTreeSize, hashSize,
-        leafLevel,
-        leafIndex, leafIndexSize,
-        leafCommitment, leafCommitmentSize,
-        isLeafEmpty);
-}
-
-int testVerifyCommitment(
-	unsigned char *salt, int saltSize,
-	char *key, int keySize,
-	unsigned char *value, int valueSize,
-	unsigned char *commitment, int commitmentSize)  {
-	return cgoVerifyCommitment(salt, saltSize,
+int testVerify(int type,
+	char *uname, int unameSize,
+	unsigned char *key, int keySize,
+	unsigned long long currentEpoch,
+	unsigned char *savedSTR, int strSize,
+	unsigned char *pk, int pkSize,
+	char *response, int responseSize) {
+	return cgoVerify(type,
+		uname, unameSize,
 		key, keySize,
-		value, valueSize,
-		commitment, commitmentSize);
+		currentEpoch,
+		savedSTR, strSize,
+		pk, pkSize, response, responseSize);
 }
 
 #cgo CFLAGS: -Wno-implicit-function-declaration
 */
 import "C"
 import (
-	"bytes"
+	"encoding/json"
 	"testing"
 	"unsafe"
 
-	"github.com/coniks-sys/coniks-go/crypto/sign"
-	"github.com/coniks-sys/coniks-go/crypto/vrf"
-	"github.com/coniks-sys/coniks-go/merkletree"
+	"github.com/coniks-sys/coniks-go/protocol"
 )
 
 func byteSliceToCucharPtr(buf []byte) *C.uchar {
@@ -74,202 +37,58 @@ func byteSliceToCcharPtr(buf []byte) *C.char {
 	return (*C.char)(ptr)
 }
 
-func testVerifyVrf(t *testing.T) {
-	sk, err := vrf.GenerateKey(nil)
+func testVerify(t *testing.T) {
+	uname := "alice"
+	key := []byte("key")
+	d, pk := protocol.NewTestDirectory(t, true)
+	res, _ := d.Register(&protocol.RegistrationRequest{
+		Username: uname,
+		Key:      key})
+	response, err := json.Marshal(res)
 	if err != nil {
 		t.Fatal(err)
 	}
-	alice := []byte("alice")
-	aliceVRF, aliceProof := sk.Prove(alice)
-	pk, ok := sk.Public()
-	if !ok {
-		t.Fatal("Couldn't obtain public key!")
-	}
-	if v := C.testVerifyVrf(byteSliceToCucharPtr(pk), C.int(len(pk)),
-		byteSliceToCucharPtr(alice), C.int(len(alice)),
-		byteSliceToCucharPtr(aliceVRF), C.int(len(aliceVRF)),
-		byteSliceToCucharPtr(aliceProof), C.int(len(aliceProof))); v != 1 {
-		t.Error("cgoVrfVerify failed")
-	}
-}
+	savedSTR := d.LatestSTR().Signature
 
-func testVerifySignature(t *testing.T) {
-	key, err := sign.GenerateKey(nil)
+	if v := C.testVerify(protocol.RegistrationType,
+		byteSliceToCcharPtr([]byte(uname)), C.int(len(uname)),
+		byteSliceToCucharPtr([]byte(key)), C.int(len(key)),
+		0,
+		byteSliceToCucharPtr(savedSTR), C.int(len(savedSTR)),
+		byteSliceToCucharPtr(pk), C.int(len(pk)),
+		byteSliceToCcharPtr(response), C.int(len(response))); v != C.int(protocol.Passed) {
+		t.Error(protocol.ErrorCode(v).Error())
+	}
+	savedSTR = res.DirectoryResponse.(*protocol.DirectoryProof).STR.Signature
+
+	d.Update()
+	res, _ = d.KeyLookup(&protocol.KeyLookupRequest{uname})
+	response, err = json.Marshal(res)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	message := []byte("test message")
-	sig := key.Sign(message)
-
-	pk, ok := key.Public()
-	if !ok {
-		t.Errorf("bad PK?")
+	if v := C.testVerify(protocol.KeyLookupType,
+		byteSliceToCcharPtr([]byte(uname)), C.int(len(uname)),
+		byteSliceToCucharPtr([]byte(key)), C.int(len(key)),
+		0,
+		byteSliceToCucharPtr(savedSTR), C.int(len(savedSTR)),
+		byteSliceToCucharPtr(pk), C.int(len(pk)),
+		byteSliceToCcharPtr(response), C.int(len(response))); v != C.int(protocol.Passed) {
+		t.Error(protocol.ErrorCode(v).Error())
 	}
 
-	if v := C.testVerifySignature(byteSliceToCucharPtr(pk), C.int(len(pk)),
-		byteSliceToCucharPtr(message), C.int(len(message)),
-		byteSliceToCucharPtr(sig), C.int(len(sig))); v != 1 {
-		t.Error("cgoVerifySignature failed")
-	}
-}
-
-func testVerifyHashChain(t *testing.T) {
-	signKey, err := sign.GenerateKey(nil)
+	res, _ = d.KeyLookup(&protocol.KeyLookupRequest{"bob"})
+	response, err = json.Marshal(res)
 	if err != nil {
 		t.Fatal(err)
 	}
-	vrfPrivKey, err := vrf.GenerateKey(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pad, err := merkletree.NewPAD(merkletree.NewPolicies(2, vrfPrivKey), signKey, 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-	key1 := "key1"
-	val1 := []byte("value1")
-
-	if err := pad.Set(key1, val1); err != nil {
-		t.Fatal(err)
-	}
-	pad.Update(nil)
-	str0 := pad.GetSTR(0)
-	str1 := pad.GetSTR(1)
-
-	if v := C.testVerifyHashChain(byteSliceToCucharPtr(str1.PreviousSTRHash), C.int(len(str1.PreviousSTRHash)),
-		byteSliceToCucharPtr(str0.Signature), C.int(len(str0.Signature))); v != 1 {
-		t.Error("cgoVerifyHashChain failed")
-	}
-}
-
-func testVerifyAuthPath(t *testing.T) {
-	signKey, err := sign.GenerateKey(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	vrfPrivKey, err := vrf.GenerateKey(bytes.NewReader(
-		[]byte("deterministic tests need 256 bit")))
-	if err != nil {
-		t.Fatal(err)
-	}
-	pad, err := merkletree.NewPAD(merkletree.NewPolicies(2, vrfPrivKey), signKey, 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	key1 := "key1"
-	val1 := []byte("value1")
-	key2 := "key2"
-	val2 := []byte("value2")
-	key3 := "key3"
-	val3 := []byte("value3")
-
-	if err := pad.Set(key1, val1); err != nil {
-		t.Fatal(err)
-	}
-	if err := pad.Set(key2, val2); err != nil {
-		t.Fatal(err)
-	}
-	if err := pad.Set(key3, val3); err != nil {
-		t.Fatal(err)
-	}
-	pad.Update(nil)
-
-	// proof of inclusion
-	proof, err := pad.Lookup(key3)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	isLeafEmpty := 0
-	if proof.Leaf.IsEmpty {
-		isLeafEmpty = 1
-	}
-
-	// verify commitment
-	if v := C.testVerifyCommitment(byteSliceToCucharPtr(proof.Leaf.Commitment.Salt), C.int(len(proof.Leaf.Commitment.Salt)),
-		byteSliceToCcharPtr([]byte(key3)), C.int(len(key3)),
-		byteSliceToCucharPtr(proof.Leaf.Value), C.int(len(proof.Leaf.Value)),
-		byteSliceToCucharPtr(proof.Leaf.Commitment.Value), C.int(len(proof.Leaf.Commitment.Value))); v != 1 {
-		t.Fatal("Verify commitment failed")
-	}
-
-	if v := C.testVerifyAuthPath(byteSliceToCucharPtr(pad.LatestSTR().TreeHash), C.int(len(pad.LatestSTR().TreeHash)),
-		byteSliceToCucharPtr(proof.TreeNonce), C.int(len(proof.TreeNonce)),
-		byteSliceToCucharPtr(proof.LookupIndex), C.int(len(proof.LookupIndex)),
-		(**C.uchar)(unsafe.Pointer(&proof.PrunedTree[0][0])), C.int(len(proof.PrunedTree)), C.int(len(proof.PrunedTree[0])),
-		C.int(proof.Leaf.Level),
-		byteSliceToCucharPtr(proof.Leaf.Index), C.int(len(proof.Leaf.Index)),
-		byteSliceToCucharPtr(proof.Leaf.Commitment.Value), C.int(len(proof.Leaf.Commitment.Value)),
-		C.int(isLeafEmpty)); v != 1 {
-		t.Error("Verify proof of inclusion failed")
-	}
-
-	// proof of absence
-	proof, err = pad.Lookup("123")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	isLeafEmpty = 0
-	if proof.Leaf.IsEmpty {
-		isLeafEmpty = 1
-	}
-	if v := C.testVerifyAuthPath(byteSliceToCucharPtr(pad.LatestSTR().TreeHash), C.int(len(pad.LatestSTR().TreeHash)),
-		byteSliceToCucharPtr(proof.TreeNonce), C.int(len(proof.TreeNonce)),
-		byteSliceToCucharPtr(proof.LookupIndex), C.int(len(proof.LookupIndex)),
-		(**C.uchar)(unsafe.Pointer(&proof.PrunedTree[0][0])), C.int(len(proof.PrunedTree)), C.int(len(proof.PrunedTree[0])),
-		C.int(proof.Leaf.Level),
-		byteSliceToCucharPtr(proof.Leaf.Index), C.int(len(proof.Leaf.Index)),
-		nil, C.int(0),
-		C.int(isLeafEmpty)); v != 1 {
-		t.Error("Verify proof of absence failed")
-	}
-}
-
-func testVerifyProofOfAbsenceSamePrefix(t *testing.T) {
-	signKey, err := sign.GenerateKey(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	vrfPrivKey, err := vrf.GenerateKey(bytes.NewReader(
-		[]byte("deterministic tests need 256 bit")))
-	if err != nil {
-		t.Fatal(err)
-	}
-	pad, err := merkletree.NewPAD(merkletree.NewPolicies(2, vrfPrivKey), signKey, 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	key1 := "key1"
-	val1 := []byte("value1")
-
-	if err := pad.Set(key1, val1); err != nil {
-		t.Fatal(err)
-	}
-	pad.Update(nil)
-
-	// proof of inclusion
-	proof, err := pad.Lookup("a")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	isLeafEmpty := 0
-	if proof.Leaf.IsEmpty {
-		isLeafEmpty = 1
-	}
-
-	if v := C.testVerifyAuthPath(byteSliceToCucharPtr(pad.LatestSTR().TreeHash), C.int(len(pad.LatestSTR().TreeHash)),
-		byteSliceToCucharPtr(proof.TreeNonce), C.int(len(proof.TreeNonce)),
-		byteSliceToCucharPtr(proof.LookupIndex), C.int(len(proof.LookupIndex)),
-		(**C.uchar)(unsafe.Pointer(&proof.PrunedTree[0][0])), C.int(len(proof.PrunedTree)), C.int(len(proof.PrunedTree[0])),
-		C.int(proof.Leaf.Level),
-		byteSliceToCucharPtr(proof.Leaf.Index), C.int(len(proof.Leaf.Index)),
-		byteSliceToCucharPtr(proof.Leaf.Commitment.Value), C.int(len(proof.Leaf.Commitment.Value)),
-		C.int(isLeafEmpty)); v != 1 {
-		t.Error("Verify proof of absence failed")
+	if v := C.testVerify(protocol.KeyLookupType,
+		byteSliceToCcharPtr([]byte(uname)), C.int(len(uname)),
+		byteSliceToCucharPtr([]byte(key)), C.int(len(key)),
+		0,
+		byteSliceToCucharPtr(savedSTR), C.int(len(savedSTR)),
+		byteSliceToCucharPtr(pk), C.int(len(pk)),
+		byteSliceToCcharPtr(response), C.int(len(response))); v != C.int(protocol.ErrorNameNotFound) {
+		t.Error(protocol.ErrorCode(v).Error())
 	}
 }
