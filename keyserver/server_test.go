@@ -154,7 +154,7 @@ func TestUpdateDirectory(t *testing.T) {
 		timer := time.NewTimer(1 * time.Second)
 		<-timer.C
 		str1 := server.dir.LatestSTR()
-		if str0.Epoch != 0 || str1.Epoch != 1 || !str1.VerifyHashChain(str0.Signature) {
+		if str0.Epoch != 0 || str1.Epoch != 1 || !str1.VerifyHashChain(str0) {
 			t.Fatal("Expect next STR in hash chain")
 		}
 	})
