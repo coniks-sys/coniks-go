@@ -55,6 +55,9 @@ Example call:
 			// TODO Do some validation!?
 			fmt.Println("Successfully registerd name.")
 		case protocol.ErrorNameExisted:
+			// FIXME Shouldn't re-registering (or updating) an existing
+			// name with new key-material (after at least one epoch
+			// has passed) return Success instead of the above error?
 			fmt.Println("Name is already registered.")
 		case protocol.ErrorDirectory:
 			// TODO From a usability perspective: how would a real
@@ -72,6 +75,8 @@ func init() {
 
 	// TODO if this test-client should be able to handle real key-material,
 	// it should be possible to pass a file containing the key instead.
+	// TODO or this shouldn't be exposed to the user and we just generate
+	// some new key
 	registerCmd.Flags().StringP("key", "k", "", "Key-material you want to bind to the user name.")
 
 	// TODO use the same directory as the server by default:
