@@ -117,8 +117,8 @@ func createRegistrationMsg(name, key string) ([]byte, error) {
 	return json.Marshal(&p.Request{
 		Type: p.RegistrationType,
 		Request: &p.RegistrationRequest{
-			Username: name,        /*+ "@twitter"*/ // a real client would
-			Key:      []byte(key), // TODO myabe generate a new key here
+			Username: name,
+			Key:      []byte(key), // TODO maybe generate a new key here
 		},
 	})
 }
