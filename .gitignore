@@ -34,7 +34,9 @@ _testmain.go
 config.toml
 botconfig.toml
 sign.priv
+sign.pub
 vrf.priv
+vrf.pub
 server.key
 server.pem
 coniks.db/

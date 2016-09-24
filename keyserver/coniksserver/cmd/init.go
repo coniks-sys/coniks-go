@@ -77,34 +77,58 @@ func mkConfig(dir string) {
 }
 
 func mkSigningKey(dir string) {
-	file := path.Join(dir, "sign.priv")
-	if _, err := os.Stat(file); err == nil {
-		log.Printf("%s already exists\n", file)
-		return
-	}
 	sk, err := sign.GenerateKey(nil)
 	if err != nil {
 		log.Print(err)
 		return
 	}
+	// TODO the code below should be refactored to a single function
+	// (vrf and sign are almost identical here)
+	file := path.Join(dir, "sign.priv")
+	if _, err := os.Stat(file); err == nil {
+		log.Printf("%s already exists\n", file)
+		return
+	}
 	if err := ioutil.WriteFile(file, sk[:], 0600); err != nil {
+		log.Print(err)
+		return
+	}
+	// public-key needed for test client:
+	file = path.Join(dir, "sign.pub")
+	if _, err := os.Stat(file); err == nil {
+		log.Printf("%s already exists\n", file)
+		return
+	}
+	signKeyPub, _ := sk.Public()
+	if err := ioutil.WriteFile(file, signKeyPub, 0600); err != nil {
 		log.Print(err)
 		return
 	}
 }
 
 func mkVrfKey(dir string) {
-	file := path.Join(dir, "vrf.priv")
-	if _, err := os.Stat(file); err == nil {
-		log.Printf("%s already exists\n", file)
-		return
-	}
 	sk, err := vrf.GenerateKey(nil)
 	if err != nil {
 		log.Print(err)
 		return
 	}
+	file := path.Join(dir, "vrf.priv")
+	if _, err := os.Stat(file); err == nil {
+		log.Printf("%s already exists\n", file)
+		return
+	}
 	if err := ioutil.WriteFile(file, sk[:], 0600); err != nil {
+		log.Print(err)
+		return
+	}
+	// public-key needed for test client:
+	file = path.Join(dir, "vrf.pub")
+	if _, err := os.Stat(file); err == nil {
+		log.Printf("%s already exists\n", file)
+		return
+	}
+	vrfKeyPub, _ := sk.Public()
+	if err := ioutil.WriteFile(file, vrfKeyPub, 0600); err != nil {
 		log.Print(err)
 		return
 	}
