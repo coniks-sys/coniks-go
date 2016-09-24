@@ -161,6 +161,13 @@ func NewTCPClient(msg []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// TODO: This might be obsolete!
+func NewUnixClientDefault(msg []byte) ([]byte, error) {
+	scheme := "unix"
+	unixaddr := &net.UnixAddr{Name: LocalConnection, Net: scheme}
+	return NewUnixClient(msg, unixaddr)
+}
+
 func NewUnixClient(msg []byte) ([]byte, error) {
 	u, _ := url.Parse(LocalConnection)
 	unixaddr := &net.UnixAddr{Name: u.Path, Net: u.Scheme}
