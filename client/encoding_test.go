@@ -13,10 +13,10 @@ func TestUnmarshalErrorResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, e := UnmarshalResponse(protocol.RegistrationType, msg)
-	if res != nil || e != protocol.ErrMalformedClientMessage {
+	res := UnmarshalResponse(protocol.RegistrationType, msg)
+	if res.Error != protocol.ErrMalformedClientMessage {
 		t.Error("Expect error", protocol.ErrMalformedClientMessage,
-			"got", e)
+			"got", res.Error)
 	}
 }
 
@@ -26,9 +26,9 @@ func TestUnmarshalMalformedErrorResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res, e := UnmarshalResponse(protocol.RegistrationType, msg)
-	if res != nil || e != protocol.ErrMalformedDirectoryMessage {
+	res := UnmarshalResponse(protocol.RegistrationType, msg)
+	if res.Error != protocol.ErrMalformedDirectoryMessage {
 		t.Error("Expect error", protocol.ErrMalformedDirectoryMessage,
-			"got", e)
+			"got", res.Error)
 	}
 }

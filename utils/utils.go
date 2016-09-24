@@ -1,10 +1,9 @@
 package utils
 
 import (
-	"bytes"
 	"encoding/binary"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 )
@@ -44,17 +43,16 @@ func UInt32ToBytes(num uint32) []byte {
 }
 
 // WriteFile writes buf to a file whose path is indicated by filename.
-// The file permissions are set to 0644.
-func WriteFile(filename string, buf bytes.Buffer) {
+func WriteFile(filename string, buf []byte, perm os.FileMode) error {
 	if _, err := os.Stat(filename); err == nil {
-		log.Printf("%s already exists\n", filename)
-		return
+		return fmt.Errorf("Can't write file. File '%s' already exists\n",
+			filename)
 	}
 
-	if err := ioutil.WriteFile(filename, buf.Bytes(), 0644); err != nil {
-		log.Printf(err.Error())
-		return
+	if err := ioutil.WriteFile(filename, buf, perm); err != nil {
+		return err
 	}
+	return nil
 }
 
 // ResolvePath returns the absolute path of file.
