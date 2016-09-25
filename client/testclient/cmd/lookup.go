@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/coniks-sys/coniks-go/client"
@@ -18,12 +17,7 @@ var lookupCmd = &cobra.Command{
 	Short: "Lookup a name.",
 	Long:  `Lookup the key of some known contact.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		config := cmd.Flag("config").Value.String()
-		conf, err := client.LoadConfig(config)
-		if err != nil {
-			log.Fatal(err)
-		}
-
+		conf := loadConfigOrExit(cmd)
 		name := cmd.Flag("name").Value.String()
 		if len(name) == 0 {
 			cmd.Usage()
@@ -41,17 +35,18 @@ var lookupCmd = &cobra.Command{
 		}
 		response, errCode := client.UnmarshalResponse(p.KeyLookupType,
 			resp)
+		res, ok := response.(*p.DirectoryProof)
+		if !ok {
+			fmt.Println("Got unexpected response from server!")
+			os.Exit(-1)
+		}
 		switch errCode {
 		case p.Success:
-			res, ok := response.(*p.DirectoryProof)
-			if !ok {
-				fmt.Println("Got unexpected response from server!")
-				os.Exit(-1)
-			}
 			c := res.Verify(name, []byte(res.AP.Leaf.Value), 0, nil,
 				conf.SigningPubKey)
 			// verify auth. path:
-			if c != p.Passed || !res.AP.Verify(res.STR.TreeHash) {
+			if c != p.Passed || res.AP == nil ||
+				!res.AP.Verify(res.STR.TreeHash) {
 				fmt.Println("Response message didn't pass verification (invalid auth. path).")
 			}
 			if res.TB != nil {
@@ -59,17 +54,26 @@ var lookupCmd = &cobra.Command{
 				if !conf.SigningPubKey.Verify(tbb, res.TB.Signature) {
 					fmt.Println("Got invalid TB!")
 				}
-				fmt.Println("Sucess! Got temporary binding (check again after next epoch). Key is: " +
-					string(res.TB.Value) + " will be inserted at index:\n" + hex.Dump(res.TB.Index))
+				fmt.Println("Sucess! Got temporary binding (check again after next epoch). Key: [" +
+					string(res.TB.Value) +
+					"] will be inserted at index:\n" +
+					hex.Dump(res.TB.Index))
+			} else {
+				fmt.Println("Sucess! Key bound to name is: [" +
+					string(res.AP.Leaf.Value) + "]")
+				fmt.Println("Index:\n" + hex.Dump(res.AP.Leaf.Index))
 			}
-			fmt.Println("Sucess! Key for name is: " + string(res.AP.Leaf.Value))
-			fmt.Println("Index:\n" + hex.Dump(res.AP.Leaf.Index))
 
 		case p.ErrorMalformedClientMessage:
 			fmt.Println("Server reported malformed client message.")
 		case p.ErrorNameNotFound:
+			c := res.Verify(name, []byte(res.AP.Leaf.Value), 0, nil,
+				conf.SigningPubKey)
+			// verify auth. path:
+			if c != p.Passed || !res.AP.Verify(res.STR.TreeHash) {
+				fmt.Println("Response message didn't pass verification (invalid auth. path).")
+			}
 			fmt.Println("Name isn't registered.")
-			// TODO verify auth. path / proof of absence?!
 		default:
 			fmt.Println(errCode)
 			os.Exit(-1)
