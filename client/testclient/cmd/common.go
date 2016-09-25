@@ -1,0 +1,39 @@
+package cmd
+
+import (
+	"fmt"
+	"github.com/coniks-sys/coniks-go/client"
+	"github.com/spf13/cobra"
+	"os"
+)
+
+const configMissingUsage = `
+Couldn't load client's config-file.
+
+To create a valid config, first, run
+  coniksserver init
+if you haven't done this already. This will create a valid server configuration
+and also store the server's public keys (by default in sign.pub and vrf.pub).
+Then, create a toml file which references these public-keys.
+
+For example create a file config.toml with the following content:
+
+vrf_pubkey_path = "/path_to/vrf.pub"
+sign_pubkey_path = "/path_to_/sign.pub"
+
+The client looks for a file called 'config.toml' in its current working directory.
+If you prefer the config-file to be named or stored somewhere different you can
+specify where to look for the config with the -config flag. For example:
+ testclient [cmd] -config /etc/coniks/clientconfig.toml
+`
+
+func loadConfigOrExit(cmd *cobra.Command) *client.Config {
+	config := cmd.Flag("config").Value.String()
+	conf, err := client.LoadConfig(config)
+	if err != nil {
+		fmt.Println(err)
+		fmt.Print(configMissingUsage)
+		os.Exit(-1)
+	}
+	return conf
+}
