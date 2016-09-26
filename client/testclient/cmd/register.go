@@ -22,7 +22,7 @@ A real client would first register an app here: https://apps.twitter.com (the UI
 For more information consult: https://godoc.org/github.com/coniks-sys/coniks-go/bots
 
 Example call:
-  coniksclient register -name Alice@twitter -key fake_test_key`,
+  coniksclient register --name Alice@twitter --key fake_test_key`,
 	Run: func(cmd *cobra.Command, args []string) {
 		conf := loadConfigOrExit(cmd)
 		name := cmd.Flag("name").Value.String()
