@@ -23,8 +23,8 @@ sign_pubkey_path = "/path_to_/sign.pub"
 
 The client looks for a file called 'config.toml' in its current working directory.
 If you prefer the config-file to be named or stored somewhere different you can
-specify where to look for the config with the -config flag. For example:
- testclient [cmd] -config /etc/coniks/clientconfig.toml
+specify where to look for the config with the --config flag. For example:
+ testclient [cmd] --config /etc/coniks/clientconfig.toml
 `
 
 func loadConfigOrExit(cmd *cobra.Command) *client.Config {
