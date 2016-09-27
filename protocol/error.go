@@ -25,6 +25,7 @@ const (
 	ErrorBadSTR
 	ErrorBadCommitment
 	ErrorBadBinding
+	ErrorCouldNotVerify
 )
 
 // ErrorResponses contains error codes that
@@ -51,6 +52,7 @@ var (
 		ErrorBadSTR:                    errors.New("[coniks] The hash chain is inconsistent"),
 		ErrorBadCommitment:             errors.New("[coniks] Bad commitment"),
 		ErrorBadBinding:                errors.New("[coniks] Bad name-to-key binding"),
+		ErrorCouldNotVerify:            errors.New("[coniks] Could not verify"),
 	}
 )
 

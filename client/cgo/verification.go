@@ -14,20 +14,26 @@ import (
 func main() {}
 
 //export cgoVerify
+// This cgoVerify returns 2 error codes,
+// the first one is the error of the response,
+// the second one is the error of the verification.
+// If the response error is in ErrorResponses,
+// the verification error will be ErrorCouldNotVerify.
 func cgoVerify(cType C.int,
 	cUname *C.char, cUnameSize C.int,
 	cKey unsafe.Pointer, cKeySize C.int,
 	cCurrentEpoch C.ulonglong,
 	cSavedSTR unsafe.Pointer, cStrSize C.int,
 	cPk unsafe.Pointer, cPkSize C.int,
-	cResponse *C.char, cResponseSize C.int) C.int {
+	cResponse *C.char, cResponseSize C.int) (C.int, C.int) {
 
 	if int(cUnameSize) == 0 ||
 		int(cKeySize) == 0 ||
 		(int(cStrSize) != sign.SignatureSize && int(cStrSize) != 0) ||
 		int(cPkSize) != sign.PublicKeySize ||
 		int(cResponseSize) == 0 {
-		return C.int(protocol.ErrorMalformedDirectoryMessage)
+		return C.int(protocol.ErrorMalformedDirectoryMessage),
+			C.int(protocol.ErrorCouldNotVerify)
 	}
 
 	uname := C.GoStringN(cUname, cUnameSize)
@@ -38,10 +44,8 @@ func cgoVerify(cType C.int,
 	currentEp := uint64(cCurrentEpoch)
 
 	msg, err := client.UnmarshalResponse(int(cType), []byte(response))
-	if err != protocol.Success {
-		// TODO: We're going to want to verify some returned data,
-		// even when the response wasn't a success.
-		return C.int(err)
+	if protocol.ErrorResponses[err] {
+		return C.int(err), C.int(protocol.ErrorCouldNotVerify)
 	}
-	return C.int(msg.Verify(uname, key, currentEp, savedSTR, signKey))
+	return C.int(err), C.int(msg.Verify(uname, key, currentEp, savedSTR, signKey))
 }
