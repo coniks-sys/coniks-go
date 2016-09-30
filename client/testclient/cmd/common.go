@@ -14,12 +14,9 @@ To create a valid config, first, run
   coniksserver init
 if you haven't done this already. This will create a valid server configuration
 and also store the server's public keys (by default in sign.pub and vrf.pub).
-Then, create a toml file which references these public-keys.
-
-For example create a file config.toml with the following content:
-
-vrf_pubkey_path = "/path_to/vrf.pub"
-sign_pubkey_path = "/path_to_/sign.pub"
+Then, run
+  testclient init
+this creates a toml file which references these public-keys.
 
 The client looks for a file called 'config.toml' in its current working directory.
 If you prefer the config-file to be named or stored somewhere different you can
