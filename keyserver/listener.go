@@ -76,7 +76,7 @@ func (server *ConiksServer) acceptClient(conn net.Conn, handler func(msg []byte)
 func malformedClientMsg(err error) ([]byte, error) {
 	// check if we're just propagating a message
 	if err == nil {
-		err = ErrorMalformedClientMessage.Error()
+		err = ErrorMalformedClientMessage
 	}
 	response := NewErrorResponse(ErrorMalformedClientMessage)
 	res, e := MarshalResponse(response)
@@ -95,7 +95,7 @@ func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(msg [
 		}
 		if !acceptableTypes[req.Type] {
 			log.Printf("unacceptable message type: %q", req.Type)
-			return malformedClientMsg(ErrorMalformedClientMessage.Error())
+			return malformedClientMsg(ErrorMalformedClientMessage)
 		}
 
 		switch req.Type {
@@ -116,6 +116,6 @@ func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(msg [
 		if err != nil {
 			panic(err)
 		}
-		return res, e.Error()
+		return res, e
 	}
 }
