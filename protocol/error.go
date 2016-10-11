@@ -3,8 +3,6 @@
 
 package protocol
 
-import "errors"
-
 type ErrorCode int
 
 const (
@@ -21,7 +19,7 @@ const (
 	ErrorBadSignature
 	ErrorBadVRFProof
 	ErrorBadIndex
-	ErrorBadMapping
+	ErrorBadAuthPath
 	ErrorBadSTR
 	ErrorBadCommitment
 	ErrorBadBinding
@@ -36,26 +34,26 @@ var ErrorResponses = map[ErrorCode]bool{
 }
 
 var (
-	errorMessages = map[ErrorCode]error{
-		Success:                     nil,
-		ErrorMalformedClientMessage: errors.New("[coniks] Malformed client request"),
-		ErrorNameExisted:            errors.New("[coniks] Registering identity is already registered"),
-		ErrorNameNotFound:           errors.New("[coniks] Name not found"),
-		ErrorDirectory:              errors.New("[coniks] Directory error"),
+	errorMessages = map[ErrorCode]string{
+		Success:                     "[coniks] Successful client request",
+		ErrorMalformedClientMessage: "[coniks] Malformed client message",
+		ErrorNameExisted:            "[coniks] Registering identity is already registered",
+		ErrorNameNotFound:           "[coniks] Searched name not found in directory",
+		ErrorDirectory:              "[coniks] Directory error",
 
-		Passed: nil,
-		ErrorMalformedDirectoryMessage: errors.New("[coniks] Malformed directory message"),
-		ErrorBadSignature:              errors.New("[coniks] Directory's signature is invalid"),
-		ErrorBadVRFProof:               errors.New("[coniks] Bad VRF proof"),
-		ErrorBadIndex:                  errors.New("[coniks] Directory returned a bad index"),
-		ErrorBadMapping:                errors.New("[coniks] Returned name-to-key mapping is inconsistent with the root hash"),
-		ErrorBadSTR:                    errors.New("[coniks] The hash chain is inconsistent"),
-		ErrorBadCommitment:             errors.New("[coniks] Bad commitment"),
-		ErrorBadBinding:                errors.New("[coniks] Bad name-to-key binding"),
-		ErrorCouldNotVerify:            errors.New("[coniks] Could not verify"),
+		Passed: "[coniks] Consistency checks passed",
+		ErrorMalformedDirectoryMessage: "[coniks] Malformed directory message",
+		ErrorBadSignature:              "[coniks] Directory's signature on STR or TB is invalid",
+		ErrorBadVRFProof:               "[coniks] Returned index is not valid for the given name",
+		ErrorBadIndex:                  "[coniks] The index in the TB and the index in the auth path do not match",
+		ErrorBadAuthPath:               "[coniks] Returned binding is inconsistent with the tree root hash",
+		ErrorBadSTR:                    "[coniks] The hash chain is inconsistent",
+		ErrorBadCommitment:             "[coniks] The binding commitment is invalid",
+		ErrorBadBinding:                "[coniks] Key in the binding is inconsistent",
+		ErrorCouldNotVerify:            "[coniks] Could not verify",
 	}
 )
 
-func (e ErrorCode) Error() error {
+func (e ErrorCode) Error() string {
 	return errorMessages[e]
 }
