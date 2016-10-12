@@ -1,11 +1,6 @@
 package protocol
 
-import (
-	"bytes"
-
-	"github.com/coniks-sys/coniks-go/crypto/sign"
-	m "github.com/coniks-sys/coniks-go/merkletree"
-)
+import m "github.com/coniks-sys/coniks-go/merkletree"
 
 // Defines constants representing the types
 // of messages exchanged by clients and servers.
@@ -61,10 +56,7 @@ type Response struct {
 }
 
 // DirectoryResponse messages
-type DirectoryResponse interface {
-	// TODO: refactor the function signature after resolving #47
-	Verify(string, []byte, uint64, []byte, sign.PublicKey) ErrorCode
-}
+type DirectoryResponse interface{}
 
 type DirectoryProof struct {
 	AP  *m.AuthenticationPath
@@ -129,42 +121,4 @@ func NewMonitoringProof(ap []*m.AuthenticationPath,
 			STR: str,
 		},
 	}, e
-}
-
-// Verify implementations
-
-func (df *DirectoryProof) Verify(uname string, key []byte,
-	curEp uint64, savedSTR []byte, signKey sign.PublicKey) ErrorCode {
-	ap := df.AP
-	str := df.STR
-	tb := df.TB
-
-	if e := verifySTR(signKey, str, curEp, savedSTR); e != Passed {
-		return e
-	}
-
-	// verify TB's Signature
-	if tb != nil {
-		if !signKey.Verify(tb.Serialize(str.Signature), tb.Signature) {
-			return ErrorBadSignature
-		}
-	}
-
-	if e := verifyAuthPath(uname, key, ap, str); e != Passed {
-		return e
-	}
-
-	// verify TB's VRF index
-	if tb != nil {
-		if !bytes.Equal(tb.Index, ap.LookupIndex) {
-			return ErrorBadIndex
-		}
-	}
-
-	return Passed
-}
-
-func (df *DirectoryProofs) Verify(uname string, key []byte,
-	curEp uint64, savedSTR []byte, signKey sign.PublicKey) ErrorCode {
-	return Passed
 }
