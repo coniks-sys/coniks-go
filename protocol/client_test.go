@@ -9,30 +9,28 @@ var (
 
 func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
-	currentEpoch := uint64(0)
-	savedSTR := d.LatestSTR().Signature
+
+	cs := NewConiksClient(d.LatestSTR().Signature, true, pk)
 
 	res, _ := d.Register(&RegistrationRequest{
 		Username: uname,
 		Key:      key})
-	if err := res.Verify(uname, key, currentEpoch, savedSTR, pk); err != Passed {
-		t.Fatal(err.Error())
+	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+		t.Fatal("Unexpected verification result")
 	}
 
 	// test error name existed
-	savedSTR = d.LatestSTR().Signature
 	res, err := d.Register(&RegistrationRequest{
 		Username: uname,
 		Key:      key})
 	if err != ErrorNameExisted {
 		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 	}
-	if err := res.Verify(uname, key, currentEpoch, savedSTR, pk); err != Passed {
-		t.Fatal(err.Error())
+	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfInclusion {
+		t.Fatal("Unexpected verification result")
 	}
 
 	// re-register in a different epoch
-	savedSTR = d.LatestSTR().Signature
 	d.Update()
 	res, err = d.Register(&RegistrationRequest{
 		Username: uname,
@@ -40,25 +38,24 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	if err != ErrorNameExisted {
 		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 	}
-	if err := res.Verify(uname, key, currentEpoch, savedSTR, pk); err != Passed {
-		t.Fatal(err.Error())
+	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfInclusion {
+		t.Fatal("Unexpected verification result")
 	}
 }
 
 func TestVerifyRegistrationResponseWithoutTB(t *testing.T) {
 	d, pk := NewTestDirectory(t, false)
-	currentEpoch := uint64(0)
-	savedSTR := d.LatestSTR().Signature
+
+	cs := NewConiksClient(d.LatestSTR().Signature, false, pk)
 
 	res, _ := d.Register(&RegistrationRequest{
 		Username: uname,
 		Key:      key})
-	if err := res.Verify(uname, key, currentEpoch, savedSTR, pk); err != Passed {
-		t.Fatal(err.Error())
+	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+		t.Fatal("Unexpected verification result")
 	}
 
 	// re-register in a different epoch
-	savedSTR = d.LatestSTR().Signature
 	d.Update()
 	res, err := d.Register(&RegistrationRequest{
 		Username: uname,
@@ -66,25 +63,25 @@ func TestVerifyRegistrationResponseWithoutTB(t *testing.T) {
 	if err != ErrorNameExisted {
 		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 	}
-	if err := res.Verify(uname, key, currentEpoch, savedSTR, pk); err != Passed {
-		t.Fatal(err.Error())
+	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfInclusion {
+		t.Fatal("Unexpected verification result")
 	}
 }
 
 func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
-	currentEpoch := uint64(0)
-	savedSTR := d.LatestSTR().Signature
+
+	cs := NewConiksClient(d.LatestSTR().Signature, true, pk)
 
 	// do lookup first
 	res, err := d.KeyLookup(&KeyLookupRequest{uname})
 	if err != ErrorNameNotFound {
 		t.Fatal("Expect error code", ErrorNameNotFound, "got", err)
 	}
-	if err := res.Verify(uname, key, currentEpoch, savedSTR, pk); err != Passed {
-		t.Fatal(err.Error())
+	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+		t.Fatal("Unexpected verification result")
 	}
-	savedSTR = res.DirectoryResponse.(*DirectoryProof).STR.Signature
+
 	// register
 	res, _ = d.Register(&RegistrationRequest{
 		Username: uname,
@@ -94,8 +91,8 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	if err != Success {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if err := res.Verify(uname, key, currentEpoch, savedSTR, pk); err != Passed {
-		t.Fatal(err.Error())
+	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+		t.Fatal("Unexpected verification result")
 	}
 
 	// do lookup in the different epoch
@@ -104,33 +101,34 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	if err != Success {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if err := res.Verify(uname, key, currentEpoch, savedSTR, pk); err != Passed {
-		t.Fatal(err.Error())
+	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfInclusion {
+		t.Fatal("Unexpected verification result")
 	}
+
 	// test error name not found
 	res, err = d.KeyLookup(&KeyLookupRequest{"bob"})
 	if err != ErrorNameNotFound {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if err := res.Verify("bob", key, currentEpoch, savedSTR, pk); err != Passed {
-		t.Fatal(err.Error())
+	if cs.Verify(res, "bob", nil); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+		t.Fatal("Unexpected verification result")
 	}
 }
 
 func TestVerifyKeyLookupResponseWithoutTB(t *testing.T) {
 	d, pk := NewTestDirectory(t, false)
-	currentEpoch := uint64(0)
-	savedSTR := d.LatestSTR().Signature
+
+	cs := NewConiksClient(d.LatestSTR().Signature, false, pk)
 
 	// do lookup first
 	res, err := d.KeyLookup(&KeyLookupRequest{uname})
 	if err != ErrorNameNotFound {
 		t.Fatal("Expect error code", ErrorNameNotFound, "got", err)
 	}
-	if err := res.Verify(uname, key, currentEpoch, savedSTR, pk); err != Passed {
-		t.Fatal(err.Error())
+	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+		t.Fatal("Unexpected verification result")
 	}
-	savedSTR = res.DirectoryResponse.(*DirectoryProof).STR.Signature
+
 	// register
 	res, _ = d.Register(&RegistrationRequest{
 		Username: uname,
@@ -140,8 +138,8 @@ func TestVerifyKeyLookupResponseWithoutTB(t *testing.T) {
 	if err != ErrorNameNotFound {
 		t.Fatal("Expect error code", ErrorNameNotFound, "got", err)
 	}
-	if err := res.Verify(uname, key, currentEpoch, savedSTR, pk); err != Passed {
-		t.Fatal(err.Error())
+	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+		t.Fatal("Unexpected verification result")
 	}
 
 	// do lookup in the different epoch
@@ -150,15 +148,16 @@ func TestVerifyKeyLookupResponseWithoutTB(t *testing.T) {
 	if err != Success {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if err := res.Verify(uname, key, currentEpoch, savedSTR, pk); err != Passed {
-		t.Fatal(err.Error())
+	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfInclusion {
+		t.Fatal("Unexpected verification result")
 	}
+
 	// test error name not found
 	res, err = d.KeyLookup(&KeyLookupRequest{"bob"})
 	if err != ErrorNameNotFound {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if err := res.Verify("bob", key, currentEpoch, savedSTR, pk); err != Passed {
-		t.Fatal(err.Error())
+	if cs.Verify(res, "bob", nil); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+		t.Fatal("Unexpected verification result")
 	}
 }
