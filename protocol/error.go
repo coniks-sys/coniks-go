@@ -24,6 +24,7 @@ const (
 	ErrorBadCommitment
 	ErrorBadBinding
 	ErrorCouldNotVerify
+	ErrorBreakPromise
 )
 
 // ErrorResponses contains error codes that
@@ -51,6 +52,7 @@ var (
 		ErrorBadCommitment:             "[coniks] The binding commitment is invalid",
 		ErrorBadBinding:                "[coniks] Key in the binding is inconsistent",
 		ErrorCouldNotVerify:            "[coniks] Could not verify",
+		ErrorBreakPromise:              "[coniks] The directory has broken the registration promise",
 	}
 )
 
