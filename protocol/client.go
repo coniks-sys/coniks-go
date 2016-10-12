@@ -36,8 +36,7 @@ type ConiksClient struct {
 
 	// extensions settings
 	isUseTBs bool
-	TBIndex  []byte
-	TBValue  []byte
+	TBs      []*m.TemporaryBinding
 
 	// signing key
 	// TODO: should we pin the signing key and vrf key in the client? see #47
@@ -73,26 +72,29 @@ func (cs *ConiksClient) verifyDirectoryProof(df *DirectoryProof, uname string, k
 		return
 	}
 
-	// verify TB's Signature
-	// TODO: the client should know beforehand whether it expects tb to be nil or not
-	if tb != nil {
-		if !cs.signKey.Verify(tb.Serialize(str.Signature), tb.Signature) {
-			cs.VerificationResult = ErrorBadSignature
-			return
-		}
-	}
-
 	if cs.ProofType, cs.VerificationResult = cs.verifyAuthPath(uname, key,
 		ap, str); cs.VerificationResult != Passed {
 		return
 	}
 
-	// verify TB's VRF index
 	if tb != nil {
+		// verify TB's Signature
+		if !cs.signKey.Verify(tb.Serialize(str.Signature), tb.Signature) {
+			cs.VerificationResult = ErrorBadSignature
+			return
+		}
+
+		// verify TB's VRF index
 		if !bytes.Equal(tb.Index, ap.LookupIndex) {
 			cs.VerificationResult = ErrorBadIndex
 			return
 		}
+
+		cs.TBs = append(cs.TBs, tb)
+	}
+
+	if cs.VerificationResult = cs.verifyIssuedPromise(str.Epoch, ap); cs.VerificationResult != Passed {
+		return
 	}
 
 	cs.VerificationResult = Passed
@@ -153,4 +155,19 @@ func (cs *ConiksClient) verifySTR(str *m.SignedTreeRoot) ErrorCode {
 		return Passed
 	}
 	return ErrorBadSTR
+}
+
+func (cs *ConiksClient) verifyIssuedPromise(epoch uint64, ap *m.AuthenticationPath) ErrorCode {
+	if cs.isUseTBs {
+		for _, tb := range cs.TBs {
+			if tb.IssuedEpoch == epoch {
+				if !tb.Verify(epoch, ap) {
+					return ErrorBreakPromise
+				}
+
+				// TODO: delete issued promise
+			}
+		}
+	}
+	return Passed
 }
