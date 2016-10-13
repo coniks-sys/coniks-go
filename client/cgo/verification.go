@@ -36,14 +36,17 @@ func cgoVerify(cType C.int,
 			C.int(protocol.ErrorCouldNotVerify)
 	}
 
-	uname := C.GoStringN(cUname, cUnameSize)
-	key := C.GoBytes(cKey, cKeySize)
-	savedSTR := C.GoBytes(cSavedSTR, cStrSize)
-	signKey := C.GoBytes(cPk, cPkSize)
+	// uname := C.GoStringN(cUname, cUnameSize)
+	// key := C.GoBytes(cKey, cKeySize)
+	// savedSTR := C.GoBytes(cSavedSTR, cStrSize)
+	// signKey := C.GoBytes(cPk, cPkSize)
+	// currentEp := uint64(cCurrentEpoch)
 	response := C.GoStringN(cResponse, cResponseSize)
-	currentEp := uint64(cCurrentEpoch)
 
-	errs := client.Verify(int(cType), []byte(response),
-		uname, key, currentEp, savedSTR, signKey)
-	return C.int(errs[0]), C.int(errs[1])
+	// TODO: fix me
+	_, err := client.UnmarshalResponse(int(cType), []byte(response))
+	if protocol.ErrorResponses[err] {
+		return C.int(err), C.int(protocol.ErrorCouldNotVerify)
+	}
+	return C.int(err), C.int(protocol.Passed)
 }
