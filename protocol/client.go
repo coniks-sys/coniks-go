@@ -77,23 +77,11 @@ func (cs *ConiksClient) verifyDirectoryProof(df *DirectoryProof, uname string, k
 		return
 	}
 
-	if tb != nil {
-		// verify TB's Signature
-		if !cs.signKey.Verify(tb.Serialize(str.Signature), tb.Signature) {
-			cs.VerificationResult = ErrorBadSignature
-			return
-		}
-
-		// verify TB's VRF index
-		if !bytes.Equal(tb.Index, ap.LookupIndex) {
-			cs.VerificationResult = ErrorBadIndex
-			return
-		}
-
-		cs.TBs = append(cs.TBs, tb)
+	if cs.VerificationResult = cs.verifyReturnedPromise(tb, str, ap); cs.VerificationResult != Passed {
+		return
 	}
 
-	if cs.VerificationResult = cs.verifyIssuedPromise(str.Epoch, ap); cs.VerificationResult != Passed {
+	if cs.VerificationResult = cs.verifyIssuedPromises(str, ap); cs.VerificationResult != Passed {
 		return
 	}
 
@@ -137,7 +125,7 @@ func (cs *ConiksClient) verifyAuthPath(uname string, key []byte,
 
 	// verify auth path
 	if !ap.Verify(str.TreeHash) {
-		return InvalidProof, ErrorBadMapping
+		return InvalidProof, ErrorBadAuthPath
 	}
 
 	return proofType, Passed
@@ -157,17 +145,54 @@ func (cs *ConiksClient) verifySTR(str *m.SignedTreeRoot) ErrorCode {
 	return ErrorBadSTR
 }
 
-func (cs *ConiksClient) verifyIssuedPromise(epoch uint64, ap *m.AuthenticationPath) ErrorCode {
+// verifyReturnedPromise verifies the returned TB
+// included in the directory's response.
+func (cs *ConiksClient) verifyReturnedPromise(tb *m.TemporaryBinding,
+	str *m.SignedTreeRoot,
+	ap *m.AuthenticationPath) ErrorCode {
+	if cs.isUseTBs && tb != nil {
+		// verify TB's Signature
+		if !cs.signKey.Verify(tb.Serialize(str.Signature), tb.Signature) {
+			return ErrorBadSignature
+		}
+
+		// verify issued epoch
+		if tb.IssuedEpoch != str.Epoch+1 {
+			return ErrorBadPromise
+		}
+
+		// verify TB's VRF index
+		if !bytes.Equal(tb.Index, ap.LookupIndex) {
+			return ErrorBadIndex
+		}
+
+		cs.TBs = append(cs.TBs, tb)
+	}
+
+	return Passed
+}
+
+// verifyIssuedPromises verifies issued TBs was inserted
+// in the directory as promised.
+func (cs *ConiksClient) verifyIssuedPromises(str *m.SignedTreeRoot,
+	ap *m.AuthenticationPath) ErrorCode {
 	if cs.isUseTBs {
+		backed := cs.TBs[:0]
 		for _, tb := range cs.TBs {
-			if tb.IssuedEpoch == epoch {
-				if !tb.Verify(epoch, ap) {
+			if tb.IssuedEpoch == str.Epoch {
+				if !tb.Verify(ap) {
 					return ErrorBreakPromise
 				}
-
-				// TODO: delete issued promise
+			} else if tb.IssuedEpoch > str.Epoch {
+				// keep current epoch's returned promises
+				// for future verifications
+				backed = append(backed, tb)
 			}
 		}
+
+		// clear all issued promises since they have been verified
+		// or the client has missed some epochs
+		cs.TBs = backed
 	}
 	return Passed
 }
