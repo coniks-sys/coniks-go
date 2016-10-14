@@ -123,7 +123,7 @@ func (pad *PAD) LatestSTR() *SignedTreeRoot {
 
 func (pad *PAD) TB(name string, value []byte) (*TemporaryBinding, error) {
 	index, _ := pad.computePrivateIndex(name, pad.policies.vrfPrivateKey)
-	tb := NewTB(pad.signKey, pad.latestSTR.Signature, index, value)
+	tb := NewTB(pad.signKey, pad.latestSTR.Epoch+1, pad.latestSTR.Signature, index, value)
 	err := pad.tree.Set(index, name, value)
 	return tb, err
 }
