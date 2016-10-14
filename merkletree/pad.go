@@ -11,8 +11,9 @@ import (
 )
 
 var (
+	// ErrorSTRNotFound indicates that the STR has been evicted from memory,
+	// because the maximum number of cached PAD snapshots has been exceeded.
 	ErrorSTRNotFound = errors.New("[merkletree] STR not found")
-	ErrorNilPolicies = errors.New("[merkletree] Nil policies")
 )
 
 // PAD is an acronym for persistent authenticated dictionary
@@ -26,10 +27,10 @@ type PAD struct {
 }
 
 // NewPAD creates new PAD consisting of an array of hash chain
-// indexed by the epoch and its maximum length is len
+// indexed by the epoch and its maximum length is len.
 func NewPAD(policies *Policies, signKey sign.PrivateKey, len uint64) (*PAD, error) {
 	if policies == nil {
-		panic(ErrorNilPolicies)
+		panic("[merkletree] PAD must be created with a non-NULL Policies struct")
 	}
 	var err error
 	pad := new(PAD)
@@ -79,6 +80,16 @@ func (pad *PAD) updateInternal(policies *Policies, epoch uint64) {
 	}
 }
 
+// Update generates a new snapshot of the tree.
+// It should be called in the beginning of each epoch.
+// Specifically, it extends the hash chain by issuing
+// a new signed tree root. It may remove some older signed tree roots from
+// memory if the cached PAD snapshots exceeded the maximum capacity.
+// policies could be nil if the PAD's policies do not change.
+// If the VRF private key is changed (by passing a new Policies),
+// the underlying tree would be reshuffled. It also means
+// the private index of all new key-to-value bindings
+// will be computed using the new VRF private key.
 func (pad *PAD) Update(policies *Policies) {
 	// delete older str(s) as needed
 	if len(pad.loadedEpochs) == cap(pad.loadedEpochs) {
@@ -91,25 +102,36 @@ func (pad *PAD) Update(policies *Policies) {
 	pad.updateInternal(policies, pad.latestSTR.Epoch+1)
 }
 
-func (pad *PAD) Set(name string, value []byte) error {
-	return pad.tree.Set(pad.Index(name), name, value)
+// Set computes the private index of the given key using
+// the current VRF private key (which will be inserted in the next
+// signed tree root) to create a new index-to-key binding,
+// and then Set inserts it into the Merkle tree underlying the PAD.
+func (pad *PAD) Set(key string, value []byte) error {
+	return pad.tree.Set(pad.Index(key), key, value)
 }
 
-func (pad *PAD) Lookup(name string) (*AuthenticationPath, error) {
-	return pad.LookupInEpoch(name, pad.latestSTR.Epoch)
+// Lookup searches the requested key in the latest snapshot of the PAD.
+func (pad *PAD) Lookup(key string) (*AuthenticationPath, error) {
+	return pad.LookupInEpoch(key, pad.latestSTR.Epoch)
 }
 
-func (pad *PAD) LookupInEpoch(name string, epoch uint64) (*AuthenticationPath, error) {
+// LookupInEpoch searches the requested key in the snapshot at the requested epoch.
+// It returns ErrorSTRNotFound if the signed tree root of the requested epoch
+// has been removed from memory.
+func (pad *PAD) LookupInEpoch(key string, epoch uint64) (*AuthenticationPath, error) {
 	str := pad.GetSTR(epoch)
 	if str == nil {
 		return nil, ErrorSTRNotFound
 	}
-	lookupIndex, proof := pad.computePrivateIndex(name, str.Policies.vrfPrivateKey)
+	lookupIndex, proof := pad.computePrivateIndex(key, str.Policies.vrfPrivateKey)
 	ap := str.tree.Get(lookupIndex)
 	ap.VrfProof = proof
 	return ap, nil
 }
 
+// GetSTR returns the signed tree root of the requested epoch.
+// This signed tree root is read from the cached snapshots of the PAD.
+// It returns nil if the signed tree root has been removed from the memory.
 func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 	if epoch >= pad.latestSTR.Epoch {
 		return pad.latestSTR
@@ -117,16 +139,20 @@ func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 	return pad.snapshots[epoch]
 }
 
+// LatestSTR returns the latest signed tree root of the PAD.
 func (pad *PAD) LatestSTR() *SignedTreeRoot {
 	return pad.latestSTR
 }
 
+// Sign uses the _current_ signing key underlying the PAD to sign msg.
 func (pad *PAD) Sign(msg ...[]byte) []byte {
 	return pad.signKey.Sign(bytes.Join(msg, nil))
 }
 
-func (pad *PAD) Index(name string) []byte {
-	index, _ := pad.computePrivateIndex(name, pad.policies.vrfPrivateKey)
+// Index uses the _current_ VRF private key of the PAD to compute
+// the private index of the requested key.
+func (pad *PAD) Index(key string) []byte {
+	index, _ := pad.computePrivateIndex(key, pad.policies.vrfPrivateKey)
 	return index
 }
 
@@ -148,8 +174,8 @@ func (pad *PAD) reshuffle() {
 	pad.tree = newTree
 }
 
-func (pad *PAD) computePrivateIndex(name string,
+func (pad *PAD) computePrivateIndex(key string,
 	vrfPrivKey vrf.PrivateKey) (index, proof []byte) {
-	index, proof = vrfPrivKey.Prove([]byte(name))
+	index, proof = vrfPrivKey.Prove([]byte(key))
 	return
 }

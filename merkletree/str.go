@@ -8,12 +8,13 @@ import (
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
-// SignedTreeRoot represents a signed tree root, which is generated
+// SignedTreeRoot represents a signed tree root (STR), which is generated
 // at the beginning of every epoch.
 // Signed tree roots contain the current root node,
 // the current and previous epochs, the hash of the
 // previous STR, and its signature.
-// STR should be final
+// The epoch number is a counter from 0, and increases by 1
+// when a new signed tree root is issued by the PAD.
 type SignedTreeRoot struct {
 	tree            *MerkleTree
 	TreeHash        []byte
@@ -42,8 +43,8 @@ func NewSTR(key sign.PrivateKey, policies Policies, m *MerkleTree, epoch uint64,
 	return str
 }
 
-// Serialize encodes the STR to a byte array with the following format:
-// [epoch, previous epoch, tree hash, previous STR hash, policies serialization]
+// Serialize serializes the signed tree root into
+// a specified format for signing.
 func (str *SignedTreeRoot) Serialize() []byte {
 	var strBytes []byte
 	strBytes = append(strBytes, util.ULongToBytes(str.Epoch)...) // t - epoch number

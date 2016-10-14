@@ -7,6 +7,12 @@ import (
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
+// ProofNode can be a user node or an empty node,
+// which is included in the returned AuthenticationPath
+// of a given index. The type of that node can be determined
+// by the IsEmpty value. It also provides an opening of
+// the commitment if the returned AuthenticationPath
+// is a proof of inclusion.
 type ProofNode struct {
 	Level      uint32
 	Index      []byte
@@ -44,6 +50,12 @@ const (
 	ProofOfInclusion
 )
 
+// AuthenticationPath is a pruned tree containing
+// the prefix path between the corresponding leaf node
+// (of type ProofNode) and the root. This is a proof
+// of inclusion or absence of requested index.
+// A proof of inclusion is when the leaf index
+// equals the lookup index.
 type AuthenticationPath struct {
 	TreeNonce   []byte
 	PrunedTree  [][crypto.HashSizeByte]byte
@@ -73,7 +85,11 @@ func (ap *AuthenticationPath) verifyBinding(key, value []byte) bool {
 		ap.Leaf.Commitment.Verify(key, value)
 }
 
-// Verify should be called after the vrf index is verified successfully
+// Verify recomputes the tree's root node from the authentication path,
+// and compares it to treeHash, which is taken from a STR.
+// Specifically, treeHash has to come from the STR whose tree returns
+// the authentication path.
+// This should be called after the VRF index is verified successfully.
 func (ap *AuthenticationPath) Verify(key, value, treeHash []byte) bool {
 	if ap.ProofType() == ProofOfAbsence { // proof of absence
 		// Check if i and j match in the first l bits
