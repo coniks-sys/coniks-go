@@ -1,6 +1,10 @@
 package merkletree
 
-import "github.com/coniks-sys/coniks-go/crypto/sign"
+import (
+	"bytes"
+
+	"github.com/coniks-sys/coniks-go/crypto/sign"
+)
 
 type TemporaryBinding struct {
 	Index     []byte
@@ -24,4 +28,16 @@ func (tb *TemporaryBinding) Serialize(strSig []byte) []byte {
 	tbBytes = append(tbBytes, tb.Index...)
 	tbBytes = append(tbBytes, tb.Value...)
 	return tbBytes
+}
+
+// Verify verifies the issued temporary binding whether
+// it was inserted as promised or not. This method should be
+// called right after the directory has been updated, i.e., at the next epoch.
+func (tb *TemporaryBinding) Verify(ap *AuthenticationPath) bool {
+	// compare TB's index with authentication path's index (after Update)
+	if !bytes.Equal(ap.LookupIndex, tb.Index) ||
+		!bytes.Equal(ap.Leaf.Value, tb.Value) {
+		return false
+	}
+	return true
 }

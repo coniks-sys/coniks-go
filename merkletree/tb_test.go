@@ -13,6 +13,8 @@ func TestTB(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	pad.Update(nil)
+
 	tb, err := pad.TB(key, val)
 	if err != nil {
 		t.Fatal(err)
@@ -35,13 +37,13 @@ func TestTB(t *testing.T) {
 	pad.Update(nil)
 
 	ap, err := pad.Lookup(key)
-	// compare TB's index with authentication path's index (after Update):
-	if !bytes.Equal(ap.LookupIndex, tb.Index) ||
-		!bytes.Equal(ap.Leaf.Value, tb.Value) {
-		t.Error("Value wasn't inserted as promised")
-	}
+
 	// verify auth path
 	if !ap.Verify(pad.LatestSTR().TreeHash) {
 		t.Error("Proof of inclusion verification failed.")
+	}
+
+	if !tb.Verify(ap) {
+		t.Error("Value wasn't inserted as promised")
 	}
 }

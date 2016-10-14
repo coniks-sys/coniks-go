@@ -34,6 +34,10 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 		t.Fatal("Unexpected verification result")
 	}
 
+	if len(cs.TBs) != 2 {
+		t.Fatal("Expect the directory to return a signed promise")
+	}
+
 	// re-register in a different epoch
 	d.Update()
 	res, err = d.Register(&RegistrationRequest{
