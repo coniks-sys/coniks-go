@@ -156,11 +156,6 @@ func (cs *ConiksClient) verifyReturnedPromise(tb *m.TemporaryBinding,
 			return ErrorBadSignature
 		}
 
-		// verify issued epoch
-		if tb.IssuedEpoch != str.Epoch+1 {
-			return ErrorBadPromise
-		}
-
 		// verify TB's VRF index
 		if !bytes.Equal(tb.Index, ap.LookupIndex) {
 			return ErrorBadIndex
@@ -179,11 +174,11 @@ func (cs *ConiksClient) verifyIssuedPromises(str *m.SignedTreeRoot,
 	if cs.isUseTBs {
 		backed := cs.TBs[:0]
 		for _, tb := range cs.TBs {
-			if tb.IssuedEpoch == str.Epoch {
+			if cs.CurrentEpoch+1 == str.Epoch {
 				if !tb.Verify(ap) {
 					return ErrorBrokenPromise
 				}
-			} else if tb.IssuedEpoch > str.Epoch {
+			} else if cs.CurrentEpoch == str.Epoch {
 				// keep current epoch's returned promises
 				// for future verifications
 				backed = append(backed, tb)
