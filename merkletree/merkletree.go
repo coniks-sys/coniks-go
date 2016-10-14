@@ -9,22 +9,31 @@ import (
 )
 
 var (
+	// ErrorInvalidTree is used to panic if there occurs
+	// a malformed operation on the tree.
 	ErrorInvalidTree = errors.New("[merkletree] invalid tree")
 )
 
 const (
+	// EmptyBranchIdentifier is the domain separation prefix for empty node hashes.
 	EmptyBranchIdentifier = 'E'
-	LeafIdentifier        = 'L'
+
+	// LeafIdentifier is the domain separation prefix for user leaf node hashes.
+	LeafIdentifier = 'L'
 )
 
+// MerkleTree represents the Merkle prefix tree data structure.
 type MerkleTree struct {
 	nonce []byte
 	root  *interiorNode
 	hash  []byte
 }
 
+// NewMerkleTree returns an empty Merkle prefix tree
+// with a secure random nonce. The tree root is an interior node
+// and its children are two empty leaf nodes.
 func NewMerkleTree() (*MerkleTree, error) {
-	root := NewInteriorNode(nil, 0, []bool{})
+	root := newInteriorNode(nil, 0, []bool{})
 	nonce, err := crypto.MakeRand()
 	if err != nil {
 		return nil, err
@@ -36,10 +45,12 @@ func NewMerkleTree() (*MerkleTree, error) {
 	return m, nil
 }
 
+// Get returns an AuthenticationPath corresponding to the proof
+// of inclusion/absence of the requested index.
 func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 	lookupIndexBits := util.ToBits(lookupIndex)
 	depth := 0
-	var nodePointer MerkleNode
+	var nodePointer merkleNode
 	nodePointer = m.root
 
 	authPath := &AuthenticationPath{
@@ -104,6 +115,10 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 	panic(ErrorInvalidTree)
 }
 
+// Set inserts or updates the value of the given index
+// calculated from the key to the tree. It will generate a new commitment
+// for the leaf node. In case of updating, the leaf node's value and commitment
+// will be replaced with the new value and new generated commitment.
 func (m *MerkleTree) Set(index []byte, key string, value []byte) error {
 	commitment, err := crypto.NewCommit([]byte(key), value)
 	if err != nil {
@@ -122,7 +137,7 @@ func (m *MerkleTree) Set(index []byte, key string, value []byte) error {
 func (m *MerkleTree) insertNode(index []byte, toAdd *userLeafNode) {
 	indexBits := util.ToBits(index)
 	var depth uint32 // = 0
-	var nodePointer MerkleNode
+	var nodePointer merkleNode
 	nodePointer = m.root
 
 insertLoop:
@@ -145,7 +160,7 @@ insertLoop:
 				return
 			}
 
-			newInteriorNode := NewInteriorNode(currentNodeUL.parent, depth, indexBits[:depth])
+			newInteriorNode := newInteriorNode(currentNodeUL.parent, depth, indexBits[:depth])
 
 			direction := util.GetNthBit(currentNodeUL.index, depth)
 			if direction {
@@ -198,7 +213,7 @@ func (m *MerkleTree) visitLeafNodes(callBack func(*userLeafNode)) {
 	visitULNsInternal(m.root, callBack)
 }
 
-func visitULNsInternal(nodePtr MerkleNode, callBack func(*userLeafNode)) {
+func visitULNsInternal(nodePtr merkleNode, callBack func(*userLeafNode)) {
 	switch nodePtr.(type) {
 	case *userLeafNode:
 		callBack(nodePtr.(*userLeafNode))
@@ -217,13 +232,16 @@ func visitULNsInternal(nodePtr MerkleNode, callBack func(*userLeafNode)) {
 }
 
 func (m *MerkleTree) recomputeHash() {
-	m.hash = m.root.Hash(m)
+	m.hash = m.root.hash(m)
 }
 
+// Clone makes a copy of the current tree.
+// Any change later on the original tree does not affect the cloned tree,
+// and vice versa.
 func (m *MerkleTree) Clone() *MerkleTree {
 	return &MerkleTree{
 		nonce: m.nonce,
-		root:  m.root.Clone(nil).(*interiorNode),
+		root:  m.root.clone(nil).(*interiorNode),
 		hash:  append([]byte{}, m.hash...),
 	}
 }

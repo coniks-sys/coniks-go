@@ -8,6 +8,11 @@ import (
 
 type Timestamp uint64
 
+// Policies is a summary of the directory's
+// current security policies. This includes the public part
+// of the VRF key used to generate private indices,
+// the cryptographic algorithms in use, as well as
+// the protocol version number.
 type Policies struct {
 	LibVersion    string
 	HashID        string
@@ -30,8 +35,10 @@ func NewPolicies(epDeadline Timestamp, vrfPrivKey vrf.PrivateKey) *Policies {
 	}
 }
 
-// Serialize encodes the policy to a byte array with the following format:
-// [lib version, cryptographic algorithm in use, epoch deadline, vrf public key]
+// Serialize serializes the policies for signing the tree root.
+// Default policies serialization includes the library version (see version.go),
+// the cryptographic algorithms in use (i.e., the hashing algorithm),
+// the epoch deadline and the public part of the VRF key.
 func (p *Policies) Serialize() []byte {
 	var bs []byte
 	bs = append(bs, []byte(p.LibVersion)...)                       // lib Version

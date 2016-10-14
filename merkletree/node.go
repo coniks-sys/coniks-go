@@ -6,14 +6,14 @@ import (
 )
 
 type node struct {
-	parent MerkleNode
+	parent merkleNode
 	level  uint32
 }
 
 type interiorNode struct {
 	node
-	leftChild  MerkleNode
-	rightChild MerkleNode
+	leftChild  merkleNode
+	rightChild merkleNode
 	leftHash   []byte
 	rightHash  []byte
 }
@@ -31,7 +31,7 @@ type emptyNode struct {
 	index []byte
 }
 
-func NewInteriorNode(parent MerkleNode, level uint32, prefixBits []bool) *interiorNode {
+func newInteriorNode(parent merkleNode, level uint32, prefixBits []bool) *interiorNode {
 	prefixLeft := append([]bool(nil), prefixBits...)
 	prefixLeft = append(prefixLeft, false)
 	prefixRight := append([]bool(nil), prefixBits...)
@@ -65,27 +65,27 @@ func NewInteriorNode(parent MerkleNode, level uint32, prefixBits []bool) *interi
 	return newNode
 }
 
-type MerkleNode interface {
+type merkleNode interface {
 	isEmpty() bool
-	Hash(*MerkleTree) []byte
-	Clone(*interiorNode) MerkleNode
+	hash(*MerkleTree) []byte
+	clone(*interiorNode) merkleNode
 }
 
-var _ MerkleNode = (*userLeafNode)(nil)
-var _ MerkleNode = (*interiorNode)(nil)
-var _ MerkleNode = (*emptyNode)(nil)
+var _ merkleNode = (*userLeafNode)(nil)
+var _ merkleNode = (*interiorNode)(nil)
+var _ merkleNode = (*emptyNode)(nil)
 
-func (n *interiorNode) Hash(m *MerkleTree) []byte {
+func (n *interiorNode) hash(m *MerkleTree) []byte {
 	if n.leftHash == nil {
-		n.leftHash = n.leftChild.Hash(m)
+		n.leftHash = n.leftChild.hash(m)
 	}
 	if n.rightHash == nil {
-		n.rightHash = n.rightChild.Hash(m)
+		n.rightHash = n.rightChild.hash(m)
 	}
 	return crypto.Digest(n.leftHash, n.rightHash)
 }
 
-func (n *userLeafNode) Hash(m *MerkleTree) []byte {
+func (n *userLeafNode) hash(m *MerkleTree) []byte {
 	return crypto.Digest(
 		[]byte{LeafIdentifier},              // K_leaf
 		[]byte(m.nonce),                     // K_n
@@ -95,7 +95,7 @@ func (n *userLeafNode) Hash(m *MerkleTree) []byte {
 	)
 }
 
-func (n *emptyNode) Hash(m *MerkleTree) []byte {
+func (n *emptyNode) hash(m *MerkleTree) []byte {
 	return crypto.Digest(
 		[]byte{EmptyBranchIdentifier},       // K_empty
 		[]byte(m.nonce),                     // K_n
@@ -104,7 +104,7 @@ func (n *emptyNode) Hash(m *MerkleTree) []byte {
 	)
 }
 
-func (n *interiorNode) Clone(parent *interiorNode) MerkleNode {
+func (n *interiorNode) clone(parent *interiorNode) merkleNode {
 	newNode := &interiorNode{
 		node: node{
 			parent: parent,
@@ -117,12 +117,12 @@ func (n *interiorNode) Clone(parent *interiorNode) MerkleNode {
 		n.rightChild == nil {
 		panic(ErrorInvalidTree)
 	}
-	newNode.leftChild = n.leftChild.Clone(newNode)
-	newNode.rightChild = n.rightChild.Clone(newNode)
+	newNode.leftChild = n.leftChild.clone(newNode)
+	newNode.rightChild = n.rightChild.clone(newNode)
 	return newNode
 }
 
-func (n *userLeafNode) Clone(parent *interiorNode) MerkleNode {
+func (n *userLeafNode) clone(parent *interiorNode) merkleNode {
 	return &userLeafNode{
 		node: node{
 			parent: parent,
@@ -135,7 +135,7 @@ func (n *userLeafNode) Clone(parent *interiorNode) MerkleNode {
 	}
 }
 
-func (n *emptyNode) Clone(parent *interiorNode) MerkleNode {
+func (n *emptyNode) clone(parent *interiorNode) merkleNode {
 	return &emptyNode{
 		node: node{
 			parent: parent,

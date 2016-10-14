@@ -11,7 +11,12 @@ import (
 )
 
 var (
+	// ErrorSTRNotFound indicates that the STR has been evicted from memory,
+	// because the maximum number of cached PAD snapshots has been exceeded.
 	ErrorSTRNotFound = errors.New("[merkletree] STR not found")
+
+	// ErrorNilPolicies is used to panic if the PAD was created
+	// with a nil Policies struct.
 	ErrorNilPolicies = errors.New("[merkletree] Nil policies")
 )
 
@@ -26,7 +31,7 @@ type PAD struct {
 }
 
 // NewPAD creates new PAD consisting of an array of hash chain
-// indexed by the epoch and its maximum length is len
+// indexed by the epoch and its maximum length is len.
 func NewPAD(policies *Policies, signKey sign.PrivateKey, len uint64) (*PAD, error) {
 	if policies == nil {
 		panic(ErrorNilPolicies)
@@ -79,6 +84,11 @@ func (pad *PAD) updateInternal(policies *Policies, epoch uint64) {
 	}
 }
 
+// Update generates a new snapshot of the directory.
+// Specifically, it extends the hash chain by issuing
+// new signed tree root. It may remove some older signed tree roots from
+// memory if the cached PAD snapshots exceeded its maximum capacity.
+// The Policies pointer can be nil if the policies does not change.
 func (pad *PAD) Update(policies *Policies) {
 	// delete older str(s) as needed
 	if len(pad.loadedEpochs) == cap(pad.loadedEpochs) {
@@ -91,14 +101,22 @@ func (pad *PAD) Update(policies *Policies) {
 	pad.updateInternal(policies, pad.latestSTR.Epoch+1)
 }
 
+// Set computes the private index of the given name using
+// the current VRF private key (which will be inserted in the next
+// signed tree root) to create a new index-to-key binding,
+// and then Set inserts it into the Merkle tree underlying the PAD.
 func (pad *PAD) Set(name string, value []byte) error {
 	return pad.tree.Set(pad.Index(name), name, value)
 }
 
+// Lookup searches the requested name in the latest snapshot of the PAD.
 func (pad *PAD) Lookup(name string) (*AuthenticationPath, error) {
 	return pad.LookupInEpoch(name, pad.latestSTR.Epoch)
 }
 
+// LookupInEpoch searches the requested name in the snapshot at requested epoch.
+// It returns ErrorSTRNotFound if the signed tree root of the requested epoch
+// has been removed from memory.
 func (pad *PAD) LookupInEpoch(name string, epoch uint64) (*AuthenticationPath, error) {
 	str := pad.GetSTR(epoch)
 	if str == nil {
@@ -110,6 +128,9 @@ func (pad *PAD) LookupInEpoch(name string, epoch uint64) (*AuthenticationPath, e
 	return ap, nil
 }
 
+// GetSTR returns the signed tree root of the requested epoch.
+// This signed tree root is read from the caching snapshots of the PAD.
+// It returns nil if the signed tree root has been removed from the memory.
 func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 	if epoch >= pad.latestSTR.Epoch {
 		return pad.latestSTR
@@ -117,6 +138,7 @@ func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 	return pad.snapshots[epoch]
 }
 
+// LatestSTR returns the latest signed tree root of the PAD.
 func (pad *PAD) LatestSTR() *SignedTreeRoot {
 	return pad.latestSTR
 }
