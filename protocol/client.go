@@ -181,7 +181,7 @@ func (cs *ConiksClient) verifyIssuedPromises(str *m.SignedTreeRoot,
 		for _, tb := range cs.TBs {
 			if tb.IssuedEpoch == str.Epoch {
 				if !tb.Verify(ap) {
-					return ErrorBreakPromise
+					return ErrorBrokenPromise
 				}
 			} else if tb.IssuedEpoch > str.Epoch {
 				// keep current epoch's returned promises
