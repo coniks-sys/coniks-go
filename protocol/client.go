@@ -52,6 +52,16 @@ func NewConiksClient(savedSTR []byte, isUseTBs bool, signKey sign.PublicKey) *Co
 	}
 }
 
+// Verify verifies the directory's response of the requested username.
+// The verification results are stored in ProofType and VerificationResult
+// field of ConiksClient struct. The client first checks the VerificationResult
+// to see if the response message is passed or not. If it gets a valid response,
+// (i.e., VerificationResult is Passed), it then needs to check the returned proof
+// is matched with its expectation or not. If the client does not check the type
+// of the returned proof, it means the client could be getting a valid proof of absence,
+// when it expects a proof of inclusion, and as long as it's valid, it's none the wiser.
+// The client can ignore the proof type check, and notify the user the verification
+// result instead if the verification check is not passed.
 func (cs *ConiksClient) Verify(msg *Response, uname string, key []byte) {
 	switch msg.DirectoryResponse.(type) {
 	case *DirectoryProof:
