@@ -15,13 +15,15 @@ import (
 )
 
 // ConsistencyChecks stores the latest consistency check
-// state of a CONIKS client. This includes the latest epoch
-// and SignedTreeRoot value, as well as directory's policies
-// (e.g., whether the TemporaryBinding extension is being used or not)
+// state of a CONIKS client. This includes the latest SignedTreeRoot,
+// as well as a directory's policies (e.g., whether the
+// TemporaryBinding extension is being used).
+//
 // The client should create a new ConsistencyChecks instance only once,
 // when she registers her binding with a ConiksDirectory.
-// This ConsistencyChecks instance then will be used to verify
-// the returned responses from the ConiksDirectory.
+// This ConsistencyChecks instance will then be used to verify
+// subsequent responses from the ConiksDirectory to any
+// client request.
 type ConsistencyChecks struct {
 	SavedSTR *m.SignedTreeRoot
 
@@ -34,8 +36,8 @@ type ConsistencyChecks struct {
 }
 
 // NewCC creates an instance of ConsistencyChecks using
-// the pinned directory's STR at epoch 0 or
-// the consistency state read from a persistent storage.
+// a CONIKS directory's pinned STR at epoch 0, or
+// the consistency state read from persistent storage.
 func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *ConsistencyChecks {
 	// TODO: see #110
 	if !useTBs {
@@ -56,11 +58,13 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 // It first verifies the directory's returned status code of the request.
 // If the status code is not in the ErrorResponses array, it means
 // the directory has successfully handled the request.
-// The verifier will then verify the consistency state of the response.
-// This will panic if it is called with an int
+// The verifier will then check the consistency (i.e. binding validity
+// and non-equivocation) of the response.
+// HandleResponse() will panic if it is called with an int
 // which isn't a valid/known request-type.
-// Note that the consistency state would be updated regardless of
-// whether the checks pass / fail, since it contains proof of being issued.
+// Note that the consistency state will be updated regardless of
+// whether the checks pass / fail, since a response message contains
+// cryptographic proof of having been issued nonetheless.
 func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	uname string, key []byte) ErrorCode {
 	if ErrorResponses[msg.Error] {
