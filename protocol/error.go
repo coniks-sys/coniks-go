@@ -1,10 +1,15 @@
 // Defines constants representing the types
-// of errors that the server may return to a client.
+// of errors that the server may return to a client,
+// and that the client may throw after a consistency
+// check or cryptographic verification
 
 package protocol
 
+// ErrorCodes are special ints
 type ErrorCode int
 
+// Server-side errors: The server returns these errors
+// to the client when a request fails
 const (
 	Success ErrorCode = iota + 10
 	ErrorDirectory
@@ -13,6 +18,9 @@ const (
 	ErrorMalformedClientMessage
 )
 
+// Client-side errors: The client throws these errors
+// when a consistency check or cryptographic verification
+// fails
 const (
 	Passed ErrorCode = iota + 20
 	ErrorMalformedDirectoryMessage
@@ -50,6 +58,7 @@ var (
 	}
 )
 
+// Returns the error message corresponding to e
 func (e ErrorCode) Error() string {
 	return errorMessages[e]
 }
