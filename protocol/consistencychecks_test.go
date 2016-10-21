@@ -7,15 +7,32 @@ var (
 	key   = []byte("key")
 )
 
-func TestVerifyRegistrationResponseWithTB(t *testing.T) {
-	d, pk := NewTestDirectory(t, true)
+func TestVerifyWithError(t *testing.T) {
+	d, pk := NewTestDirectory(t, false)
 
-	cs := NewConiksClient(d.LatestSTR().Signature, true, pk)
+	// modify the pinning STR so that the consistency check should fail.
+	str := append([]byte{}, d.LatestSTR().Signature...)
+	str[0]++
+
+	cs := NewCC(str, false, pk)
 
 	res, _ := d.Register(&RegistrationRequest{
 		Username: uname,
 		Key:      key})
-	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+	if err := cs.Verify(RegistrationType, res, uname, key); err != ErrorBadSTR {
+		t.Fatal("Expect", ErrorBadSTR, "got", err)
+	}
+}
+
+func TestVerifyRegistrationResponseWithTB(t *testing.T) {
+	d, pk := NewTestDirectory(t, true)
+
+	cs := NewCC(d.LatestSTR().Signature, true, pk)
+
+	res, _ := d.Register(&RegistrationRequest{
+		Username: uname,
+		Key:      key})
+	if cs.Verify(RegistrationType, res, uname, key) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -30,7 +47,8 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	if err != ErrorNameExisted {
 		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 	}
-	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfInclusion {
+	// expect a proof of absence since this binding was "inserted" in this epoch
+	if err := cs.Verify(RegistrationType, res, uname, key); err != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -46,7 +64,7 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	if err != ErrorNameExisted {
 		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 	}
-	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfInclusion {
+	if cs.Verify(RegistrationType, res, uname, key) != PassedWithAProofOfInclusion {
 		t.Fatal("Unexpected verification result")
 	}
 	if len(cs.TBs) != 0 {
@@ -57,12 +75,12 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 func TestVerifyRegistrationResponseWithoutTB(t *testing.T) {
 	d, pk := NewTestDirectory(t, false)
 
-	cs := NewConiksClient(d.LatestSTR().Signature, false, pk)
+	cs := NewCC(d.LatestSTR().Signature, false, pk)
 
 	res, _ := d.Register(&RegistrationRequest{
 		Username: uname,
 		Key:      key})
-	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+	if cs.Verify(RegistrationType, res, uname, key) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -74,7 +92,7 @@ func TestVerifyRegistrationResponseWithoutTB(t *testing.T) {
 	if err != ErrorNameExisted {
 		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 	}
-	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfInclusion {
+	if cs.Verify(RegistrationType, res, uname, key) != PassedWithAProofOfInclusion {
 		t.Fatal("Unexpected verification result")
 	}
 }
@@ -82,14 +100,14 @@ func TestVerifyRegistrationResponseWithoutTB(t *testing.T) {
 func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
 
-	cs := NewConiksClient(d.LatestSTR().Signature, true, pk)
+	cs := NewCC(d.LatestSTR().Signature, true, pk)
 
 	// do lookup first
 	res, err := d.KeyLookup(&KeyLookupRequest{uname})
 	if err != ErrorNameNotFound {
 		t.Fatal("Expect error code", ErrorNameNotFound, "got", err)
 	}
-	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+	if cs.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -102,7 +120,7 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	if err != Success {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+	if cs.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -112,7 +130,7 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	if err != Success {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfInclusion {
+	if cs.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfInclusion {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -121,7 +139,7 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	if err != ErrorNameNotFound {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if cs.Verify(res, "bob", nil); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+	if cs.Verify(KeyLookupType, res, "bob", nil) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 }
@@ -129,14 +147,14 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 func TestVerifyKeyLookupResponseWithoutTB(t *testing.T) {
 	d, pk := NewTestDirectory(t, false)
 
-	cs := NewConiksClient(d.LatestSTR().Signature, false, pk)
+	cs := NewCC(d.LatestSTR().Signature, false, pk)
 
 	// do lookup first
 	res, err := d.KeyLookup(&KeyLookupRequest{uname})
 	if err != ErrorNameNotFound {
 		t.Fatal("Expect error code", ErrorNameNotFound, "got", err)
 	}
-	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+	if cs.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -149,7 +167,7 @@ func TestVerifyKeyLookupResponseWithoutTB(t *testing.T) {
 	if err != ErrorNameNotFound {
 		t.Fatal("Expect error code", ErrorNameNotFound, "got", err)
 	}
-	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+	if cs.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -159,7 +177,7 @@ func TestVerifyKeyLookupResponseWithoutTB(t *testing.T) {
 	if err != Success {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if cs.Verify(res, uname, key); cs.VerificationResult != Passed && cs.ProofType != ProofOfInclusion {
+	if cs.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfInclusion {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -168,7 +186,7 @@ func TestVerifyKeyLookupResponseWithoutTB(t *testing.T) {
 	if err != ErrorNameNotFound {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if cs.Verify(res, "bob", nil); cs.VerificationResult != Passed && cs.ProofType != ProofOfAbsence {
+	if cs.Verify(KeyLookupType, res, "bob", nil) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 }
