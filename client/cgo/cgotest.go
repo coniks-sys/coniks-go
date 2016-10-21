@@ -67,7 +67,7 @@ func testVerify(t *testing.T) {
 
 	r0 := C.struct_cgoVerify_return(v).r0
 	r1 := C.struct_cgoVerify_return(v).r1
-	if r0 != C.int(protocol.Success) || r1 != C.int(protocol.Passed) {
+	if r0 != C.int(protocol.Success) || r1 != C.int(protocol.PassedWithAProofOfAbsence) {
 		t.Errorf("%s, %s\n", protocol.ErrorCode(r0).Error(), protocol.ErrorCode(r1).Error())
 	}
 	savedSTR = res.DirectoryResponse.(*protocol.DirectoryProof).STR.Signature
@@ -88,7 +88,7 @@ func testVerify(t *testing.T) {
 		byteSliceToCcharPtr(response), C.int(len(response)))
 	r0 = C.struct_cgoVerify_return(v).r0
 	r1 = C.struct_cgoVerify_return(v).r1
-	if r0 != C.int(protocol.Success) || r1 != C.int(protocol.Passed) {
+	if r0 != C.int(protocol.Success) || r1 != C.int(protocol.PassedWithAProofOfAbsence) {
 		t.Errorf("%s, %s\n", protocol.ErrorCode(r0).Error(), protocol.ErrorCode(r1).Error())
 	}
 
@@ -106,7 +106,7 @@ func testVerify(t *testing.T) {
 		byteSliceToCcharPtr(response), C.int(len(response)))
 	r0 = C.struct_cgoVerify_return(v).r0
 	r1 = C.struct_cgoVerify_return(v).r1
-	if r0 != C.int(protocol.ErrorNameNotFound) || r1 != C.int(protocol.Passed) {
+	if r0 != C.int(protocol.ErrorNameNotFound) || r1 != C.int(protocol.PassedWithAProofOfAbsence) {
 		t.Errorf("%s, %s\n", protocol.ErrorCode(r0).Error(), protocol.ErrorCode(r1).Error())
 	}
 }

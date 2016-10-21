@@ -48,5 +48,5 @@ func cgoVerify(cType C.int,
 	if protocol.ErrorResponses[err] {
 		return C.int(err), C.int(protocol.ErrorCouldNotVerify)
 	}
-	return C.int(err), C.int(protocol.Passed)
+	return C.int(err), C.int(protocol.PassedWithAProofOfAbsence)
 }
