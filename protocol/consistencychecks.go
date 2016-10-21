@@ -254,9 +254,11 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(str *m.SignedTreeRoot,
 }
 
 func (cc *ConsistencyChecks) verifyProofTypeWithTB(statusCode ErrorCode, proofType int) ErrorCode {
+	// these checks mean the requested binding wasn't included in the latest STR
+	// but was being held in the temporary binding array.
 	if (statusCode == ErrorNameExisted && proofType == proofOfAbsence) ||
-		(statusCode == ErrorNameNotFound && proofType == proofOfAbsence) {
-		return PassedWithAProofOfAbsence
+		(statusCode == Success && proofType == proofOfAbsence) {
+		return PassedWithAProofOfInclusion
 	}
 
 	return ErrorBadProofType
