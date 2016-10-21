@@ -47,8 +47,8 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	if err != ErrorNameExisted {
 		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 	}
-	// expect a proof of absence since this binding was "inserted" in this epoch
-	if err := cs.Verify(RegistrationType, res, uname, key); err != PassedWithAProofOfAbsence {
+	// expect a proof of inclusion even this binding wasn't "inserted" in this epoch
+	if err := cs.Verify(RegistrationType, res, uname, key); err != PassedWithAProofOfInclusion {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -120,7 +120,7 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	if err != Success {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if cs.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfAbsence {
+	if cs.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfInclusion {
 		t.Fatal("Unexpected verification result")
 	}
 
