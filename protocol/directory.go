@@ -69,13 +69,16 @@ func (d *ConiksDirectory) HandleOps(req *Request) (*Response, ErrorCode) {
 		}
 	case KeyLookupInEpochType:
 		if msg, ok := req.Request.(*KeyLookupInEpochRequest); ok {
-			if len(msg.Username) > 0 {
+			if len(msg.Username) > 0 &&
+				msg.Epoch <= d.LatestSTR().Epoch {
 				return d.KeyLookupInEpoch(msg)
 			}
 		}
 	case MonitoringType:
 		if msg, ok := req.Request.(*MonitoringRequest); ok {
-			if len(msg.Username) > 0 && msg.StartEpoch <= msg.EndEpoch {
+			if len(msg.Username) > 0 &&
+				msg.StartEpoch <= d.LatestSTR().Epoch &&
+				msg.StartEpoch <= msg.EndEpoch {
 				return d.Monitor(msg)
 			}
 		}
