@@ -51,42 +51,6 @@ func (d *ConiksDirectory) LatestSTR() *merkletree.SignedTreeRoot {
 	return d.pad.LatestSTR()
 }
 
-// HandleOps validates the request message and then pass it to
-// appropriate operation handler according to the request type.
-func (d *ConiksDirectory) HandleOps(req *Request) (*Response, ErrorCode) {
-	switch req.Type {
-	case RegistrationType:
-		if msg, ok := req.Request.(*RegistrationRequest); ok {
-			if len(msg.Username) > 0 && len(msg.Key) > 0 {
-				return d.Register(msg)
-			}
-		}
-	case KeyLookupType:
-		if msg, ok := req.Request.(*KeyLookupRequest); ok {
-			if len(msg.Username) > 0 {
-				return d.KeyLookup(msg)
-			}
-		}
-	case KeyLookupInEpochType:
-		if msg, ok := req.Request.(*KeyLookupInEpochRequest); ok {
-			if len(msg.Username) > 0 &&
-				msg.Epoch <= d.LatestSTR().Epoch {
-				return d.KeyLookupInEpoch(msg)
-			}
-		}
-	case MonitoringType:
-		if msg, ok := req.Request.(*MonitoringRequest); ok {
-			if len(msg.Username) > 0 &&
-				msg.StartEpoch <= d.LatestSTR().Epoch &&
-				msg.StartEpoch <= msg.EndEpoch {
-				return d.Monitor(msg)
-			}
-		}
-	}
-	return NewErrorResponse(ErrorMalformedClientMessage),
-		ErrorMalformedClientMessage
-}
-
 func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 	*Response, ErrorCode) {
 	// check whether the name already exists

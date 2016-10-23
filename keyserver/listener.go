@@ -86,6 +86,42 @@ func malformedClientMsg(err error) ([]byte, error) {
 	return res, err
 }
 
+// andleOps validates the request message and then pass it to
+// appropriate operation handler according to the request type.
+func handleOps(d *ConiksDirectory, req *Request) (*Response, ErrorCode) {
+	switch req.Type {
+	case RegistrationType:
+		if msg, ok := req.Request.(*RegistrationRequest); ok {
+			if len(msg.Username) > 0 && len(msg.Key) > 0 {
+				return d.Register(msg)
+			}
+		}
+	case KeyLookupType:
+		if msg, ok := req.Request.(*KeyLookupRequest); ok {
+			if len(msg.Username) > 0 {
+				return d.KeyLookup(msg)
+			}
+		}
+	case KeyLookupInEpochType:
+		if msg, ok := req.Request.(*KeyLookupInEpochRequest); ok {
+			if len(msg.Username) > 0 &&
+				msg.Epoch <= d.LatestSTR().Epoch {
+				return d.KeyLookupInEpoch(msg)
+			}
+		}
+	case MonitoringType:
+		if msg, ok := req.Request.(*MonitoringRequest); ok {
+			if len(msg.Username) > 0 &&
+				msg.StartEpoch <= d.LatestSTR().Epoch &&
+				msg.StartEpoch <= msg.EndEpoch {
+				return d.Monitor(msg)
+			}
+		}
+	}
+	return NewErrorResponse(ErrorMalformedClientMessage),
+		ErrorMalformedClientMessage
+}
+
 func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(msg []byte) ([]byte, error) {
 	return func(msg []byte) ([]byte, error) {
 		// get request message
@@ -104,7 +140,7 @@ func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(msg [
 		default:
 			server.Lock()
 		}
-		response, e := server.dir.HandleOps(req)
+		response, e := handleOps(server.dir, req)
 		switch req.Type {
 		case KeyLookupType, KeyLookupInEpochType, MonitoringType:
 			server.RUnlock()

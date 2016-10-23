@@ -146,7 +146,7 @@ func TestUpdateDirectory(t *testing.T) {
 		str0 := server.dir.LatestSTR()
 		rs := createMultiRegistrationRequests(10)
 		for i := range rs {
-			_, err := server.dir.HandleOps(rs[i])
+			_, err := handleOps(server.dir, rs[i])
 			if err != Success {
 				t.Fatal("Error while submitting registration request number", i, "to server")
 			}
@@ -183,11 +183,11 @@ func TestRegisterDuplicateUserInOneEpoch(t *testing.T) {
 		defer teardown()
 		r0 := createMultiRegistrationRequests(1)[0]
 		r1 := createMultiRegistrationRequests(1)[0]
-		_, err := server.dir.HandleOps(r0)
+		_, err := handleOps(server.dir, r0)
 		if err != Success {
 			t.Fatal("Error while submitting registration request")
 		}
-		rev, err := server.dir.HandleOps(r1)
+		rev, err := handleOps(server.dir, r1)
 		response, ok := rev.DirectoryResponse.(*DirectoryProof)
 		if !ok {
 			t.Fatal("Expect a directory proof response")
@@ -210,13 +210,13 @@ func TestRegisterDuplicateUserInDifferentEpoches(t *testing.T) {
 		server, teardown := startServer(t, db, 1, "")
 		defer teardown()
 		r0 := createMultiRegistrationRequests(1)[0]
-		_, err := server.dir.HandleOps(r0)
+		_, err := handleOps(server.dir, r0)
 		if err != Success {
 			t.Fatal("Error while submitting registration request")
 		}
 		timer := time.NewTimer(2 * time.Second)
 		<-timer.C
-		rev, err := server.dir.HandleOps(r0)
+		rev, err := handleOps(server.dir, r0)
 		response, ok := rev.DirectoryResponse.(*DirectoryProof)
 		if !ok {
 			t.Fatal("Expect a directory proof response")
