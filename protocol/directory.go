@@ -1,3 +1,10 @@
+// This module implements a CONIKS key directory that a CONIKS key server
+// maintains.
+// A directory is a publicly auditable, tamper-evident, privacy-preserving
+// data structure that contains mappings from usernames to public keys.
+// It currently supports registration, current key lookups, past key lookups,
+// and monitoring.
+
 package protocol
 
 import (
@@ -8,6 +15,13 @@ import (
 	"github.com/coniks-sys/coniks-go/merkletree"
 )
 
+// A CONIKS key directory maintains the underlying persistent
+// authenticated dictionary (PAD)
+// and its policies (i.e. epoch deadline, VRF public key, etc.).
+//
+// The current implementation of ConiksDirectory also keeps track
+// of temporary bindings (TBs). This feature will be split into a separate
+// protocol extension in a future release.
 type ConiksDirectory struct {
 	pad      *merkletree.PAD
 	useTBs   bool
@@ -15,6 +29,14 @@ type ConiksDirectory struct {
 	policies *merkletree.Policies
 }
 
+// Constructs a new ConiksDirectory given the key server's PAD
+// policies (i.e. epDeadline, vrfKey).
+//
+// signKey is the private key the key server uses to sign signed tree
+// roots (STRs) and TBs.
+// dirSize indicates the number of PAD snapshots the server keeps in memory.
+// useTBs indicates whether the key server returns TBs upon a successful
+// registration.
 func NewDirectory(epDeadline merkletree.Timestamp, vrfKey vrf.PrivateKey,
 	signKey sign.PrivateKey, dirSize uint64, useTBs bool) *ConiksDirectory {
 
@@ -37,6 +59,10 @@ func NewDirectory(epDeadline merkletree.Timestamp, vrfKey vrf.PrivateKey,
 	return d
 }
 
+// Updates this ConiksDirectory, creating a new PAD snapshot. Update() is
+//called at the end of a CONIKS epoch. This implementation also deletes all
+// issued TBs for the ending epoch as their corresponding mappings
+// will have been inserted into the PAD.
 func (d *ConiksDirectory) Update() {
 	d.pad.Update(d.policies)
 	// clear issued temporary bindings
@@ -45,14 +71,17 @@ func (d *ConiksDirectory) Update() {
 	}
 }
 
+	// Sets this ConiksDirectory's epoch deadline and VRF private key.
 func (d *ConiksDirectory) SetPolicies(epDeadline merkletree.Timestamp, vrfKey vrf.PrivateKey) {
 	d.policies = merkletree.NewPolicies(epDeadline, vrfKey)
 }
 
+// Returns this ConiksDirectory's current epoch deadline as a timestamp.
 func (d *ConiksDirectory) EpochDeadline() merkletree.Timestamp {
 	return d.pad.LatestSTR().Policies.EpochDeadline
 }
 
+// Returns this ConiksDirectory's latest STR.
 func (d *ConiksDirectory) LatestSTR() *merkletree.SignedTreeRoot {
 	return d.pad.LatestSTR()
 }
@@ -66,6 +95,23 @@ func (d *ConiksDirectory) NewTB(name string, key []byte) *TemporaryBinding {
 	}
 }
 
+// Registers the username-to-key mapping contained in a
+// RegistrationRequest req received from a CONIKS client
+// into this ConiksDirectory, and returns a tuple of the form
+// (response, error).
+// The response (which also includes the error code) is supposed to
+// be sent back to the client. The returned error is used by the key
+// server for logging purposes.
+//
+// If the given username already exists in the latest snapshot of the
+// directory, Register() returns an (error response, ErrorNameExisted)
+// tuple.
+// Otherwise, Register() inserts the new mapping in req
+// into the PAD so it can be included in the snapshot taken at the end
+// of the current  epoch), and returns a (registration proof, Success)
+// if this operation succeeds.
+// If Register() encounters an internal error at any point, it returns
+// an (error response, ErrorDirectory) tuple.
 func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 	*Response, ErrorCode) {
 	// make sure the request is well-formed
@@ -105,6 +151,24 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 	return NewRegistrationProof(ap, d.LatestSTR(), tb, Success)
 }
 
+// Gets the public key for the username indicated in the KeyLookupRequest
+// req received from a CONIKS client from the latest snapshot of
+// this ConiksDirectory, and returns a tuple of the form
+// (response, error).
+// The response (which also includes the error code) is supposed to
+// be sent back to the client. The returned error is used by the key
+// server for logging purposes.
+//
+// If the username doesn't have an entry in the directory and doesn't have a
+// corresponding TB, KeyLookup() returns
+// a (proof of absence, ErrorNameNotFound) tuple.
+// Otherwise, KeyLookup() returns a (key lookup proof, Success) tuple.
+// The proof will be a proof of absence including a TB, if there is a
+// corresponding TB for the username,
+// but there isn't an entry in the directory yet, and a proof of inclusion
+// if there is an entry in the directory.
+// If KeyLookup() encounters an internal error at any point, it returns
+// an (error response, ErrorDirectory) tuple.
 func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 	*Response, ErrorCode) {
 
@@ -131,6 +195,21 @@ func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 	return NewKeyLookupProof(ap, d.LatestSTR(), nil, ErrorNameNotFound)
 }
 
+// Gets the public key for the username for a prior epoch in the
+// directory history indicated in the
+// KeyLookupInEpochRequest req received from a CONIKS client,
+// and returns a tuple of the form (response, error).
+// The response (which also includes the error code) is supposed to
+// be sent back to the client. The returned error is used by the key
+// server for logging purposes.
+//
+// If the username doesn't have an entry in the directory,
+// at the indicated snapshot, KeyLookupInEpoch() returns a (KeyLookupInEpoch
+// proof of absence, ErrorNameNotFound) tuple.
+// Otherwise, KeyLookupInEpoch() returns a (KeyLookupInEpoch proof of
+// inclusion, Success) tuple.
+// If KeyLookupInEpoch() encounters an internal error at any point,
+// it returns an (error response, ErrorDirectory) tuple.
 func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 	*Response, ErrorCode) {
 
@@ -160,6 +239,17 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 	return NewKeyLookupInEpochProof(ap, strs, ErrorNameNotFound)
 }
 
+// Gets the directory proofs for the username for the range of
+// epochs indicated in the MonitoringRequest req received from a
+// CONIKS client,
+// and returns a tuple of the form (response, error).
+// The response (which also includes the error code) is supposed to
+// be sent back to the client. The returned error is used by the key
+// server for logging purposes.
+//
+// Monitor() returns a (monitoring proof, Success) tuple.
+// If Monitor() encounters an internal error at any point,
+// it returns an (error response, ErrorDirectory) tuple.
 func (d *ConiksDirectory) Monitor(req *MonitoringRequest) (
 	*Response, ErrorCode) {
 
