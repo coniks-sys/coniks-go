@@ -295,12 +295,7 @@ func TestDirectoryKeyLookupInEpochBadEpoch(t *testing.T) {
 
 	// Send an invalid KeyLookupInEpochRequest (epoch > d.LatestEpoch())
 	// Expect ErrorMalformedClientMessage
-	req := &Request{
-		Type:    KeyLookupInEpochType,
-		Request: &KeyLookupInEpochRequest{"alice", uint64(6)},
-	}
-
-	_, err := d.HandleOps(req)
+	_, err := d.KeyLookupInEpoch(&KeyLookupInEpochRequest{"alice", uint64(6)})
 	if err != ErrorMalformedClientMessage {
 		t.Fatal("Expect error", ErrorMalformedClientMessage, "got", err)
 	}
@@ -316,22 +311,14 @@ func TestMonitoringBadStartEpoch(t *testing.T) {
 
 	// Send an invalid MonitoringRequest (startEpoch > d.LatestEpoch())
 	// Expect ErrorMalformedClientMessage
-	req := &Request{
-		Type:    MonitoringType,
-		Request: &MonitoringRequest{"alice", uint64(6), uint64(10)},
-	}
-	_, err := d.HandleOps(req)
+	_, err := d.Monitor(&MonitoringRequest{"alice", uint64(6), uint64(10)})
 	if err != ErrorMalformedClientMessage {
 		t.Fatal("Expect error", ErrorMalformedClientMessage, "got", err)
 	}
 
 	// Send an invalid MonitoringRequest (startEpoch > EndEpoch)
 	// Expect ErrorMalformedClientMessage
-	req = &Request{
-		Type:    MonitoringType,
-		Request: &MonitoringRequest{"alice", uint64(2), uint64(0)},
-	}
-	_, err = d.HandleOps(req)
+	_, err = d.Monitor(&MonitoringRequest{"alice", uint64(2), uint64(0)})
 	if err != ErrorMalformedClientMessage {
 		t.Fatal("Expect error", ErrorMalformedClientMessage, "got", err)
 	}
