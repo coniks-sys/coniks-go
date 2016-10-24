@@ -88,7 +88,7 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 	*Response, ErrorCode) {
 	// check whether the name already exists
 	// in the directory before we register
-	ap, err := d.pad.Lookup(req.Username)
+	ap, err := d.pad.LookupInLatestEpoch(req.Username)
 	if err != nil {
 		return NewErrorResponse(ErrorDirectory), ErrorDirectory
 	}
@@ -110,6 +110,12 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 		d.tbs[req.Username] = tb
 		return NewRegistrationProof(ap, d.LatestSTR(), tb, Success)
 	} else {
+		currentAP, _ := d.pad.LookupInCurrentEpoch(req.Username)
+		if bytes.Equal(currentAP.LookupIndex, currentAP.Leaf.Index) {
+			// use the ap from the latest STR to return to the client
+			return NewRegistrationProof(ap, d.LatestSTR(), nil, ErrorNameExisted)
+		}
+
 		if err = d.pad.Set(req.Username, req.Key); err != nil {
 			return NewErrorResponse(ErrorDirectory), ErrorDirectory
 		}
@@ -119,7 +125,7 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 
 func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 	*Response, ErrorCode) {
-	ap, err := d.pad.Lookup(req.Username)
+	ap, err := d.pad.LookupInLatestEpoch(req.Username)
 	if err != nil {
 		return NewErrorResponse(ErrorDirectory), ErrorDirectory
 	}

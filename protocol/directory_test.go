@@ -106,6 +106,15 @@ func TestRegisterExistedUserWithoutTB(t *testing.T) {
 		t.Fatal("Unable to register")
 	}
 
+	// re-register in the same epoch
+	// expect ErrorNameExisted
+	_, err = d.Register(&RegistrationRequest{
+		Username: "alice",
+		Key:      []byte("key2")})
+	if err != ErrorNameExisted {
+		t.Error("Unexpected error", "got", err, "want", ErrorNameExisted)
+	}
+
 	d.Update()
 	// expect return a proof of inclusion
 	// and error ErrorNameExisted
@@ -119,6 +128,11 @@ func TestRegisterExistedUserWithoutTB(t *testing.T) {
 	if ap := df.AP; ap == nil || !bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
 		t.Fatal("Expect a proof of inclusion")
 	}
+
+	if ap := df.AP; !bytes.Equal(ap.Leaf.Value, []byte("key")) {
+		t.Fatal("Unexpected key change")
+	}
+
 	if df.TB != nil {
 		t.Fatal("Expect returned TB is nil")
 	}
