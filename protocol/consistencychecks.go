@@ -32,8 +32,8 @@ type ConsistencyChecks struct {
 	SavedSTR     []byte
 
 	// extensions settings
-	isUseTBs bool
-	TBs      []*m.TemporaryBinding
+	useTBs bool
+	TBs    map[string]*m.TemporaryBinding
 
 	// signing key
 	// TODO: should we pin the signing key in the client? see #47
@@ -42,13 +42,24 @@ type ConsistencyChecks struct {
 
 // NewCC creates an instance of ConsistencyChecks using
 // the pinning directory's STR at epoch 0.
-func NewCC(savedSTR []byte, isUseTBs bool, signKey sign.PublicKey) *ConsistencyChecks {
-	return &ConsistencyChecks{
+func NewCC(savedSTR []byte, useTBs bool, signKey sign.PublicKey) *ConsistencyChecks {
+
+	// Fix me: see #110
+	if !useTBs {
+		panic("Currently the server is forced to use TBs")
+	}
+
+	cc := &ConsistencyChecks{
 		CurrentEpoch: 0,
 		SavedSTR:     savedSTR,
-		isUseTBs:     isUseTBs,
+		useTBs:       useTBs,
 		signKey:      signKey,
 	}
+
+	if useTBs {
+		cc.TBs = make(map[string]*m.TemporaryBinding)
+	}
+	return cc
 }
 
 // Verify verifies the directory's response for a request.
@@ -66,20 +77,20 @@ func (cc *ConsistencyChecks) Verify(requestType int, msg *Response,
 		return msg.Error
 	}
 
-	var verificationResult error
+	var verifResult error
 	var proofType int
 
 	switch msg.DirectoryResponse.(type) {
 	case *DirectoryProof:
-		proofType, verificationResult = cc.verifyDirectoryProof(
+		proofType, verifResult = cc.verifyDirectoryProof(
 			msg.DirectoryResponse.(*DirectoryProof), uname, key)
 	case *DirectoryProofs:
-		proofType, verificationResult = cc.verifyDirectoryProofs(
+		proofType, verifResult = cc.verifyDirectoryProofs(
 			msg.DirectoryResponse.(*DirectoryProofs), uname, key)
 	}
 
-	if verificationResult != nil {
-		return verificationResult.(ErrorCode)
+	if verifResult != nil {
+		return verifResult.(ErrorCode)
 	}
 
 	switch requestType {
@@ -91,7 +102,7 @@ func (cc *ConsistencyChecks) Verify(requestType int, msg *Response,
 			proofType == proofOfAbsence {
 			return PassedWithAProofOfAbsence
 		}
-		return cc.verifyProofTypeWithTB(msg.Error, proofType)
+		return cc.verifyProofTypeUsingPromises(msg.Error, proofType)
 
 	case KeyLookupType:
 		if msg.Error == ErrorNameNotFound &&
@@ -101,7 +112,7 @@ func (cc *ConsistencyChecks) Verify(requestType int, msg *Response,
 			proofType == proofOfInclusion {
 			return PassedWithAProofOfInclusion
 		}
-		return cc.verifyProofTypeWithTB(msg.Error, proofType)
+		return cc.verifyProofTypeUsingPromises(msg.Error, proofType)
 
 	case MonitoringType:
 		if proofType == proofOfAbsence {
@@ -120,34 +131,34 @@ func (cc *ConsistencyChecks) Verify(requestType int, msg *Response,
 }
 
 func (cc *ConsistencyChecks) verifyDirectoryProof(df *DirectoryProof,
-	uname string, key []byte) (proofType int, verificationResult error) {
+	uname string, key []byte) (proofType int, verifResult error) {
 
-	verificationResult = nil
+	verifResult = nil
 	proofType = invalidProof
 
 	ap := df.AP
 	str := df.STR
 	tb := df.TB
 
-	if verificationResult = cc.verifySTR(str); verificationResult != nil {
+	if verifResult = cc.verifySTR(str); verifResult != nil {
 		return
 	}
 
-	if proofType, verificationResult = cc.verifyAuthPath(uname, key,
-		ap, str); verificationResult != nil {
+	if proofType, verifResult = cc.verifyAuthPath(uname, key,
+		ap, str); verifResult != nil {
 		return
 	}
 
-	if verificationResult = cc.verifyReturnedPromise(tb, str, ap); verificationResult != nil {
+	if verifResult = cc.verifyReturnedPromise(tb, uname, key, str, ap); verifResult != nil {
 		return
 	}
 
-	if verificationResult = cc.verifyFulfilledPromise(str, ap); verificationResult != nil {
+	if verifResult = cc.verifyFulfilledPromise(uname, str, ap); verifResult != nil {
 		return
 	}
 
 	// re-assign new state for the client
-	if str.Epoch > cc.CurrentEpoch {
+	if str.Epoch == cc.CurrentEpoch+1 {
 		cc.CurrentEpoch++
 		cc.SavedSTR = str.Signature
 	}
@@ -209,9 +220,17 @@ func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
 // verifyReturnedPromise verifies the returned TB
 // included in the directory's response.
 func (cc *ConsistencyChecks) verifyReturnedPromise(tb *m.TemporaryBinding,
+	uname string, key []byte,
 	str *m.SignedTreeRoot,
 	ap *m.AuthenticationPath) error {
-	if cc.isUseTBs && tb != nil {
+
+	if cc.useTBs && tb != nil {
+		// the client should receive a signed promise iff
+		// the server returns a proof of absence
+		if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
+			return ErrorMalformedDirectoryMessage
+		}
+
 		// verify TB's Signature
 		if !cc.signKey.Verify(tb.Serialize(str.Signature), tb.Signature) {
 			return ErrorBadSignature
@@ -222,7 +241,12 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(tb *m.TemporaryBinding,
 			return ErrorBadIndex
 		}
 
-		cc.TBs = append(cc.TBs, tb)
+		// verify TB's value
+		if !bytes.Equal(tb.Value, key) {
+			return ErrorBadPromise
+		}
+
+		cc.TBs[uname] = tb
 	}
 
 	return nil
@@ -230,35 +254,40 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(tb *m.TemporaryBinding,
 
 // verifyFulfilledPromise verifies issued TBs was inserted
 // in the directory as promised.
-func (cc *ConsistencyChecks) verifyFulfilledPromise(str *m.SignedTreeRoot,
+func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
+	str *m.SignedTreeRoot,
 	ap *m.AuthenticationPath) error {
-	if cc.isUseTBs {
-		backed := cc.TBs[:0]
-		for _, tb := range cc.TBs {
-			if cc.CurrentEpoch+1 == str.Epoch {
+	if cc.useTBs {
+		for name, tb := range cc.TBs {
+			if cc.CurrentEpoch+1 == str.Epoch &&
+				name == uname {
 				if !tb.Verify(ap) {
 					return ErrorBrokenPromise
 				}
-			} else if cc.CurrentEpoch == str.Epoch {
-				// keep current epoch's returned promises
-				// for future verifications
-				backed = append(backed, tb)
+				delete(cc.TBs, uname)
+			} else if cc.CurrentEpoch < str.Epoch {
+				// clear all issued promises since they have been verified
+				// or the client has missed some epochs
+				delete(cc.TBs, name)
 			}
+			// keep current epoch's returned promises
+			// for future verifications
 		}
-
-		// clear all issued promises since they have been verified
-		// or the client has missed some epochs
-		cc.TBs = backed
 	}
 	return nil
 }
 
-func (cc *ConsistencyChecks) verifyProofTypeWithTB(statusCode ErrorCode, proofType int) ErrorCode {
-	// these checks mean the requested binding wasn't included in the latest STR
-	// but was being held in the temporary binding array.
-	if (statusCode == ErrorNameExisted && proofType == proofOfAbsence) ||
-		(statusCode == Success && proofType == proofOfAbsence) {
-		return PassedWithAProofOfInclusion
+// verifyProofTypeUsingPromises verifies the returned proof type
+// and the returned error code when signed promises extension is enabled.
+// See #110.
+func (cc *ConsistencyChecks) verifyProofTypeUsingPromises(e ErrorCode, proofType int) ErrorCode {
+	if cc.useTBs {
+		// these checks mean the requested binding wasn't included in the latest STR
+		// but was being held in the temporary binding array.
+		if (e == ErrorNameExisted && proofType == proofOfAbsence) ||
+			(e == Success && proofType == proofOfAbsence) {
+			return PassedWithAProofOfAbsence
+		}
 	}
 
 	return ErrorBadProofType
