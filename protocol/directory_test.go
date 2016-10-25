@@ -325,7 +325,7 @@ func TestMonitoringBadStartEpoch(t *testing.T) {
 		t.Fatal("Expect error", ErrorMalformedClientMessage, "got", err)
 	}
 
-	// Send an invalid MonitoringRequest (startEpoch < EndEpoch)
+	// Send an invalid MonitoringRequest (startEpoch > EndEpoch)
 	// Expect ErrorMalformedClientMessage
 	req = &Request{
 		Type:    MonitoringType,
