@@ -80,6 +80,13 @@ func TestRegisterExistedUserWithTB(t *testing.T) {
 }
 
 func TestRegisterWithoutTB(t *testing.T) {
+	// workaround for #110
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic")
+		}
+	}()
+
 	// expect return a proof of absence
 	d, _ := NewTestDirectory(t, false)
 	res, err := d.Register(&RegistrationRequest{
@@ -98,6 +105,13 @@ func TestRegisterWithoutTB(t *testing.T) {
 }
 
 func TestRegisterExistedUserWithoutTB(t *testing.T) {
+	// workaround for #110
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic")
+		}
+	}()
+
 	d, _ := NewTestDirectory(t, false)
 	_, err := d.Register(&RegistrationRequest{
 		Username: "alice",
@@ -164,6 +178,13 @@ func TestKeyLookupWithTB(t *testing.T) {
 }
 
 func TestKeyLookupWithoutTB(t *testing.T) {
+	// workaround for #110
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("The code did not panic")
+		}
+	}()
+
 	d, _ := NewTestDirectory(t, false)
 	_, err := d.Register(&RegistrationRequest{
 		Username: "alice",
@@ -201,7 +222,7 @@ func TestKeyLookupWithoutTB(t *testing.T) {
 func TestDirectoryMonitoring(t *testing.T) {
 	N := 10
 
-	d, _ := NewTestDirectory(t, false)
+	d, _ := NewTestDirectory(t, true)
 	_, err := d.Register(&RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
@@ -247,7 +268,7 @@ func TestDirectoryMonitoring(t *testing.T) {
 func TestDirectoryKeyLookupInEpoch(t *testing.T) {
 	N := 3
 
-	d, _ := NewTestDirectory(t, false)
+	d, _ := NewTestDirectory(t, true)
 	for i := 0; i < N; i++ {
 		d.Update()
 	}
@@ -325,7 +346,7 @@ func TestMonitoringBadStartEpoch(t *testing.T) {
 }
 
 func TestPoliciesChanges(t *testing.T) {
-	d, _ := NewTestDirectory(t, false)
+	d, _ := NewTestDirectory(t, true)
 	if p := d.LatestSTR().Policies.EpochDeadline; p != 1 {
 		t.Fatal("Unexpected policies", "want", 1, "got", p)
 	}

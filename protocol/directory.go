@@ -17,6 +17,12 @@ type ConiksDirectory struct {
 
 func NewDirectory(epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey,
 	signKey sign.PrivateKey, dirSize uint64, useTBs bool) *ConiksDirectory {
+
+	// Fix me: see #110
+	if !useTBs {
+		panic("Currently the server is forced to use TBs")
+	}
+
 	d := new(ConiksDirectory)
 	d.SetPolicies(epDeadline, vrfKey)
 	pad, err := merkletree.NewPAD(d.policies, signKey, dirSize)
