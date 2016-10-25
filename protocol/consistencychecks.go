@@ -268,6 +268,10 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 			} else if cc.CurrentEpoch < str.Epoch {
 				// clear all issued promises since they have been verified
 				// or the client has missed some epochs
+				// TODO: should verify when we introduce KeyLookupInEpoch
+				// and monitoring with missed epochs,
+				// see: https://github.com/coniks-sys/coniks-go/pull/74#discussion_r84930999
+				// and: https://github.com/coniks-sys/coniks-go/pull/74#discussion_r84501211
 				delete(cc.TBs, name)
 			}
 			// keep current epoch's returned promises
