@@ -53,6 +53,13 @@ func (d *ConiksDirectory) LatestSTR() *merkletree.SignedTreeRoot {
 
 func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 	*Response, ErrorCode) {
+
+	// make sure the request is well-formed
+	if len(req.Username) <= 0 || len(req.Key) <= 0 {
+		return NewErrorResponse(ErrorMalformedClientMessage),
+			ErrorMalformedClientMessage
+	}
+
 	// check whether the name already exists
 	// in the directory before we register
 	ap, err := d.pad.Lookup(req.Username)
@@ -86,6 +93,13 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 
 func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 	*Response, ErrorCode) {
+
+	// make sure the request is well-formed
+	if len(req.Username) <= 0 {
+		return NewErrorResponse(ErrorMalformedClientMessage),
+			ErrorMalformedClientMessage
+	}
+
 	ap, err := d.pad.Lookup(req.Username)
 	if err != nil {
 		return NewErrorResponse(ErrorDirectory), ErrorDirectory
@@ -105,6 +119,14 @@ func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 
 func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 	*Response, ErrorCode) {
+
+	// make sure the request is well-formed
+	if len(req.Username) <= 0 ||
+		req.Epoch > d.LatestSTR().Epoch {
+		return NewErrorResponse(ErrorMalformedClientMessage),
+			ErrorMalformedClientMessage
+	}
+
 	var strs []*merkletree.SignedTreeRoot
 	startEp := req.Epoch
 	endEp := d.LatestSTR().Epoch
@@ -126,6 +148,15 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 
 func (d *ConiksDirectory) Monitor(req *MonitoringRequest) (
 	*Response, ErrorCode) {
+
+	// make sure the request is well-formed
+	if len(req.Username) <= 0 ||
+		req.StartEpoch > d.LatestSTR().Epoch ||
+		req.StartEpoch > req.EndEpoch {
+		return NewErrorResponse(ErrorMalformedClientMessage),
+			ErrorMalformedClientMessage
+	}
+
 	var strs []*merkletree.SignedTreeRoot
 	var aps []*merkletree.AuthenticationPath
 	startEp := req.StartEpoch

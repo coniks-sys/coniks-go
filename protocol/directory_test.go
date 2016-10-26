@@ -285,6 +285,45 @@ func TestDirectoryKeyLookupInEpoch(t *testing.T) {
 	}
 }
 
+func TestDirectoryKeyLookupInEpochBadEpoch(t *testing.T) {
+	N := 3
+
+	d, _ := NewTestDirectory(t, false)
+	for i := 0; i < N; i++ {
+		d.Update()
+	}
+
+	// Send an invalid KeyLookupInEpochRequest (epoch > d.LatestEpoch())
+	// Expect ErrorMalformedClientMessage
+	_, err := d.KeyLookupInEpoch(&KeyLookupInEpochRequest{"alice", uint64(6)})
+	if err != ErrorMalformedClientMessage {
+		t.Fatal("Expect error", ErrorMalformedClientMessage, "got", err)
+	}
+}
+
+func TestMonitoringBadStartEpoch(t *testing.T) {
+	N := 3
+
+	d, _ := NewTestDirectory(t, false)
+	for i := 0; i < N; i++ {
+		d.Update()
+	}
+
+	// Send an invalid MonitoringRequest (startEpoch > d.LatestEpoch())
+	// Expect ErrorMalformedClientMessage
+	_, err := d.Monitor(&MonitoringRequest{"alice", uint64(6), uint64(10)})
+	if err != ErrorMalformedClientMessage {
+		t.Fatal("Expect error", ErrorMalformedClientMessage, "got", err)
+	}
+
+	// Send an invalid MonitoringRequest (startEpoch > EndEpoch)
+	// Expect ErrorMalformedClientMessage
+	_, err = d.Monitor(&MonitoringRequest{"alice", uint64(2), uint64(0)})
+	if err != ErrorMalformedClientMessage {
+		t.Fatal("Expect error", ErrorMalformedClientMessage, "got", err)
+	}
+}
+
 func TestPoliciesChanges(t *testing.T) {
 	d, _ := NewTestDirectory(t, false)
 	if p := d.LatestSTR().Policies.EpochDeadline; p != 1 {
