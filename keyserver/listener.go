@@ -86,25 +86,25 @@ func malformedClientMsg(err error) ([]byte, error) {
 	return res, err
 }
 
-// andleOps validates the request message and then pass it to
+// handleOps validates the request message and then pass it to
 // appropriate operation handler according to the request type.
-func handleOps(d *ConiksDirectory, req *Request) (*Response, ErrorCode) {
+func (server *ConiksServer) handleOps(req *Request) (*Response, ErrorCode) {
 	switch req.Type {
 	case RegistrationType:
 		if msg, ok := req.Request.(*RegistrationRequest); ok {
-			return d.Register(msg)
+			return server.dir.Register(msg)
 		}
 	case KeyLookupType:
 		if msg, ok := req.Request.(*KeyLookupRequest); ok {
-			return d.KeyLookup(msg)
+			return server.dir.KeyLookup(msg)
 		}
 	case KeyLookupInEpochType:
 		if msg, ok := req.Request.(*KeyLookupInEpochRequest); ok {
-			return d.KeyLookupInEpoch(msg)
+			return server.dir.KeyLookupInEpoch(msg)
 		}
 	case MonitoringType:
 		if msg, ok := req.Request.(*MonitoringRequest); ok {
-			return d.Monitor(msg)
+			return server.dir.Monitor(msg)
 		}
 	}
 	return NewErrorResponse(ErrorMalformedClientMessage),
@@ -129,7 +129,7 @@ func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(msg [
 		default:
 			server.Lock()
 		}
-		response, e := handleOps(server.dir, req)
+		response, e := server.handleOps(req)
 		switch req.Type {
 		case KeyLookupType, KeyLookupInEpochType, MonitoringType:
 			server.RUnlock()
