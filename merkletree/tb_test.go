@@ -34,7 +34,7 @@ func TestTB(t *testing.T) {
 	// create next epoch and see if the TB is inserted as promised:
 	pad.Update(nil)
 
-	ap, err := pad.Lookup(key)
+	ap, err := pad.LookupInLatestEpoch(key)
 	// compare TB's index with authentication path's index (after Update):
 	if !bytes.Equal(ap.LookupIndex, tb.Index) ||
 		!bytes.Equal(ap.Leaf.Value, tb.Value) {

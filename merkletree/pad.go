@@ -95,10 +95,24 @@ func (pad *PAD) Set(name string, value []byte) error {
 	return pad.tree.Set(index, name, value)
 }
 
-func (pad *PAD) Lookup(name string) (*AuthenticationPath, error) {
+// LookupInCurrentEpoch searchs the requested name in the current tree
+// (which is not committed to the PAD).
+// The returned AuthenticationPath should be used only to verify the inclusion
+// of the requested name in the server-side
+// and should **not** be used to return to the client.
+func (pad *PAD) LookupInCurrentEpoch(name string) (*AuthenticationPath, error) {
+	lookupIndex, proof := pad.computePrivateIndex(name, pad.policies.vrfPrivateKey)
+	ap := pad.tree.Get(lookupIndex)
+	ap.VrfProof = proof
+	return ap, nil
+}
+
+// LookupInLatestEpoch searchs the requested name in the latest version of the tree.
+func (pad *PAD) LookupInLatestEpoch(name string) (*AuthenticationPath, error) {
 	return pad.LookupInEpoch(name, pad.latestSTR.Epoch)
 }
 
+// LookupInEpoch searchs the requested name in the tree at requested epoch.
 func (pad *PAD) LookupInEpoch(name string, epoch uint64) (*AuthenticationPath, error) {
 	str := pad.GetSTR(epoch)
 	if str == nil {

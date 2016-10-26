@@ -86,7 +86,7 @@ func TestPADHashChain(t *testing.T) {
 	}
 
 	// lookup
-	ap, _ := pad.Lookup(key1)
+	ap, _ := pad.LookupInLatestEpoch(key1)
 	if ap.Leaf.Value == nil {
 		t.Error("Cannot find key:", key1)
 		return
@@ -95,7 +95,7 @@ func TestPADHashChain(t *testing.T) {
 		t.Error(key1, "value mismatch")
 	}
 
-	ap, _ = pad.Lookup(key2)
+	ap, _ = pad.LookupInLatestEpoch(key2)
 	if ap.Leaf.Value == nil {
 		t.Error("Cannot find key:", key2)
 		return
@@ -104,7 +104,7 @@ func TestPADHashChain(t *testing.T) {
 		t.Error(key2, "value mismatch")
 	}
 
-	ap, _ = pad.Lookup(key3)
+	ap, _ = pad.LookupInLatestEpoch(key3)
 	if ap.Leaf.Value == nil {
 		t.Error("Cannot find key:", key3)
 		return
@@ -205,7 +205,7 @@ func TestPoliciesChange(t *testing.T) {
 	}
 	pad.Update(nil)
 
-	ap, _ := pad.Lookup(key1)
+	ap, _ := pad.LookupInLatestEpoch(key1)
 	if ap.Leaf.Value == nil {
 		t.Error("Cannot find key:", key1)
 	}
@@ -213,7 +213,7 @@ func TestPoliciesChange(t *testing.T) {
 		t.Error(key1, "value mismatch")
 	}
 
-	ap, _ = pad.Lookup(key2)
+	ap, _ = pad.LookupInLatestEpoch(key2)
 	if ap.Leaf.Value == nil {
 		t.Error("Cannot find key:", key2)
 	}
@@ -365,7 +365,7 @@ func benchPADLookup(b *testing.B, entries uint64) {
 			key = keyPrefix + string(n%int(entries))
 		}
 		b.StartTimer()
-		_, err := pad.Lookup(key)
+		_, err := pad.LookupInLatestEpoch(key)
 		if err != nil {
 			b.Fatalf("Coudldn't lookup key=%s", key)
 		}
