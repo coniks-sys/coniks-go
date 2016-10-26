@@ -309,7 +309,7 @@ func TestDirectoryKeyLookupInEpoch(t *testing.T) {
 func TestDirectoryKeyLookupInEpochBadEpoch(t *testing.T) {
 	N := 3
 
-	d, _ := NewTestDirectory(t, false)
+	d, _ := NewTestDirectory(t, true)
 	for i := 0; i < N; i++ {
 		d.Update()
 	}
@@ -325,7 +325,7 @@ func TestDirectoryKeyLookupInEpochBadEpoch(t *testing.T) {
 func TestMonitoringBadStartEpoch(t *testing.T) {
 	N := 3
 
-	d, _ := NewTestDirectory(t, false)
+	d, _ := NewTestDirectory(t, true)
 	for i := 0; i < N; i++ {
 		d.Update()
 	}
