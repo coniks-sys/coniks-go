@@ -103,6 +103,9 @@ func (d *ConiksDirectory) NewTB(name string, key []byte) *TemporaryBinding {
 // be sent back to the client. The returned error is used by the key
 // server for logging purposes.
 //
+// A request without a username or without a public key is considered
+// malformed, and causes Register() to return a (error response,
+// ErrorMalformedClientMessage) tuple.
 // If the given username already exists in the latest snapshot of the
 // directory, Register() returns an (error response, ErrorNameExisted)
 // tuple.
@@ -159,6 +162,9 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 // be sent back to the client. The returned error is used by the key
 // server for logging purposes.
 //
+// A request without a username is considered
+// malformed, and causes KeyLookup() to return a (error response,
+// ErrorMalformedClientMessage) tuple.
 // If the username doesn't have an entry in the directory and doesn't have a
 // corresponding TB, KeyLookup() returns
 // a (proof of absence, ErrorNameNotFound) tuple.
@@ -203,6 +209,9 @@ func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 // be sent back to the client. The returned error is used by the key
 // server for logging purposes.
 //
+// A request without a username or with an epoch greater than the latest
+// epoch of this directory is considered malformed, and causes KeyLookupInEpoch()
+// to return a (error response, ErrorMalformedClientMessage) tuple.
 // If the username doesn't have an entry in the directory,
 // at the indicated snapshot, KeyLookupInEpoch() returns a (KeyLookupInEpoch
 // proof of absence, ErrorNameNotFound) tuple.
@@ -247,6 +256,10 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 // be sent back to the client. The returned error is used by the key
 // server for logging purposes.
 //
+// A request without a username, with a start epoch greater than the
+// latest epoch of this directory, or a start epoch greater than the end epoch
+// is considered malformed, and causes Monitor() to return a (error response,
+// ErrorMalformedClientMessage) tuple.
 // Monitor() returns a (monitoring proof, Success) tuple.
 // If Monitor() encounters an internal error at any point,
 // it returns an (error response, ErrorDirectory) tuple.
