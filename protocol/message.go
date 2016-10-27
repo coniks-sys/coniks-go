@@ -1,4 +1,6 @@
 // Defines the message formats of the CONIKS protocols
+// and constructors for the response messages for each
+// protocol
 
 package protocol
 
@@ -117,13 +119,15 @@ func NewErrorResponse(e ErrorCode) *Response {
 var _ DirectoryResponse = (*DirectoryProof)(nil)
 var _ DirectoryResponse = (*DirectoryProofs)(nil)
 
-// Creates the response a CONIKS server sends to a client upon a RegistrationRequest.
+// Creates the response message a CONIKS server sends to a client upon a RegistrationRequest.
 // The contained DirectoryProof is either a proof of absence with a temporary
 // binding in the case of a successful registration (e = Success), or a proof of inclusion
 // in the case that the requested name already exists in the directory (e = ErrorNameExisted).
 // If the requested name has already been registered but not yet committed to the directory,
 // the DirectoryProof returns a proof of absence with the corresponding TB, but sets
 // the error code to ErrorNameExisted.
+// In all cases, the sserver must also include the signed tree root (STR) for the
+// lastest epoch.
 func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 	tb *TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
 	return &Response{
@@ -136,6 +140,15 @@ func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 	}, e
 }
 
+// Creates the response message a CONIKS server sends to a client upon a KeyLookupRequest.
+// The contained DirectoryProof is either a proof of inclusion without a temporary binding
+// (e = Success), or a proof of absence if the requested name does not exist in the directory
+// (e = ErrorNameNotFound).
+// If the requested name has already been registered but not yet committed to the directory,
+// the DirectoryProof returns a proof of absence with the corresponding TB, but sets
+// the error code to Success.
+// In all cases, the sserver must also include the signed tree root (STR) for the
+// lastest epoch.
 func NewKeyLookupProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 	tb *TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
 	return &Response{
@@ -148,6 +161,13 @@ func NewKeyLookupProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 	}, e
 }
 
+// Creates the response message a CONIKS server sends to a client upon a KeyLookupInEpochRequest.
+// The contained DirectoryProofs is either a single proof of inclusion (e = Success),
+// or a proof of absence if the requested name does not exist in the directory
+// (e = ErrorNameNotFound).
+// In either case, the server returns a list of STRs for the epoch range [ep,
+// directory.LatestEpoch().Epoch], where ep is the past epoch for which the client has
+// requested the user's key.
 func NewKeyLookupInEpochProof(ap *m.AuthenticationPath,
 	str []*m.SignedTreeRoot, e ErrorCode) (*Response, ErrorCode) {
 	aps := append([]*m.AuthenticationPath{}, ap)
@@ -160,6 +180,11 @@ func NewKeyLookupInEpochProof(ap *m.AuthenticationPath,
 	}, e
 }
 
+// Creates the response message a CONIKS server sends to a client upon a MonitoringRequest.
+// The contained DirectoryProofs includes a list of proofs of inclusion and a list
+// of STRs for the epoch range [startEpoch, endEpoch], where startEpoch and endEpoch
+// are the epoch range endpoints indicated in the client's request. The error code
+// is set to Success.
 func NewMonitoringProof(ap []*m.AuthenticationPath,
 	str []*m.SignedTreeRoot, e ErrorCode) (*Response, ErrorCode) {
 	return &Response{
