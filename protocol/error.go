@@ -5,11 +5,11 @@
 
 package protocol
 
-// ErrorCodes are special ints
+// ErrorCodes are special ints.
 type ErrorCode int
 
 // Server-side errors: The server returns these errors
-// to the client when a request fails
+// to the client when a request fails.
 const (
 	Success ErrorCode = iota + 10
 	ErrorDirectory
@@ -20,7 +20,7 @@ const (
 
 // Client-side errors: The client throws these errors
 // when a consistency check or cryptographic verification
-// fails
+// fails.
 const (
 	Passed ErrorCode = iota + 20
 	ErrorMalformedDirectoryMessage
@@ -32,8 +32,11 @@ const (
 	ErrorBrokenPromise
 )
 
-// ErrorResponses contains error codes that
-// a response can omit the DirectoryResponse.
+// ErrorResponses contains the server responses indicating that
+// a client request could not be processed due to a
+// malformed client request or an internal server error.
+// Server response messages containing one of these errors therefore
+// omit the DirectoryResponse.
 var ErrorResponses = map[ErrorCode]bool{
 	ErrorMalformedClientMessage: true,
 	ErrorDirectory:              true,
@@ -58,7 +61,7 @@ var (
 	}
 )
 
-// Returns the error message corresponding to e
+// Returns the error message corresponding to the error code e.
 func (e ErrorCode) Error() string {
 	return errorMessages[e]
 }
