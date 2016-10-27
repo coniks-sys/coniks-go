@@ -43,7 +43,7 @@ func cgoVerify(cType C.int,
 	// currentEp := uint64(cCurrentEpoch)
 	response := C.GoStringN(cResponse, cResponseSize)
 
-	// TODO: fix me
+	// TODO: call verification from protocol/consistencychecks.go here
 	_, err := client.UnmarshalResponse(int(cType), []byte(response))
 	if protocol.ErrorResponses[err] {
 		return C.int(err), C.int(protocol.ErrorCouldNotVerify)

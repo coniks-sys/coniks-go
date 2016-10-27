@@ -44,7 +44,7 @@ type ConsistencyChecks struct {
 // the pinning directory's STR at epoch 0.
 func NewCC(savedSTR []byte, useTBs bool, signKey sign.PublicKey) *ConsistencyChecks {
 
-	// Fix me: see #110
+	// TODO: see #110
 	if !useTBs {
 		panic("Currently the server is forced to use TBs")
 	}
@@ -121,7 +121,7 @@ func (cc *ConsistencyChecks) Verify(requestType int, msg *Response,
 		return PassedWithAProofOfInclusion
 
 	case KeyLookupInEpochType:
-		// TODO: fix me
+		// TODO:
 
 	}
 
@@ -167,7 +167,7 @@ func (cc *ConsistencyChecks) verifyDirectoryProof(df *DirectoryProof,
 
 func (cc *ConsistencyChecks) verifyDirectoryProofs(dfs *DirectoryProofs,
 	uname string, key []byte) (int, error) {
-	// TODO: fix me
+	// TODO: implement verifications for multi ranges of epoch
 	return invalidProof, nil
 }
 
