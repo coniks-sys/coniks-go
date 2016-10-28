@@ -15,7 +15,7 @@ import (
 	"github.com/coniks-sys/coniks-go/merkletree"
 )
 
-// A CONIKS key directory maintains the underlying persistent
+// A ConiksDirectory maintains the underlying persistent
 // authenticated dictionary (PAD)
 // and its policies (i.e. epoch deadline, VRF public key, etc.).
 //
@@ -29,7 +29,7 @@ type ConiksDirectory struct {
 	policies *merkletree.Policies
 }
 
-// Constructs a new ConiksDirectory given the key server's PAD
+// NewDirectory Constructs a new ConiksDirectory given the key server's PAD
 // policies (i.e. epDeadline, vrfKey).
 //
 // signKey is the private key the key server uses to sign signed tree
@@ -59,10 +59,10 @@ func NewDirectory(epDeadline merkletree.Timestamp, vrfKey vrf.PrivateKey,
 	return d
 }
 
-// Updates this ConiksDirectory, creating a new PAD snapshot. Update() is
-//called at the end of a CONIKS epoch. This implementation also deletes all
-// issued TBs for the ending epoch as their corresponding mappings
-// will have been inserted into the PAD.
+// Update creates a new PAD snapshot updating this ConiksDirectory.
+// Update() is called at the end of a CONIKS epoch. This implementation
+// also deletes all issued TBs for the ending epoch as their
+// corresponding mappings will have been inserted into the PAD.
 func (d *ConiksDirectory) Update() {
 	d.pad.Update(d.policies)
 	// clear issued temporary bindings
@@ -71,17 +71,19 @@ func (d *ConiksDirectory) Update() {
 	}
 }
 
-	// Sets this ConiksDirectory's epoch deadline and VRF private key.
-func (d *ConiksDirectory) SetPolicies(epDeadline merkletree.Timestamp, vrfKey vrf.PrivateKey) {
+// SetPolicies sets this ConiksDirectory's epoch deadline and VRF
+// private key.
+func (d *ConiksDirectory) SetPolicies(epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey) {
 	d.policies = merkletree.NewPolicies(epDeadline, vrfKey)
 }
 
-// Returns this ConiksDirectory's current epoch deadline as a timestamp.
-func (d *ConiksDirectory) EpochDeadline() merkletree.Timestamp {
+// EpochDeadline returns this ConiksDirectory's current epoch deadline
+// as a timestamp.
+func (d *ConiksDirectory) EpochDeadline() merkletree.TimeStamp {
 	return d.pad.LatestSTR().Policies.EpochDeadline
 }
 
-// Returns this ConiksDirectory's latest STR.
+// LatestSTR Returns this ConiksDirectory's latest STR.
 func (d *ConiksDirectory) LatestSTR() *merkletree.SignedTreeRoot {
 	return d.pad.LatestSTR()
 }
@@ -95,7 +97,7 @@ func (d *ConiksDirectory) NewTB(name string, key []byte) *TemporaryBinding {
 	}
 }
 
-// Registers the username-to-key mapping contained in a
+// Register inserts the username-to-key mapping contained in a
 // RegistrationRequest req received from a CONIKS client
 // into this ConiksDirectory, and returns a tuple of the form
 // (response, error).
@@ -154,9 +156,9 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 	return NewRegistrationProof(ap, d.LatestSTR(), tb, Success)
 }
 
-// Gets the public key for the username indicated in the KeyLookupRequest
-// req received from a CONIKS client from the latest snapshot of
-// this ConiksDirectory, and returns a tuple of the form
+// KeyLookup gets the public key for the username indicated in the
+// KeyLookupRequest req received from a CONIKS client from the latest
+// snapshot of this ConiksDirectory, and returns a tuple of the form
 // (response, error).
 // The response (which also includes the error code) is supposed to
 // be sent back to the client. The returned error is used by the key
@@ -201,8 +203,8 @@ func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 	return NewKeyLookupProof(ap, d.LatestSTR(), nil, ErrorNameNotFound)
 }
 
-// Gets the public key for the username for a prior epoch in the
-// directory history indicated in the
+// KeyLookupInEpoch gets the public key for the username for a prior
+// epoch in the directory history indicated in the
 // KeyLookupInEpochRequest req received from a CONIKS client,
 // and returns a tuple of the form (response, error).
 // The response (which also includes the error code) is supposed to
@@ -210,8 +212,9 @@ func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 // server for logging purposes.
 //
 // A request without a username or with an epoch greater than the latest
-// epoch of this directory is considered malformed, and causes KeyLookupInEpoch()
-// to return a (error response, ErrorMalformedClientMessage) tuple.
+// epoch of this directory is considered malformed, and causes
+// KeyLookupInEpoch() to return a (error response,
+// ErrorMalformedClientMessage) tuple.
 // If the username doesn't have an entry in the directory,
 // at the indicated snapshot, KeyLookupInEpoch() returns a (KeyLookupInEpoch
 // proof of absence, ErrorNameNotFound) tuple.
@@ -248,7 +251,7 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 	return NewKeyLookupInEpochProof(ap, strs, ErrorNameNotFound)
 }
 
-// Gets the directory proofs for the username for the range of
+// Monitor gets the directory proofs for the username for the range of
 // epochs indicated in the MonitoringRequest req received from a
 // CONIKS client,
 // and returns a tuple of the form (response, error).

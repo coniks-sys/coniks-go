@@ -5,7 +5,7 @@
 
 package protocol
 
-// ErrorCodes are special ints.
+// An ErrorCode is a special int.
 type ErrorCode int
 
 // Server-side errors: The server returns these errors

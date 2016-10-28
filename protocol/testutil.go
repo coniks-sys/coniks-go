@@ -9,7 +9,7 @@ import (
 
 // TODO: refactor the function signature after resolving #47
 
-// Creates a ConiksDirectory used for testing server-side
+// NewTestDirectory creates a ConiksDirectory used for testing server-side
 // CONIKS operations.
 func NewTestDirectory(t *testing.T, useTBs bool) (
 	*ConiksDirectory, sign.PublicKey) {
