@@ -79,7 +79,7 @@ func TestRegisterExistedUserWithTB(t *testing.T) {
 	}
 }
 
-func TestRegisterWithoutTB(t *testing.T) {
+func TestNewDirectoryPanicWithoutTB(t *testing.T) {
 	// workaround for #110
 	defer func() {
 		if r := recover(); r == nil {
@@ -87,55 +87,7 @@ func TestRegisterWithoutTB(t *testing.T) {
 		}
 	}()
 
-	// expect return a proof of absence
-	d, _ := NewTestDirectory(t, false)
-	res, err := d.Register(&RegistrationRequest{
-		Username: "alice",
-		Key:      []byte("key")})
-	df := res.DirectoryResponse.(*DirectoryProof)
-	if err != Success {
-		t.Fatal("Unable to register")
-	}
-	if ap := df.AP; ap == nil || bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
-		t.Fatal("Expect a proof of absence")
-	}
-	if df.TB != nil {
-		t.Fatal("Expect returned TB is nil")
-	}
-}
-
-func TestRegisterExistedUserWithoutTB(t *testing.T) {
-	// workaround for #110
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("The code did not panic")
-		}
-	}()
-
-	d, _ := NewTestDirectory(t, false)
-	_, err := d.Register(&RegistrationRequest{
-		Username: "alice",
-		Key:      []byte("key")})
-	if err != Success {
-		t.Fatal("Unable to register")
-	}
-
-	d.Update()
-	// expect return a proof of inclusion
-	// and error ErrorNameExisted
-	res, err := d.Register(&RegistrationRequest{
-		Username: "alice",
-		Key:      []byte("key")})
-	df := res.DirectoryResponse.(*DirectoryProof)
-	if err != ErrorNameExisted {
-		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
-	}
-	if ap := df.AP; ap == nil || !bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
-		t.Fatal("Expect a proof of inclusion")
-	}
-	if df.TB != nil {
-		t.Fatal("Expect returned TB is nil")
-	}
+	NewTestDirectory(t, false)
 }
 
 func TestKeyLookupWithTB(t *testing.T) {
@@ -168,48 +120,6 @@ func TestKeyLookupWithTB(t *testing.T) {
 	// lookup in epoch after registering epoch
 	// expect a proof of inclusion
 	res, _ = d.KeyLookup(&KeyLookupRequest{Username: "alice"})
-	df = res.DirectoryResponse.(*DirectoryProof)
-	if ap := df.AP; ap == nil || !bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
-		t.Fatal("Expect a proof of inclusion")
-	}
-	if df.TB != nil {
-		t.Fatal("Expect returned TB is nil")
-	}
-}
-
-func TestKeyLookupWithoutTB(t *testing.T) {
-	// workaround for #110
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("The code did not panic")
-		}
-	}()
-
-	d, _ := NewTestDirectory(t, false)
-	_, err := d.Register(&RegistrationRequest{
-		Username: "alice",
-		Key:      []byte("key")})
-
-	// lookup in the same epoch
-	// expect a proof of absence
-	// and error ErrorNameNotFound
-	res, err := d.KeyLookup(&KeyLookupRequest{Username: "alice"})
-	df := res.DirectoryResponse.(*DirectoryProof)
-	if err != ErrorNameNotFound ||
-		res.Error != ErrorNameNotFound {
-		t.Fatal("Expect error code", ErrorNameNotFound, "got", err)
-	}
-	if ap := df.AP; ap == nil || bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
-		t.Fatal("Expect a proof of absence")
-	}
-	if df.TB != nil {
-		t.Fatal("Expect returned TB is nil")
-	}
-
-	d.Update()
-	// lookup in epoch after registering epoch
-	// expect a proof of inclusion
-	res, err = d.KeyLookup(&KeyLookupRequest{Username: "alice"})
 	df = res.DirectoryResponse.(*DirectoryProof)
 	if ap := df.AP; ap == nil || !bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
 		t.Fatal("Expect a proof of inclusion")
