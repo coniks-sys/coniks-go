@@ -25,16 +25,19 @@ const (
 	ErrorBadSTR
 	ErrorBadCommitment
 	ErrorBadBinding
-	ErrorCouldNotVerify
 	ErrorBadPromise
 	ErrorBrokenPromise
 )
 
-// ErrorResponses contains error codes that
-// a response can omit the DirectoryResponse.
+// ErrorResponses contains error codes indicating the client
+// should omit the consistency checks. These errors indicate
+// that either a client request could not be processed due to
+// a malformed client request, an internal server error or
+// due to a malformed server response.
 var ErrorResponses = map[ErrorCode]bool{
-	ErrorMalformedClientMessage: true,
-	ErrorDirectory:              true,
+	ErrorMalformedDirectoryMessage: true,
+	ErrorMalformedClientMessage:    true,
+	ErrorDirectory:                 true,
 }
 
 var (
@@ -56,7 +59,6 @@ var (
 		ErrorBadSTR:                    "[coniks] The hash chain is inconsistent",
 		ErrorBadCommitment:             "[coniks] The binding commitment is invalid",
 		ErrorBadBinding:                "[coniks] Key in the binding is inconsistent",
-		ErrorCouldNotVerify:            "[coniks] Could not verify",
 		ErrorBadPromise:                "[coniks] The directory returned an invalid registration promise",
 		ErrorBrokenPromise:             "[coniks] The directory broke the registration promise",
 	}
