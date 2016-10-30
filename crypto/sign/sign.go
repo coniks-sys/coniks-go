@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	// PrivateKeySize is the size of private-key in bytes.
+	// PrivateKeySize is the size of the private-key in bytes.
 	PrivateKeySize = 64
 	// PublicKeySize is the size of the public-key in bytes.
 	PublicKeySize = 32
@@ -47,7 +47,7 @@ func (key PrivateKey) Sign(message []byte) []byte {
 }
 
 // Public derives the corresponding public-key from the underlying private-key.
-// It returns the derived key ,if possible, and a boolean flag which indicates if
+// It returns the derived key, if possible, and a boolean flag which indicates if
 // the operations to derive the public-key were successful.
 func (key PrivateKey) Public() (PublicKey, bool) {
 	pk, ok := ed25519.PrivateKey(key).Public().(ed25519.PublicKey)

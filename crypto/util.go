@@ -14,7 +14,7 @@ const (
 	HashID = "SHAKE128"
 )
 
-// Digest hashes all passed byte slice and hashes them.
+// Digest hashes all passed byte slices and hashes them.
 // The passed slices won't be mutated.
 func Digest(ms ...[]byte) []byte {
 	h := sha3.NewShake128()
@@ -29,7 +29,10 @@ func Digest(ms ...[]byte) []byte {
 // MakeRand returns a random slice of byte.
 // It returns an error if there was a problem while generating the random slice.
 // It is different from the 'standard' random byte generation as it hashes its
-// output before returning it.
+// output before returning it; by hashing the system's PRNG output before it is
+// send over the wire, we aim to make the random output less predictable (even
+// if the system's PRNG isn't as unpredictable as desired).
+// See https://trac.torproject.org/projects/tor/ticket/17694
 func MakeRand() ([]byte, error) {
 	r := make([]byte, HashSizeByte)
 	if _, err := rand.Read(r); err != nil {
