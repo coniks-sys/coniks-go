@@ -36,7 +36,6 @@ type ConsistencyChecks struct {
 	TBs    map[string]*m.TemporaryBinding
 
 	// signing key
-	// TODO: should we pin the signing key in the client? see #47
 	signKey sign.PublicKey
 }
 
@@ -62,17 +61,44 @@ func NewCC(savedSTR []byte, useTBs bool, signKey sign.PublicKey) *ConsistencyChe
 	return cc
 }
 
-// Verify verifies the directory's response for a request.
-// It first verifies the directory's returned status code of the request.
+// clone makes a copy of the current consistency state.
+func (cc *ConsistencyChecks) clone() *ConsistencyChecks {
+	newCC := &ConsistencyChecks{
+		CurrentEpoch: cc.CurrentEpoch,
+		SavedSTR:     cc.SavedSTR,
+		useTBs:       cc.useTBs,
+		signKey:      cc.signKey,
+	}
+
+	if cc.useTBs {
+		newCC.TBs = make(map[string]*m.TemporaryBinding)
+		for k, v := range cc.TBs {
+			newCC.TBs[k] = v
+		}
+	}
+
+	return newCC
+}
+
+func (cc *ConsistencyChecks) update(updated *ConsistencyChecks) {
+	cc.CurrentEpoch = updated.CurrentEpoch
+	cc.SavedSTR = updated.SavedSTR
+	cc.TBs = updated.TBs
+}
+
+// Verify verifies the directory's response for a request and
+// updates the current state if all the verifications are successful.
+// It makes a copy of the current state and does verifications
+// using the cloned state. To verify the directory's response,
+// it first verifies the directory's returned status code of the request.
 // If the status code is not in ErrorResponses array, it means
 // the directory has successfully handled the request.
-// The verifier will then verify the consistency state of the response,
-// and finally, it verifies the returned proof type
-// according to the request type.
-// This will also update the consistency state if the check is passed.
+// The verifier will then verify the consistency state of the response.
+// During the verifications, the cloned state would be modified.
+// This cloned state will be used to update the original
+// state if all the verifications are passed, otherwise it will be discarded.
 func (cc *ConsistencyChecks) Verify(requestType int, msg *Response,
 	uname string, key []byte) ErrorCode {
-
 	if ErrorResponses[msg.Error] {
 		return msg.Error
 	}
@@ -80,57 +106,30 @@ func (cc *ConsistencyChecks) Verify(requestType int, msg *Response,
 	var verifResult error
 	var proofType int
 
+	cloneCC := cc.clone()
 	switch msg.DirectoryResponse.(type) {
 	case *DirectoryProof:
-		proofType, verifResult = cc.verifyDirectoryProof(
-			msg.DirectoryResponse.(*DirectoryProof), uname, key)
+		proofType, verifResult = cloneCC.verifyDirectoryProof(requestType,
+			msg.Error, msg.DirectoryResponse.(*DirectoryProof), uname, key)
+
 	case *DirectoryProofs:
-		proofType, verifResult = cc.verifyDirectoryProofs(
+		proofType, verifResult = cloneCC.verifyDirectoryProofs(
 			msg.DirectoryResponse.(*DirectoryProofs), uname, key)
 	}
 
 	if verifResult != nil {
 		return verifResult.(ErrorCode)
 	}
+	cc.update(cloneCC)
 
-	switch requestType {
-	case RegistrationType:
-		if msg.Error == ErrorNameExisted &&
-			proofType == proofOfInclusion {
-			return PassedWithAProofOfInclusion
-		} else if msg.Error == Success &&
-			proofType == proofOfAbsence {
-			return PassedWithAProofOfAbsence
-		}
-		return cc.verifyProofTypeUsingPromises(msg.Error, proofType)
-
-	case KeyLookupType:
-		if msg.Error == ErrorNameNotFound &&
-			proofType == proofOfAbsence {
-			return PassedWithAProofOfAbsence
-		} else if msg.Error == Success &&
-			proofType == proofOfInclusion {
-			return PassedWithAProofOfInclusion
-		}
-		return cc.verifyProofTypeUsingPromises(msg.Error, proofType)
-
-	case MonitoringType:
-		if proofType == proofOfAbsence {
-			return ErrorBadProofType
-		}
-		return PassedWithAProofOfInclusion
-
-	case KeyLookupInEpochType:
-		// TODO:
-
+	if proofType == proofOfAbsence {
+		return PassedWithAProofOfAbsence
 	}
-
-	// this return should be unreachable
-	// unless the developers mistakenly passed an invalid request type.
-	return ErrorMalformedClientMessage
+	return PassedWithAProofOfInclusion
 }
 
-func (cc *ConsistencyChecks) verifyDirectoryProof(df *DirectoryProof,
+func (cc *ConsistencyChecks) verifyDirectoryProof(requestType int,
+	responseCode ErrorCode, df *DirectoryProof,
 	uname string, key []byte) (proofType int, verifResult error) {
 
 	verifResult = nil
@@ -138,7 +137,6 @@ func (cc *ConsistencyChecks) verifyDirectoryProof(df *DirectoryProof,
 
 	ap := df.AP
 	str := df.STR
-	tb := df.TB
 
 	if verifResult = cc.verifySTR(str); verifResult != nil {
 		return
@@ -149,11 +147,26 @@ func (cc *ConsistencyChecks) verifyDirectoryProof(df *DirectoryProof,
 		return
 	}
 
-	if verifResult = cc.verifyReturnedPromise(tb, uname, key, str, ap); verifResult != nil {
-		return
+	// validates the (response code, proof type) according to the request type.
+	switch requestType {
+	case RegistrationType:
+		if responseCode != ErrorNameExisted &&
+			(responseCode != Success || proofType != proofOfAbsence) {
+			return invalidProof, ErrorMalformedDirectoryMessage
+		}
+
+	case KeyLookupType:
+		if responseCode != Success &&
+			(responseCode != ErrorNameNotFound || proofType != proofOfAbsence) {
+			return invalidProof, ErrorMalformedDirectoryMessage
+		}
+
+	default:
+		panic("[coniks] Unknown request type")
 	}
 
-	if verifResult = cc.verifyFulfilledPromise(uname, str, ap); verifResult != nil {
+	if verifResult = cc.verifySignedPromise(requestType,
+		responseCode, df, uname, key); verifResult != nil {
 		return
 	}
 
@@ -210,11 +223,80 @@ func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
 	}
 
 	// verify hash chain
+	// TODO: clearly verify which is the client's actual expectation.
+	// See #81
 	if (str.Epoch == cc.CurrentEpoch && bytes.Equal(cc.SavedSTR, str.Signature)) ||
 		(str.Epoch == cc.CurrentEpoch+1 && str.VerifyHashChain(cc.SavedSTR)) {
 		return nil
 	}
 	return ErrorBadSTR
+}
+
+// verifySignedPromise checks if the returned response is match
+// with the directory's policy. Then it calls verifyFulfilledPromise
+// to verify whether issued TBs was inserted in the directory
+// as promised. Finally, it verifies the returned promise
+// based on the request type. Note that the directory returns a promise
+// iff the returned proof is a proof of absence.
+// 	If the request is a registration, and
+// 	- the request is successful, then the directory should return a promise for the new binding.
+// 	- the request is failed because of ErrorNameExisted, then the directory should return a promise for that existed binding.
+//
+// 	If the request is a key lookup, and
+// 	- the request is successful, then the directory should return a promise for the lookup binding.
+func (cc *ConsistencyChecks) verifySignedPromise(requestType int,
+	responseCode ErrorCode, df *DirectoryProof,
+	uname string, key []byte) error {
+	ap := df.AP
+	str := df.STR
+	tb := df.TB
+
+	if !cc.useTBs {
+		if tb != nil {
+			// this violates the directory's policy.
+			return ErrorMalformedDirectoryMessage
+		}
+		return nil
+	}
+
+	if verifResult := cc.verifyFulfilledPromise(uname, str, ap); verifResult != nil {
+		return verifResult
+	}
+
+	// the client should receive a signed promise iff
+	// the directory returns a proof of absence
+	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
+		if tb != nil {
+			// the directory returned a proof of inclusion
+			// _and_ a promise
+			return ErrorMalformedDirectoryMessage
+		}
+		return nil
+	}
+
+	switch requestType {
+	case RegistrationType:
+		if responseCode == ErrorNameExisted {
+			// ignore the key value verification since we may have no information about that existed binding.
+			if verifResult := cc.verifyReturnedPromise(tb, uname, nil, str, ap); verifResult != nil {
+				return verifResult
+			}
+		} else if responseCode == Success {
+			// this promise should be our binding
+			if verifResult := cc.verifyReturnedPromise(tb, uname, key, str, ap); verifResult != nil {
+				return verifResult
+			}
+		}
+
+	case KeyLookupType:
+		if responseCode == Success {
+			if verifResult := cc.verifyReturnedPromise(tb, uname, key, str, ap); verifResult != nil {
+				return verifResult
+			}
+		}
+	}
+
+	return nil
 }
 
 // verifyReturnedPromise verifies the returned TB
@@ -224,30 +306,22 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(tb *m.TemporaryBinding,
 	str *m.SignedTreeRoot,
 	ap *m.AuthenticationPath) error {
 
-	if cc.useTBs && tb != nil {
-		// the client should receive a signed promise iff
-		// the server returns a proof of absence
-		if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
-			return ErrorMalformedDirectoryMessage
-		}
-
-		// verify TB's Signature
-		if !cc.signKey.Verify(tb.Serialize(str.Signature), tb.Signature) {
-			return ErrorBadSignature
-		}
-
-		// verify TB's VRF index
-		if !bytes.Equal(tb.Index, ap.LookupIndex) {
-			return ErrorBadIndex
-		}
-
-		// verify TB's value
-		if !bytes.Equal(tb.Value, key) {
-			return ErrorBadPromise
-		}
-
-		cc.TBs[uname] = tb
+	// verify TB's Signature
+	if !cc.signKey.Verify(tb.Serialize(str.Signature), tb.Signature) {
+		return ErrorBadSignature
 	}
+
+	// verify TB's VRF index
+	if !bytes.Equal(tb.Index, ap.LookupIndex) {
+		return ErrorBadIndex
+	}
+
+	// verify TB's value
+	if key != nil && !bytes.Equal(tb.Value, key) {
+		return ErrorBadPromise
+	}
+
+	cc.TBs[uname] = tb
 
 	return nil
 }
@@ -257,42 +331,22 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(tb *m.TemporaryBinding,
 func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 	str *m.SignedTreeRoot,
 	ap *m.AuthenticationPath) error {
-	if cc.useTBs {
-		for name, tb := range cc.TBs {
-			if cc.CurrentEpoch+1 == str.Epoch &&
-				name == uname {
-				if !tb.Verify(ap) {
-					return ErrorBrokenPromise
-				}
-				delete(cc.TBs, uname)
-			} else if cc.CurrentEpoch < str.Epoch {
-				// clear all issued promises since they have been verified
-				// or the client has missed some epochs
-				// TODO: should verify when we introduce KeyLookupInEpoch
-				// and monitoring with missed epochs,
-				// see: https://github.com/coniks-sys/coniks-go/pull/74#discussion_r84930999
-				// and: https://github.com/coniks-sys/coniks-go/pull/74#discussion_r84501211
-				delete(cc.TBs, name)
+	for name, tb := range cc.TBs {
+		if cc.CurrentEpoch+1 == str.Epoch &&
+			name == uname {
+			if !tb.Verify(ap) {
+				return ErrorBrokenPromise
 			}
-			// keep current epoch's returned promises
-			// for future verifications
+			delete(cc.TBs, uname)
+		} else if cc.CurrentEpoch < str.Epoch {
+			// TODO: should verify when we introduce KeyLookupInEpoch
+			// and monitoring with missed epochs,
+			// see: https://github.com/coniks-sys/coniks-go/pull/74#discussion_r84930999
+			// and: https://github.com/coniks-sys/coniks-go/pull/74#discussion_r84501211
+			delete(cc.TBs, name)
 		}
+		// keep current epoch's returned promises
+		// for future verifications
 	}
 	return nil
-}
-
-// verifyProofTypeUsingPromises verifies the returned proof type
-// and the returned error code when signed promises extension is enabled.
-// See #110.
-func (cc *ConsistencyChecks) verifyProofTypeUsingPromises(e ErrorCode, proofType int) ErrorCode {
-	if cc.useTBs {
-		// these checks mean the requested binding wasn't included in the latest STR
-		// but was being held in the temporary binding array.
-		if (e == ErrorNameExisted && proofType == proofOfAbsence) ||
-			(e == Success && proofType == proofOfAbsence) {
-			return PassedWithAProofOfAbsence
-		}
-	}
-
-	return ErrorBadProofType
 }
