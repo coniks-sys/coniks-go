@@ -159,38 +159,6 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 	}
 }
 
-func TestVerifyRegistrationResponseWithoutTB(t *testing.T) {
-	// workaround for #110
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("The code did not panic")
-		}
-	}()
-
-	d, pk := NewTestDirectory(t, false)
-
-	cc := NewCC(d.LatestSTR().Signature, false, pk)
-
-	res, _ := d.Register(&RegistrationRequest{
-		Username: uname,
-		Key:      key})
-	if cc.Verify(RegistrationType, res, uname, key) != PassedWithAProofOfAbsence {
-		t.Fatal("Unexpected verification result")
-	}
-
-	// re-register in a different epoch
-	d.Update()
-	res, err := d.Register(&RegistrationRequest{
-		Username: uname,
-		Key:      key})
-	if err != ErrorNameExisted {
-		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
-	}
-	if cc.Verify(RegistrationType, res, uname, key) != PassedWithAProofOfInclusion {
-		t.Fatal("Unexpected verification result")
-	}
-}
-
 func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
 
@@ -213,60 +181,6 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	res, err = d.KeyLookup(&KeyLookupRequest{uname})
 	if err != Success {
 		t.Fatal("Expect error code", Success, "got", err)
-	}
-	if cc.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfAbsence {
-		t.Fatal("Unexpected verification result")
-	}
-
-	// do lookup in the different epoch
-	d.Update()
-	res, err = d.KeyLookup(&KeyLookupRequest{uname})
-	if err != Success {
-		t.Fatal("Expect error code", Success, "got", err)
-	}
-	if cc.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfInclusion {
-		t.Fatal("Unexpected verification result")
-	}
-
-	// test error name not found
-	res, err = d.KeyLookup(&KeyLookupRequest{"bob"})
-	if err != ErrorNameNotFound {
-		t.Fatal("Expect error code", Success, "got", err)
-	}
-	if cc.Verify(KeyLookupType, res, "bob", nil) != PassedWithAProofOfAbsence {
-		t.Fatal("Unexpected verification result")
-	}
-}
-
-func TestVerifyKeyLookupResponseWithoutTB(t *testing.T) {
-	// workaround for #110
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("The code did not panic")
-		}
-	}()
-
-	d, pk := NewTestDirectory(t, false)
-
-	cc := NewCC(d.LatestSTR().Signature, false, pk)
-
-	// do lookup first
-	res, err := d.KeyLookup(&KeyLookupRequest{uname})
-	if err != ErrorNameNotFound {
-		t.Fatal("Expect error code", ErrorNameNotFound, "got", err)
-	}
-	if cc.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfAbsence {
-		t.Fatal("Unexpected verification result")
-	}
-
-	// register
-	res, _ = d.Register(&RegistrationRequest{
-		Username: uname,
-		Key:      key})
-	// do lookup in the same epoch
-	res, err = d.KeyLookup(&KeyLookupRequest{uname})
-	if err != ErrorNameNotFound {
-		t.Fatal("Expect error code", ErrorNameNotFound, "got", err)
 	}
 	if cc.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
