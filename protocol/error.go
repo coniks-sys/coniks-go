@@ -17,7 +17,6 @@ const (
 	PassedWithAProofOfAbsence ErrorCode = iota + 20
 	PassedWithAProofOfInclusion
 	ErrorMalformedDirectoryMessage
-	ErrorBadProofType
 	ErrorBadSignature
 	ErrorBadVRFProof
 	ErrorBadIndex
@@ -48,7 +47,6 @@ var (
 		PassedWithAProofOfAbsence:      "[coniks] Consistency checks passed with a proof of absence",
 		PassedWithAProofOfInclusion:    "[coniks] Consistency checks passed with a proof of inclusion",
 		ErrorMalformedDirectoryMessage: "[coniks] Malformed directory message",
-		ErrorBadProofType:              "[coniks] The directory returned an unexpected proof type for the request",
 		ErrorBadSignature:              "[coniks] Directory's signature on STR or TB is invalid",
 		ErrorBadVRFProof:               "[coniks] Returned index is not valid for the given name",
 		ErrorBadIndex:                  "[coniks] The index in the TB and the index in the auth path do not match",
