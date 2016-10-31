@@ -52,6 +52,19 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 		t.Fatal("Unexpected verification result")
 	}
 
+	// test error name existed with different key
+	res, err = d.Register(&RegistrationRequest{
+		Username: uname,
+		Key:      []byte{1, 2, 3},
+	})
+	if err != ErrorNameExisted {
+		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
+	}
+	// expect a proof of absence since this binding wasn't included in this epoch
+	if err := cc.Verify(RegistrationType, res, uname, key); err != PassedWithAProofOfAbsence {
+		t.Fatal("Unexpected verification result")
+	}
+
 	if len(cc.TBs) != 1 {
 		t.Fatal("Expect the directory to return a signed promise")
 	}
