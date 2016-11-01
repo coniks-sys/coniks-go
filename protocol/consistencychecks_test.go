@@ -11,10 +11,11 @@ func TestVerifyWithError(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
 
 	// modify the pinning STR so that the consistency check should fail.
-	str := append([]byte{}, d.LatestSTR().Signature...)
-	str[0]++
+	str := *(d.LatestSTR())
+	str.Signature = append([]byte{}, str.Signature...)
+	str.Signature[0]++
 
-	cc := NewCC(str, true, pk)
+	cc := NewCC(&str, true, pk)
 
 	res, _ := d.Register(&RegistrationRequest{
 		Username: uname,
@@ -27,7 +28,7 @@ func TestVerifyWithError(t *testing.T) {
 func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
 
-	cc := NewCC(d.LatestSTR().Signature, true, pk)
+	cc := NewCC(d.LatestSTR(), true, pk)
 
 	res, _ := d.Register(&RegistrationRequest{
 		Username: uname,
@@ -88,7 +89,7 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 func TestVerifyFullfilledPromise(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
 
-	cc := NewCC(d.LatestSTR().Signature, true, pk)
+	cc := NewCC(d.LatestSTR(), true, pk)
 
 	res, _ := d.Register(&RegistrationRequest{
 		Username: "alice",
@@ -140,8 +141,7 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 	d.Update()
 
 	// bypass the hash chain verification
-	cc.SavedSTR = d.LatestSTR().Signature
-	cc.CurrentEpoch = d.LatestSTR().Epoch
+	cc.SavedSTR = d.LatestSTR()
 
 	d.Update()
 
@@ -162,7 +162,7 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
 
-	cc := NewCC(d.LatestSTR().Signature, true, pk)
+	cc := NewCC(d.LatestSTR(), true, pk)
 
 	// do lookup first
 	res, err := d.KeyLookup(&KeyLookupRequest{uname})
