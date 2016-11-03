@@ -99,41 +99,65 @@ func (cc *ConsistencyChecks) Verify(requestType int, msg *Response,
 		return msg.Error
 	}
 
-	switch requestType {
-	case RegistrationType, KeyLookupType:
-		if _, ok := msg.DirectoryResponse.(*DirectoryProof); !ok {
-			return ErrorMalformedDirectoryMessage
-		}
+	var verifResult error
+	cloneCC := cc.clone()
 
-	case MonitoringType, KeyLookupInEpochType:
-		if _, ok := msg.DirectoryResponse.(*DirectoryProofs); !ok {
-			return ErrorMalformedDirectoryMessage
-		}
+	switch requestType {
+	case RegistrationType:
+		verifResult = cloneCC.verifyRegistration(requestType, msg, uname, key)
+	case KeyLookupType:
+		verifResult = cloneCC.verifyKeyLookup(requestType, msg, uname, key)
+	case MonitoringType:
+	case KeyLookupInEpochType:
 	default:
 		panic("[coniks] Unknown request type")
 	}
 
-	var verifResult error
-	var proofType int
-
-	cloneCC := cc.clone()
-	switch msg.DirectoryResponse.(type) {
-	case *DirectoryProof:
-		proofType, verifResult = cloneCC.verifyDirectoryProof(requestType,
-			msg.Error, msg.DirectoryResponse.(*DirectoryProof), uname, key)
-
-	case *DirectoryProofs:
-		proofType, verifResult = cloneCC.verifyDirectoryProofs(requestType,
-			msg.Error, msg.DirectoryResponse.(*DirectoryProofs), uname, key)
+	if verifResult == PassedWithAProofOfAbsence ||
+		verifResult == PassedWithAProofOfInclusion {
+		cc.update(cloneCC)
 	}
 
+	return verifResult.(ErrorCode)
+}
+
+func (cc *ConsistencyChecks) verifyRegistration(requestType int,
+	msg *Response, uname string, key []byte) error {
+
+	df, ok := msg.DirectoryResponse.(*DirectoryProof)
+	if !ok {
+		return ErrorMalformedDirectoryMessage
+	}
+
+	ap := df.AP
+	str := df.STR
+
+	// 1. verify STR
+	if verifResult := cc.verifySTR(str); verifResult != nil {
+		return verifResult
+	}
+
+	// 2. verify Auth path
+	proofType, verifResult := cc.verifyAuthPath(uname, key, ap, str)
 	if verifResult != nil {
-		return verifResult.(ErrorCode)
+		return verifResult
 	}
 
-	// all checks are passed
-	// update new state for the client
-	cc.update(cloneCC)
+	// 3. verify (response code, proof type) pair.
+	switch {
+	case msg.Error == ErrorNameExisted:
+	case msg.Error == Success && proofType == proofOfAbsence:
+	default:
+		return ErrorMalformedDirectoryMessage
+	}
+
+	// 4. verify returned promise
+	if verifResult := cc.verifyReturnedPromise(requestType,
+		msg.Error, df, uname, key); verifResult != nil {
+		return verifResult
+	}
+
+	cc.SavedSTR = str
 
 	if proofType == proofOfAbsence {
 		return PassedWithAProofOfAbsence
@@ -141,67 +165,53 @@ func (cc *ConsistencyChecks) Verify(requestType int, msg *Response,
 	return PassedWithAProofOfInclusion
 }
 
-func (cc *ConsistencyChecks) verifyDirectoryProof(requestType int,
-	responseCode ErrorCode, df *DirectoryProof,
-	uname string, key []byte) (proofType int, verifResult error) {
+func (cc *ConsistencyChecks) verifyKeyLookup(requestType int,
+	msg *Response, uname string, key []byte) error {
 
-	verifResult = nil
-	proofType = invalidProof
+	df, ok := msg.DirectoryResponse.(*DirectoryProof)
+	if !ok {
+		return ErrorMalformedDirectoryMessage
+	}
 
 	ap := df.AP
 	str := df.STR
 
 	// 1. verify STR
-	if verifResult = cc.verifySTR(str); verifResult != nil {
-		return
+	if verifResult := cc.verifySTR(str); verifResult != nil {
+		return verifResult
 	}
 
 	// 2. verify Auth path
-	if proofType, verifResult = cc.verifyAuthPath(uname, key,
-		ap, str); verifResult != nil {
-		return
+	proofType, verifResult := cc.verifyAuthPath(uname, key, ap, str)
+	if verifResult != nil {
+		return verifResult
 	}
 
-	// 3. verify (response code, proof type) pair according to the request type.
-	switch requestType {
-	case RegistrationType:
-		switch {
-		case responseCode == ErrorNameExisted:
-		case responseCode == Success && proofType == proofOfAbsence:
-		default:
-			return invalidProof, ErrorMalformedDirectoryMessage
-		}
-
-	case KeyLookupType:
-		switch {
-		case responseCode == ErrorNameNotFound && proofType == proofOfAbsence:
-		case responseCode == Success:
-		default:
-			return invalidProof, ErrorMalformedDirectoryMessage
-		}
+	// 3. verify (response code, proof type) pair.
+	switch {
+	case msg.Error == ErrorNameNotFound && proofType == proofOfAbsence:
+	case msg.Error == Success:
+	default:
+		return ErrorMalformedDirectoryMessage
 	}
 
 	// 4. verify fulfilled promise
-	if verifResult = cc.verifyFulfilledPromise(uname, str, ap); verifResult != nil {
-		return invalidProof, verifResult
+	if verifResult := cc.verifyFulfilledPromise(uname, str, ap); verifResult != nil {
+		return verifResult
 	}
 
 	// 5. verify returned promise
-	if verifResult = cc.verifyReturnedPromise(requestType,
-		responseCode, df, uname, key); verifResult != nil {
-		return invalidProof, verifResult
+	if verifResult := cc.verifyReturnedPromise(requestType,
+		msg.Error, df, uname, key); verifResult != nil {
+		return verifResult
 	}
 
 	cc.SavedSTR = str
 
-	return
-}
-
-func (cc *ConsistencyChecks) verifyDirectoryProofs(requestType int,
-	responseCode ErrorCode, dfs *DirectoryProofs,
-	uname string, key []byte) (int, error) {
-	// TODO: implement verifications for a range of epochs
-	return invalidProof, nil
+	if proofType == proofOfAbsence {
+		return PassedWithAProofOfAbsence
+	}
+	return PassedWithAProofOfInclusion
 }
 
 func (cc *ConsistencyChecks) verifyAuthPath(uname string, key []byte,

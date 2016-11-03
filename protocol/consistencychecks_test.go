@@ -71,6 +71,8 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	}
 
 	// re-register in a different epoch
+	// Since the fulfilled promise verification would be perform
+	// when the client is monitoring, we do _not_ expect a TB's verification here.
 	d.Update()
 	res, err = d.Register(&RegistrationRequest{
 		Username: uname,
@@ -80,9 +82,6 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	}
 	if cc.Verify(RegistrationType, res, uname, key) != PassedWithAProofOfInclusion {
 		t.Fatal("Unexpected verification result")
-	}
-	if len(cc.TBs) != 0 {
-		t.Error("Expect the directory to insert the binding as promised")
 	}
 }
 
