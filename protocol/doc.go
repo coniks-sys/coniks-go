@@ -21,7 +21,7 @@ This module implements a CONIKS key directory that a CONIKS key server
 maintains. A directory is a publicly auditable, tamper-evident,
 privacy-preserving data structure that contains mappings from usernames
 to public keys. It currently supports registration of new mappings,
-current key lookups, historical key lookups, and monitoring of mappings.
+latest-version key lookups, historical key lookups, and monitoring of mappings.
 
 Error
 

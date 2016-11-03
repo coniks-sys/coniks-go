@@ -2,8 +2,9 @@
 // maintains.
 // A directory is a publicly auditable, tamper-evident, privacy-preserving
 // data structure that contains mappings from usernames to public keys.
-// It currently supports registration, current key lookups, past key lookups,
+// It currently supports registration, latest-version key lookups, past key lookups,
 // and monitoring.
+// It does not yet support key changes.
 
 package protocol
 
@@ -20,7 +21,7 @@ import (
 // and its policies (i.e. epoch deadline, VRF public key, etc.).
 //
 // The current implementation of ConiksDirectory also keeps track
-// of temporary bindings (TBs). This feature will be split into a separate
+// of temporary bindings (TBs). This feature may be split into a separate
 // protocol extension in a future release.
 type ConiksDirectory struct {
 	pad      *merkletree.PAD
@@ -29,7 +30,7 @@ type ConiksDirectory struct {
 	policies *merkletree.Policies
 }
 
-// NewDirectory Constructs a new ConiksDirectory given the key server's PAD
+// NewDirectory constructs a new ConiksDirectory given the key server's PAD
 // policies (i.e. epDeadline, vrfKey).
 //
 // signKey is the private key the key server uses to sign signed tree
@@ -72,12 +73,12 @@ func (d *ConiksDirectory) Update() {
 }
 
 // SetPolicies sets this ConiksDirectory's epoch deadline and VRF
-// private key.
+// private key, which will be used in the next epoch.
 func (d *ConiksDirectory) SetPolicies(epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey) {
 	d.policies = merkletree.NewPolicies(epDeadline, vrfKey)
 }
 
-// EpochDeadline returns this ConiksDirectory's current epoch deadline
+// EpochDeadline returns this ConiksDirectory's latest epoch deadline
 // as a timestamp.
 func (d *ConiksDirectory) EpochDeadline() merkletree.TimeStamp {
 	return d.pad.LatestSTR().Policies.EpochDeadline
@@ -108,15 +109,20 @@ func (d *ConiksDirectory) NewTB(name string, key []byte) *TemporaryBinding {
 // A request without a username or without a public key is considered
 // malformed, and causes Register() to return a (error response,
 // ErrorMalformedClientMessage) tuple.
-// If the given username already exists in the latest snapshot of the
-// directory, Register() returns an (error response, ErrorNameExisted)
-// tuple.
-// Otherwise, Register() inserts the new mapping in req
-// into the PAD so it can be included in the snapshot taken at the end
-// of the current  epoch), and returns a (registration proof, Success)
-// if this operation succeeds.
+// Register() inserts the new mapping in req
+// into a pending version of the directory so it can be included in the
+// snapshot taken at the end of the latest epoch, and returns a (proof
+// of absence, TB, Success) tuple if this operation succeeds.
+// Otherwise, if the username already exists, Register() returns a
+// (registration proof, ErrorNameExisted)
+// tuple. The proof will be a proof of absence with a TB, if the username
+// is still pending inclusion in the next directory snapshot,
+// and a proof of inclusion it exists in the latest directory snapshot.
 // If Register() encounters an internal error at any point, it returns
 // an (error response, ErrorDirectory) tuple.
+//
+// See message.NewRegistrationProof() for details on the contents of the response
+// messages.
 func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 	*Response, ErrorCode) {
 	// make sure the request is well-formed
@@ -167,9 +173,9 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 // A request without a username is considered
 // malformed, and causes KeyLookup() to return a (error response,
 // ErrorMalformedClientMessage) tuple.
-// If the username doesn't have an entry in the directory and doesn't have a
-// corresponding TB, KeyLookup() returns
-// a (proof of absence, ErrorNameNotFound) tuple.
+// If the username doesn't have an entry in the latest directory
+// snapshot and also isn't pending registration (i.e. has a corresponding TB),
+// KeyLookup() returns a (proof of absence, ErrorNameNotFound) tuple.
 // Otherwise, KeyLookup() returns a (key lookup proof, Success) tuple.
 // The proof will be a proof of absence including a TB, if there is a
 // corresponding TB for the username,
@@ -177,6 +183,9 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 // if there is an entry in the directory.
 // If KeyLookup() encounters an internal error at any point, it returns
 // an (error response, ErrorDirectory) tuple.
+//
+// See message.NewKeyLookupProof() for details on the contents of the response
+// messages.
 func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 	*Response, ErrorCode) {
 
@@ -216,12 +225,17 @@ func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 // KeyLookupInEpoch() to return a (error response,
 // ErrorMalformedClientMessage) tuple.
 // If the username doesn't have an entry in the directory,
-// at the indicated snapshot, KeyLookupInEpoch() returns a (KeyLookupInEpoch
-// proof of absence, ErrorNameNotFound) tuple.
-// Otherwise, KeyLookupInEpoch() returns a (KeyLookupInEpoch proof of
-// inclusion, Success) tuple.
+// in the directory snapshot for the indicated epoch, KeyLookupInEpoch()
+// returns a (proof of absence, ErrorNameNotFound) tuple.
+// Otherwise, KeyLookupInEpoch() returns a (proof of inclusion, Success) tuple.
+// KeyLookupInEpoch() proofs do not include temporary bindings since
+// the TB corresponding to a registered binding is discarded at the time
+// the binding is included in a directory snapshot.
 // If KeyLookupInEpoch() encounters an internal error at any point,
 // it returns an (error response, ErrorDirectory) tuple.
+//
+// See message.NewKeyLookupInEpochProof() for details on the contents of the response
+// messages.
 func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 	*Response, ErrorCode) {
 
@@ -266,6 +280,9 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 // Monitor() returns a (monitoring proof, Success) tuple.
 // If Monitor() encounters an internal error at any point,
 // it returns an (error response, ErrorDirectory) tuple.
+//
+// See message.NewMonitoringProof() for details on the contents of the response
+// messages.
 func (d *ConiksDirectory) Monitor(req *MonitoringRequest) (
 	*Response, ErrorCode) {
 

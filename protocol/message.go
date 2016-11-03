@@ -39,12 +39,12 @@ type RegistrationRequest struct {
 
 // A KeyLookupRequest is a message with a username as a string
 // that a CONIKS client sends to a CONIKS server to retrieve the
-// public key bound to the given username at the current epoch.
+// public key bound to the given username at the latest epoch.
 // If the client needs to look up a username's key for a prior epoch, it
 // must send a KeyLookupInEpochRequest.
 //
 // The response to a successful request is a DirectoryProof with a TB if the requested
-// username was registered during the current epoch (i.e. the new binding hasn't been
+// username was registered during the latest epoch (i.e. the new binding hasn't been
 // committed to the directory).
 type KeyLookupRequest struct {
 	Username string `json:"username"`
@@ -55,7 +55,7 @@ type KeyLookupRequest struct {
 // retrieve the public key bound to the username in the given epoch.
 // The client sends this request type when it needs to obtain
 // a user's key for a past epoch. The client can send a KeyLookupRequest
-// if it needs to look up a user's key for the current epoch.
+// if it needs to look up a user's key for the latest epoch.
 //
 // The response to a successful request is a DirectoryProofs with an AP
 // of length 1 containing the auth path for the requested Epoch, and an
