@@ -20,7 +20,7 @@ func TestVerifyWithError(t *testing.T) {
 	res, _ := d.Register(&RegistrationRequest{
 		Username: uname,
 		Key:      key})
-	if err := cc.Verify(RegistrationType, res, uname, key); err != ErrorBadSTR {
+	if err := cc.UpdateConsistency(RegistrationType, res, uname, key); err != ErrorBadSTR {
 		t.Fatal("Expect", ErrorBadSTR, "got", err)
 	}
 }
@@ -33,7 +33,7 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	res, _ := d.Register(&RegistrationRequest{
 		Username: uname,
 		Key:      key})
-	if cc.Verify(RegistrationType, res, uname, key) != PassedWithAProofOfAbsence {
+	if cc.UpdateConsistency(RegistrationType, res, uname, key) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -49,7 +49,7 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 	}
 	// expect a proof of absence since this binding wasn't included in this epoch
-	if err := cc.Verify(RegistrationType, res, uname, key); err != PassedWithAProofOfAbsence {
+	if err := cc.UpdateConsistency(RegistrationType, res, uname, key); err != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -62,7 +62,7 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 	}
 	// expect a proof of absence since this binding wasn't included in this epoch
-	if err := cc.Verify(RegistrationType, res, uname, key); err != PassedWithAProofOfAbsence {
+	if err := cc.UpdateConsistency(RegistrationType, res, uname, key); err != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -80,7 +80,7 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	if err != ErrorNameExisted {
 		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 	}
-	if cc.Verify(RegistrationType, res, uname, key) != PassedWithAProofOfInclusion {
+	if cc.UpdateConsistency(RegistrationType, res, uname, key) != PassedWithAProofOfInclusion {
 		t.Fatal("Unexpected verification result")
 	}
 }
@@ -94,7 +94,7 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 		Username: "alice",
 		Key:      key})
 
-	if cc.Verify(RegistrationType, res, "alice", key) != PassedWithAProofOfAbsence {
+	if cc.UpdateConsistency(RegistrationType, res, "alice", key) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -102,7 +102,7 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 		Username: "bob",
 		Key:      key})
 
-	if cc.Verify(RegistrationType, res, "bob", key) != PassedWithAProofOfAbsence {
+	if cc.UpdateConsistency(RegistrationType, res, "bob", key) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -118,7 +118,7 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 	if err != Success {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if err := cc.Verify(KeyLookupType, res, "alice", key); err != PassedWithAProofOfInclusion {
+	if err := cc.UpdateConsistency(KeyLookupType, res, "alice", key); err != PassedWithAProofOfInclusion {
 		t.Fatal("Unexpected verification result", "got", err)
 	}
 	if len(cc.TBs) != 0 {
@@ -130,7 +130,7 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 		Username: "eve",
 		Key:      key})
 
-	if cc.Verify(RegistrationType, res, "eve", key) != PassedWithAProofOfAbsence {
+	if cc.UpdateConsistency(RegistrationType, res, "eve", key) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 	if len(cc.TBs) != 1 {
@@ -150,7 +150,7 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 	if err != Success {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if err := cc.Verify(KeyLookupType, res, "eve", key); err != PassedWithAProofOfInclusion {
+	if err := cc.UpdateConsistency(KeyLookupType, res, "eve", key); err != PassedWithAProofOfInclusion {
 		t.Fatal("Unexpected verification result", "got", err)
 	}
 	if len(cc.TBs) != 0 {
@@ -168,7 +168,7 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	if err != ErrorNameNotFound {
 		t.Fatal("Expect error code", ErrorNameNotFound, "got", err)
 	}
-	if cc.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfAbsence {
+	if cc.UpdateConsistency(KeyLookupType, res, uname, key) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -181,7 +181,7 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	if err != Success {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if cc.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfAbsence {
+	if cc.UpdateConsistency(KeyLookupType, res, uname, key) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -191,7 +191,7 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	if err != Success {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if cc.Verify(KeyLookupType, res, uname, key) != PassedWithAProofOfInclusion {
+	if cc.UpdateConsistency(KeyLookupType, res, uname, key) != PassedWithAProofOfInclusion {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -200,7 +200,7 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	if err != ErrorNameNotFound {
 		t.Fatal("Expect error code", Success, "got", err)
 	}
-	if cc.Verify(KeyLookupType, res, "bob", nil) != PassedWithAProofOfAbsence {
+	if cc.UpdateConsistency(KeyLookupType, res, "bob", nil) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
 }

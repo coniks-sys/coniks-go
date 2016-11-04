@@ -55,8 +55,8 @@ var (
 		ErrorBadCommitment:             "[coniks] The binding commitment is invalid",
 		ErrorBadBinding:                "[coniks] Key in the binding is inconsistent",
 		ErrorCouldNotVerify:            "[coniks] Could not verify",
-		ErrorBadPromise:                "[coniks] The directory returned an invalid registration promise",
-		ErrorBrokenPromise:             "[coniks] The directory broke the registration promise",
+		ErrorBadPromise:                "[coniks] The directory returned either an invalid registration promise or no promise",
+		ErrorBrokenPromise:             "[coniks] The directory broke the registration promise by not inserting the binding to the tree in the expected epoch",
 	}
 )
 
