@@ -107,12 +107,12 @@ func (cc *ConsistencyChecks) verifyRegistration(requestType int,
 	str := df.STR
 
 	// 1. verify STR
-	if err := cc.verifySTR(str); err != nil {
+	if err := cc.verifySTR(cc.SavedSTR, str); err != nil {
 		return nil, err
 	}
 
 	// 2. verify Auth path
-	proofType, err := cc.verifyAuthPath(uname, key, ap, str)
+	proofType, err := verifyAuthPath(uname, key, ap, str)
 	if err != nil {
 		return nil, err
 	}
@@ -149,12 +149,12 @@ func (cc *ConsistencyChecks) verifyKeyLookup(requestType int,
 	str := df.STR
 
 	// 1. verify STR
-	if err := cc.verifySTR(str); err != nil {
+	if err := cc.verifySTR(cc.SavedSTR, str); err != nil {
 		return nil, err
 	}
 
 	// 2. verify Auth path
-	proofType, err := cc.verifyAuthPath(uname, key, ap, str)
+	proofType, err := verifyAuthPath(uname, key, ap, str)
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +188,7 @@ func (cc *ConsistencyChecks) verifyKeyLookup(requestType int,
 	return str, PassedWithAProofOfInclusion
 }
 
-func (cc *ConsistencyChecks) verifyAuthPath(uname string, key []byte,
+func verifyAuthPath(uname string, key []byte,
 	ap *m.AuthenticationPath,
 	str *m.SignedTreeRoot) (int, error) {
 	proofType := proofOfAbsence
@@ -220,7 +220,11 @@ func (cc *ConsistencyChecks) verifyAuthPath(uname string, key []byte,
 	return proofType, nil
 }
 
-func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
+// verifySTR checks the consistency between 2 snapshots.
+// This uses the pinning signing key in cc
+// to verify the STR's signature and should not verify
+// the hash chain using the current STR stored in cc.
+func (cc *ConsistencyChecks) verifySTR(savedSTR, str *m.SignedTreeRoot) error {
 	// verify STR's signature
 	if !cc.signKey.Verify(str.Serialize(), str.Signature) {
 		return ErrorBadSignature
@@ -229,8 +233,8 @@ func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
 	// verify hash chain
 	// TODO: clearly verify which is the client's actual expectation.
 	// See #81
-	if (str.Epoch == cc.SavedSTR.Epoch && bytes.Equal(cc.SavedSTR.Signature, str.Signature)) ||
-		(str.Epoch == cc.SavedSTR.Epoch+1 && str.VerifyHashChain(cc.SavedSTR.Signature)) {
+	if (str.Epoch == savedSTR.Epoch && bytes.Equal(savedSTR.Signature, str.Signature)) ||
+		(str.Epoch == savedSTR.Epoch+1 && str.VerifyHashChain(savedSTR.Signature)) {
 		return nil
 	}
 
