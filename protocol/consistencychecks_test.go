@@ -121,7 +121,9 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 	if err := cc.UpdateConsistency(KeyLookupType, res, "alice", key); err != PassedWithAProofOfInclusion {
 		t.Fatal("Unexpected verification result", "got", err)
 	}
-	if len(cc.TBs) != 0 {
+
+	// should contain the TBs of "bob"
+	if len(cc.TBs) != 1 || cc.TBs["bob"] == nil {
 		t.Error("Expect the directory to insert the binding as promised")
 	}
 
@@ -133,7 +135,7 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 	if cc.UpdateConsistency(RegistrationType, res, "eve", key) != PassedWithAProofOfAbsence {
 		t.Fatal("Unexpected verification result")
 	}
-	if len(cc.TBs) != 1 {
+	if len(cc.TBs) != 2 || cc.TBs["eve"] == nil {
 		t.Fatal("Expect the directory to return signed promises")
 	}
 
@@ -153,9 +155,12 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 	if err := cc.UpdateConsistency(KeyLookupType, res, "eve", key); err != PassedWithAProofOfInclusion {
 		t.Fatal("Unexpected verification result", "got", err)
 	}
-	if len(cc.TBs) != 0 {
-		t.Error("Expect the directory to insert the binding as promised")
-	}
+
+	// TODO: expect eve's TB was instered as promise
+	// should be resolve when we address monitoring
+	// if len(cc.TBs) != 0 {
+	// 	t.Error("Expect the directory to insert the binding as promised")
+	// }
 }
 
 func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
