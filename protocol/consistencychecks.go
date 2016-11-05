@@ -247,23 +247,16 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 		return nil
 	}
 
-	for name, tb := range cc.TBs {
-		if cc.SavedSTR.Epoch+1 == str.Epoch &&
-			name == uname {
-			if !tb.Verify(ap) {
-				return ErrorBrokenPromise
-			}
-			delete(cc.TBs, uname)
-			return nil
-		} else if cc.SavedSTR.Epoch < str.Epoch {
-			// TODO: should verify when we introduce KeyLookupInEpoch
-			// and monitoring with missed epochs,
-			// see: https://github.com/coniks-sys/coniks-go/pull/74#discussion_r84930999
-			// and: https://github.com/coniks-sys/coniks-go/pull/74#discussion_r84501211
-			delete(cc.TBs, name)
+	if cc.SavedSTR.Epoch+1 != str.Epoch {
+		return nil
+	}
+
+	tb := cc.TBs[uname]
+	if tb != nil {
+		if !tb.Verify(ap) {
+			return ErrorBrokenPromise
 		}
-		// keep current epoch's returned promises
-		// for future verifications
+		delete(cc.TBs, uname)
 	}
 	return nil
 }
