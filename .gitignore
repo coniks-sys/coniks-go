@@ -39,3 +39,6 @@ server.key
 server.pem
 coniks.db/
 coniks.pid
+
+# Temp
+*.go~
