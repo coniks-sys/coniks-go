@@ -19,10 +19,10 @@ const (
 	proofOfInclusion
 )
 
-// ConsistencyChecks stores the current consistency check
-// state of a CONIKS client. This includes the current epoch
+// ConsistencyChecks stores the latest consistency check
+// state of a CONIKS client. This includes the latest epoch
 // and SignedTreeRoot value, as well as directory's policies
-// (e.g., wherether the TemporaryBinding extension is being used or not)
+// (e.g., whether the TemporaryBinding extension is being used or not)
 // The client should create a new ConsistencyChecks instance only once,
 // when she registers her binding with a ConiksDirectory.
 // This ConsistencyChecks instance then will be used to verify
@@ -66,6 +66,8 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 // If the status code is not in the ErrorResponses array, it means
 // the directory has successfully handled the request.
 // The verifier will then verify the consistency state of the response.
+// This will panic if it is called with an int
+// which isn't a valid/known request-type.
 func (cc *ConsistencyChecks) UpdateConsistency(requestType int, msg *Response,
 	uname string, key []byte) ErrorCode {
 	if ErrorResponses[msg.Error] {
@@ -106,18 +108,15 @@ func (cc *ConsistencyChecks) verifyRegistration(requestType int,
 	ap := df.AP
 	str := df.STR
 
-	// 1. verify STR
 	if err := cc.verifySTR(cc.SavedSTR, str); err != nil {
 		return nil, err
 	}
 
-	// 2. verify Auth path
 	proofType, err := verifyAuthPath(uname, key, ap, str)
 	if err != nil {
 		return nil, err
 	}
 
-	// 3. verify (response code, proof type) pair
 	switch {
 	case msg.Error == ErrorNameExisted:
 	case msg.Error == Success && proofType == proofOfAbsence:
@@ -125,7 +124,6 @@ func (cc *ConsistencyChecks) verifyRegistration(requestType int,
 		return nil, ErrorMalformedDirectoryMessage
 	}
 
-	// 4. verify returned promise
 	if err := cc.verifyReturnedPromise(requestType,
 		msg.Error, df, uname, key); err != nil {
 		return nil, err
@@ -148,18 +146,15 @@ func (cc *ConsistencyChecks) verifyKeyLookup(requestType int,
 	ap := df.AP
 	str := df.STR
 
-	// 1. verify STR
 	if err := cc.verifySTR(cc.SavedSTR, str); err != nil {
 		return nil, err
 	}
 
-	// 2. verify Auth path
 	proofType, err := verifyAuthPath(uname, key, ap, str)
 	if err != nil {
 		return nil, err
 	}
 
-	// 3. verify (response code, proof type) pair
 	switch {
 	case msg.Error == ErrorNameNotFound && proofType == proofOfAbsence:
 	case msg.Error == Success:
@@ -170,13 +165,11 @@ func (cc *ConsistencyChecks) verifyKeyLookup(requestType int,
 	// determine which kind of TB's verification we should do
 	// based on the response code and proof type
 	if msg.Error == Success && proofType == proofOfAbsence {
-		// 4.1 verify returned promise
 		if err := cc.verifyReturnedPromise(requestType,
 			msg.Error, df, uname, key); err != nil {
 			return nil, err
 		}
-	} else {
-		// 4.2 verify fulfilled promise
+	} else { // (msg.Error != Success || proofType != proofOfAbsence)
 		if err := cc.verifyFulfilledPromise(uname, str, ap); err != nil {
 			return nil, err
 		}
@@ -223,7 +216,7 @@ func verifyAuthPath(uname string, key []byte,
 // verifySTR checks the consistency between 2 snapshots.
 // This uses the pinning signing key in cc
 // to verify the STR's signature and should not verify
-// the hash chain using the current STR stored in cc.
+// the hash chain using the STR stored in cc.
 func (cc *ConsistencyChecks) verifySTR(savedSTR, str *m.SignedTreeRoot) error {
 	// verify STR's signature
 	if !cc.signKey.Verify(str.Serialize(), str.Signature) {
@@ -242,7 +235,7 @@ func (cc *ConsistencyChecks) verifySTR(savedSTR, str *m.SignedTreeRoot) error {
 	return ErrorBadSTR
 }
 
-// verifyFulfilledPromise verifies issued TBs was inserted
+// verifyFulfilledPromise verifies issued TBs were inserted
 // in the directory as promised.
 func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 	str *m.SignedTreeRoot,
