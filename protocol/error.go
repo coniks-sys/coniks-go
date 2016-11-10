@@ -1,11 +1,11 @@
 // Defines constants representing the types
 // of errors that the server may return to a client,
 // and that the client may throw after a consistency
-// check or cryptographic verification
+// check or a cryptographic verification
 
 package protocol
 
-// An ErrorCode is a special int.
+// An ErrorCode implements the built-in error interface type.
 type ErrorCode int
 
 // Server-side errors: The server returns these errors

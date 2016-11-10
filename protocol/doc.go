@@ -10,7 +10,7 @@ at the client.
 
 Consistency Checks
 
-This module implements all consistency checks perfomed by a CONIKS client
+This module implements all consistency checks performed by a CONIKS client
 on directory proofs received from a CONIKS server. These operations
 include the verification of username-to-key bindings (authentication paths),
 and non-equivocation checks (signed tree root).
@@ -27,7 +27,7 @@ Error
 
 This module defines the constants representing the types
 of errors that a CONIKS server may return to a client,
-and the results of a consistency check or cryptographic verification
+and the results of a consistency check or a cryptographic verification
 that a CONIKS client performs.
 
 Message

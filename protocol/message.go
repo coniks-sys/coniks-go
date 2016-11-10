@@ -1,4 +1,4 @@
-// Defines the message formats of the CONIKS protocols
+// Defines the message format of the CONIKS protocols
 // and constructors for the response messages for each
 // protocol
 
@@ -136,8 +136,8 @@ var _ DirectoryResponse = (*DirectoryProofs)(nil)
 // committed to the directory,
 // the DirectoryProof returns a proof of absence with the corresponding
 // TB, but sets the error code to ErrorNameExisted.
-// In all cases, the sserver must also include the signed tree root
-// (STR) for the lastest epoch.
+// In all cases, the server must also include the signed tree root
+// (STR) for the latest epoch.
 func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 	tb *TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
 	return &Response{
@@ -158,8 +158,8 @@ func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 // If the requested name has already been registered but not yet
 // committed to the directory, the DirectoryProof returns a proof of
 // absence with the corresponding TB, but sets the error code to Success.
-// In all cases, the sserver must also include the signed tree root (STR)
-// for the lastest epoch.
+// In all cases, the server must also include the signed tree root (STR)
+// for the latest epoch.
 func NewKeyLookupProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 	tb *TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
 	return &Response{
