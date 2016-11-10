@@ -1,3 +1,5 @@
+// Package cmd provides a reference implementation for a CONIKS
+// account verification proxy for Twitter accounts.
 package cmd
 
 import (
@@ -7,15 +9,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// RootCmd represents the base command when called without any subcommands
+// RootCmd represents the base "coniksbot" command when called without any subcommands.
 var RootCmd = &cobra.Command{
 	Use:   "coniksbot",
 	Short: "CONIKS bot for third-party account verification",
 	Long:  `CONIKS bot for third-party account verification`,
 }
 
-// Execute adds all child commands to the root command sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
+// Execute adds all subcommands (i.e. "init" and "run") to the RootCmd
+// and sets their flags appropriately.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
