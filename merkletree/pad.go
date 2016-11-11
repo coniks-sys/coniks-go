@@ -14,10 +14,6 @@ var (
 	// ErrorSTRNotFound indicates that the STR has been evicted from memory,
 	// because the maximum number of cached PAD snapshots has been exceeded.
 	ErrorSTRNotFound = errors.New("[merkletree] STR not found")
-
-	// ErrorNilPolicies is used to panic if the PAD was created
-	// with a nil Policies struct.
-	ErrorNilPolicies = errors.New("[merkletree] Nil policies")
 )
 
 // PAD is an acronym for persistent authenticated dictionary
@@ -34,7 +30,7 @@ type PAD struct {
 // indexed by the epoch and its maximum length is len.
 func NewPAD(policies *Policies, signKey sign.PrivateKey, len uint64) (*PAD, error) {
 	if policies == nil {
-		panic(ErrorNilPolicies)
+		panic("[merkletree] PAD must be created with a non-NULL Policies struct")
 	}
 	var err error
 	pad := new(PAD)
@@ -105,24 +101,24 @@ func (pad *PAD) Update(policies *Policies) {
 // the current VRF private key (which will be inserted in the next
 // signed tree root) to create a new index-to-key binding,
 // and then Set inserts it into the Merkle tree underlying the PAD.
-func (pad *PAD) Set(name string, value []byte) error {
-	return pad.tree.Set(pad.Index(name), name, value)
+func (pad *PAD) Set(key string, value []byte) error {
+	return pad.tree.Set(pad.Index(key), key, value)
 }
 
-// Lookup searches the requested name in the latest snapshot of the PAD.
-func (pad *PAD) Lookup(name string) (*AuthenticationPath, error) {
-	return pad.LookupInEpoch(name, pad.latestSTR.Epoch)
+// Lookup searches the requested key in the latest snapshot of the PAD.
+func (pad *PAD) Lookup(key string) (*AuthenticationPath, error) {
+	return pad.LookupInEpoch(key, pad.latestSTR.Epoch)
 }
 
-// LookupInEpoch searches the requested name in the snapshot at the requested epoch.
+// LookupInEpoch searches the requested key in the snapshot at the requested epoch.
 // It returns ErrorSTRNotFound if the signed tree root of the requested epoch
 // has been removed from memory.
-func (pad *PAD) LookupInEpoch(name string, epoch uint64) (*AuthenticationPath, error) {
+func (pad *PAD) LookupInEpoch(key string, epoch uint64) (*AuthenticationPath, error) {
 	str := pad.GetSTR(epoch)
 	if str == nil {
 		return nil, ErrorSTRNotFound
 	}
-	lookupIndex, proof := pad.computePrivateIndex(name, str.Policies.vrfPrivateKey)
+	lookupIndex, proof := pad.computePrivateIndex(key, str.Policies.vrfPrivateKey)
 	ap := str.tree.Get(lookupIndex)
 	ap.VrfProof = proof
 	return ap, nil
@@ -147,8 +143,8 @@ func (pad *PAD) Sign(msg ...[]byte) []byte {
 	return pad.signKey.Sign(bytes.Join(msg, nil))
 }
 
-func (pad *PAD) Index(name string) []byte {
-	index, _ := pad.computePrivateIndex(name, pad.policies.vrfPrivateKey)
+func (pad *PAD) Index(key string) []byte {
+	index, _ := pad.computePrivateIndex(key, pad.policies.vrfPrivateKey)
 	return index
 }
 
@@ -170,8 +166,8 @@ func (pad *PAD) reshuffle() {
 	pad.tree = newTree
 }
 
-func (pad *PAD) computePrivateIndex(name string,
+func (pad *PAD) computePrivateIndex(key string,
 	vrfPrivKey vrf.PrivateKey) (index, proof []byte) {
-	index, proof = vrfPrivKey.Prove([]byte(name))
+	index, proof = vrfPrivKey.Prove([]byte(key))
 	return
 }
