@@ -80,7 +80,7 @@ func (pad *PAD) updateInternal(policies *Policies, epoch uint64) {
 	}
 }
 
-// Update generates a new snapshot of the directory.
+// Update generates a new snapshot of the tree.
 // Specifically, it extends the hash chain by issuing
 // a new signed tree root. It may remove some older signed tree roots from
 // memory if the cached PAD snapshots exceeded the maximum capacity.
@@ -139,10 +139,13 @@ func (pad *PAD) LatestSTR() *SignedTreeRoot {
 	return pad.latestSTR
 }
 
+// Sign uses the _current_ signing key underlying the PAD to sign msg.
 func (pad *PAD) Sign(msg ...[]byte) []byte {
 	return pad.signKey.Sign(bytes.Join(msg, nil))
 }
 
+// Index uses the _current_ VRF private key of the PAD to compute
+// the private index of the requested key.
 func (pad *PAD) Index(key string) []byte {
 	index, _ := pad.computePrivateIndex(key, pad.policies.vrfPrivateKey)
 	return index

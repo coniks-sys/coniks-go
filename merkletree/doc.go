@@ -6,18 +6,20 @@ to help other developers use it in their implementation easily.
 
 Persistent Authenticated Dictionary
 
-This module implements a persistent authenticated dictionary (PAD) where the client
-can query a name-to-key binding at a specific epoch and get authenticated answer.
-The PAD is represented by a hash chain committing to the entire history. This hash chain
-is used to prove to the client that the PAD is maintaining a linear hash chain
-and there is no equivocations.
+This module implements a persistent authenticated dictionary (PAD) data structure.
 
-Merkle Tree
+Merkle Prefix Tree
 
-This module implements the Merkle prefix tree data structure. It provides methods to
-insert, update and lookup. The tree is append-only which means there is no ways to delete
-any node from the tree or change a user leaf node to an empty node.
-All the tree hash operations use the hash algorithm provided by our crypto package
+This module implements the Merkle prefix tree, which is the data structure
+underlying our PAD implementation. It is a binary tree, and that there are
+two types of leaf nodes: empty leaf node and user leaf node. Each node contains
+its prefix index and its level value. It provides methods to insert, update
+(to update an existing key-value pair) and lookup. The tree is append-only,
+and it does not support the deletion of values.
+This Merkle prefix tree implementation also preserves the privacy feature:
+the prefix used to search in the tree is a cryptographic transformation (VRF)
+of the search key, and values are concealed using cryptographic commitments.
+The VRF, commitment scheme and hash operations are provided by our crypto package
 (see https://godoc.org/github.com/coniks-sys/coniks-go/crypto).
 */
 package merkletree
