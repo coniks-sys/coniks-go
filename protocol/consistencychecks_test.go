@@ -85,6 +85,8 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	// Since the fulfilled promise verification would be perform
 	// when the client is monitoring, we do _not_ expect a TB's verification here.
 	d.Update()
+	cc.Timestamp += d.LatestSTR().Policies.EpochDeadline
+
 	if doRequestAndVerify(d, cc, RegistrationType, "alice") != Passed {
 		t.Fatal("Unexpected verification result")
 	}
@@ -107,10 +109,12 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 	}
 
 	d.Update()
+	cc.Timestamp += d.LatestSTR().Policies.EpochDeadline
+	cc.SavedSTR = d.LatestSTR() // bypass monitoring check
 
 	for i := 0; i < 2; i++ {
 		if doRequestAndVerify(d, cc, KeyLookupType, "alice") != Passed {
-			t.Fatal("Unexpected verification result")
+			t.Error("Unexpected verification result")
 		}
 	}
 
@@ -141,6 +145,9 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 
 	// do lookup in the different epoch
 	d.Update()
+	cc.Timestamp += d.LatestSTR().Policies.EpochDeadline
+	cc.SavedSTR = d.LatestSTR() // bypass monitoring check
+
 	if doRequestAndVerify(d, cc, KeyLookupType, "alice") != Passed {
 		t.Fatal("Unexpected verification result")
 	}

@@ -7,6 +7,8 @@ package protocol
 
 import (
 	"bytes"
+	"reflect"
+	"time"
 
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
@@ -28,7 +30,9 @@ const (
 // This ConsistencyChecks instance then will be used to verify
 // the returned responses from the ConiksDirectory.
 type ConsistencyChecks struct {
-	SavedSTR *m.SignedTreeRoot
+	// Timestamp indicates the time when the SavedSTR updated.
+	Timestamp m.Timestamp
+	SavedSTR  *m.SignedTreeRoot
 
 	// extensions settings
 	useTBs bool
@@ -45,13 +49,14 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 
 	// TODO: see #110
 	if !useTBs {
-		panic("Currently the server is forced to use TBs")
+		panic("[coniks] Currently the server is forced to use TBs")
 	}
 
 	cc := &ConsistencyChecks{
-		SavedSTR: savedSTR,
-		useTBs:   useTBs,
-		signKey:  signKey,
+		Timestamp: m.Timestamp(time.Now().Unix()),
+		SavedSTR:  savedSTR,
+		useTBs:    useTBs,
+		signKey:   signKey,
 	}
 
 	if useTBs {
@@ -81,10 +86,6 @@ func (cc *ConsistencyChecks) UpdateConsistency(requestType int, msg *Response,
 	switch requestType {
 	case RegistrationType:
 		str, err = cc.verifyRegistration(requestType, msg, uname, key)
-		// update the state
-		if err == Passed {
-			cc.SavedSTR = str
-		}
 
 	case KeyLookupType:
 		err = cc.verifyKeyLookup(requestType, msg, uname, key)
@@ -93,6 +94,13 @@ func (cc *ConsistencyChecks) UpdateConsistency(requestType int, msg *Response,
 	case KeyLookupInEpochType:
 	default:
 		panic("[coniks] Unknown request type")
+	}
+
+	if err == Passed &&
+		requestType == RegistrationType || requestType == MonitoringType {
+		// update the state
+		cc.Timestamp = m.Timestamp(time.Now().Unix())
+		cc.SavedSTR = str
 	}
 
 	return err.(ErrorCode)
@@ -109,8 +117,17 @@ func (cc *ConsistencyChecks) verifyRegistration(requestType int,
 	ap := df.AP
 	str := df.STR
 
-	if err := cc.verifySTR(cc.SavedSTR, str); err != nil {
-		return nil, err
+	interval := m.Timestamp(time.Now().Unix()) - cc.Timestamp
+	if interval < 0 {
+		panic("[coniks] Malformed consistency state.")
+	} else if interval <= cc.SavedSTR.Policies.EpochDeadline { // same str
+		if err := cc.verifySTR(str); err != nil {
+			return nil, err
+		}
+	} else { // new str
+		if err := cc.verifySTRConsistency(cc.SavedSTR, str); err != nil {
+			return nil, err
+		}
 	}
 
 	proofType, err := verifyAuthPath(uname, key, ap, str)
@@ -144,7 +161,7 @@ func (cc *ConsistencyChecks) verifyKeyLookup(requestType int,
 	ap := df.AP
 	str := df.STR
 
-	if err := cc.verifySTR(cc.SavedSTR, str); err != nil {
+	if err := cc.verifySTR(str); err != nil {
 		return err
 	}
 
@@ -208,25 +225,35 @@ func verifyAuthPath(uname string, key []byte,
 	return proofType, nil
 }
 
-// verifySTR checks the consistency between 2 snapshots.
-// This uses the pinning signing key in cc
+// verifySTRConsistency checks the consistency between 2 snapshots.
+// This should be called if the request is either registration or
+// monitoring. It uses the pinning signing key in cc
 // to verify the STR's signature and should not verify
 // the hash chain using the STR stored in cc.
-func (cc *ConsistencyChecks) verifySTR(savedSTR, str *m.SignedTreeRoot) error {
+func (cc *ConsistencyChecks) verifySTRConsistency(savedSTR, str *m.SignedTreeRoot) error {
 	// verify STR's signature
 	if !cc.signKey.Verify(str.Serialize(), str.Signature) {
 		return ErrorBadSignature
 	}
 
-	// verify hash chain
-	// TODO: clearly verify which is the client's actual expectation.
-	// See #81
-	if (str.Epoch == savedSTR.Epoch && bytes.Equal(savedSTR.Signature, str.Signature)) ||
-		(str.Epoch == savedSTR.Epoch+1 && str.VerifyHashChain(savedSTR.Signature)) {
+	// TODO: clearly verify which is the client's actual expectation. See #81
+	if str.Epoch == savedSTR.Epoch+1 && str.VerifyHashChain(savedSTR.Signature) {
 		return nil
 	}
 
 	// TODO: verify the directory's policies as well. See #115
+	return ErrorBadSTR
+}
+
+// verifySTR checks whether the received STR is the same with
+// the SavedSTR using reflect.DeepEqual().
+// This should be called if the request is lookup, since the SavedSTR
+// should only be updated in the beginning of each epoch by registration
+// or monitoring requests.
+func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
+	if reflect.DeepEqual(cc.SavedSTR, str) {
+		return nil
+	}
 	return ErrorBadSTR
 }
 
@@ -239,8 +266,8 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 		return nil
 	}
 
-	if cc.SavedSTR.Epoch+1 != str.Epoch {
-		return nil
+	if cc.SavedSTR.Epoch != str.Epoch {
+		panic("[coniks] Malformed consistency state. Probably should do self monitoring first to update the state.")
 	}
 
 	tb := cc.TBs[uname]
