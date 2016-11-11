@@ -14,8 +14,7 @@ const (
 )
 
 const (
-	PassedWithAProofOfAbsence ErrorCode = iota + 20
-	PassedWithAProofOfInclusion
+	Passed ErrorCode = iota + 20
 	ErrorMalformedDirectoryMessage
 	ErrorBadSignature
 	ErrorBadVRFProof
@@ -44,8 +43,7 @@ var (
 		ErrorNameNotFound:           "[coniks] Searched name not found in directory",
 		ErrorDirectory:              "[coniks] Directory error",
 
-		PassedWithAProofOfAbsence:      "[coniks] Consistency checks passed with a proof of absence",
-		PassedWithAProofOfInclusion:    "[coniks] Consistency checks passed with a proof of inclusion",
+		Passed: "[coniks] Consistency checks passed",
 		ErrorMalformedDirectoryMessage: "[coniks] Malformed directory message",
 		ErrorBadSignature:              "[coniks] Directory's signature on STR or TB is invalid",
 		ErrorBadVRFProof:               "[coniks] Returned index is not valid for the given name",
