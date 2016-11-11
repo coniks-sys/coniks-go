@@ -38,7 +38,7 @@ var keylookupMsg = `
 }
 `
 
-func startServer(t *testing.T, kvdb kv.DB, epDeadline merkletree.TimeStamp, policiesPath string) (*ConiksServer, func()) {
+func startServer(t *testing.T, kvdb kv.DB, epDeadline merkletree.Timestamp, policiesPath string) (*ConiksServer, func()) {
 	dir, teardown := testutil.CreateTLSCertForTest(t)
 
 	signKey, err := sign.GenerateKey(nil)

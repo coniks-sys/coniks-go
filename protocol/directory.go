@@ -15,7 +15,7 @@ type ConiksDirectory struct {
 	policies *merkletree.Policies
 }
 
-func NewDirectory(epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey,
+func NewDirectory(epDeadline merkletree.Timestamp, vrfKey vrf.PrivateKey,
 	signKey sign.PrivateKey, dirSize uint64, useTBs bool) *ConiksDirectory {
 
 	// FIXME: see #110
@@ -45,11 +45,11 @@ func (d *ConiksDirectory) Update() {
 	}
 }
 
-func (d *ConiksDirectory) SetPolicies(epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey) {
+func (d *ConiksDirectory) SetPolicies(epDeadline merkletree.Timestamp, vrfKey vrf.PrivateKey) {
 	d.policies = merkletree.NewPolicies(epDeadline, vrfKey)
 }
 
-func (d *ConiksDirectory) EpochDeadline() merkletree.TimeStamp {
+func (d *ConiksDirectory) EpochDeadline() merkletree.Timestamp {
 	return d.pad.LatestSTR().Policies.EpochDeadline
 }
 

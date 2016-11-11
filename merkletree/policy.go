@@ -6,17 +6,17 @@ import (
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
-type TimeStamp uint64
+type Timestamp uint64
 
 type Policies struct {
 	LibVersion    string
 	HashID        string
 	vrfPrivateKey vrf.PrivateKey
 	VrfPublicKey  vrf.PublicKey
-	EpochDeadline TimeStamp
+	EpochDeadline Timestamp
 }
 
-func NewPolicies(epDeadline TimeStamp, vrfPrivKey vrf.PrivateKey) *Policies {
+func NewPolicies(epDeadline Timestamp, vrfPrivKey vrf.PrivateKey) *Policies {
 	vrfPublicKey, ok := vrfPrivKey.Public()
 	if !ok {
 		panic(vrf.ErrorGetPubKey)

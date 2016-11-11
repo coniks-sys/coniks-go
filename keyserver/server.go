@@ -38,7 +38,7 @@ type TLSConnection struct {
 }
 
 type ServerPolicies struct {
-	EpochDeadline merkletree.TimeStamp `toml:"epoch_deadline"`
+	EpochDeadline merkletree.Timestamp `toml:"epoch_deadline"`
 	VRFKeyPath    string               `toml:"vrf_key_path"`
 	SignKeyPath   string               `toml:"sign_key_path"` // it should be a part of policies, see #47
 	vrfKey        vrf.PrivateKey
