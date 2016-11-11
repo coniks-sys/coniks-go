@@ -32,7 +32,7 @@ type ConsistencyChecks struct {
 
 	// extensions settings
 	useTBs bool
-	TBs    map[string]*m.TemporaryBinding
+	TBs    map[string]*TemporaryBinding
 
 	// signing key
 	signKey sign.PublicKey
@@ -55,7 +55,7 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 	}
 
 	if useTBs {
-		cc.TBs = make(map[string]*m.TemporaryBinding)
+		cc.TBs = make(map[string]*TemporaryBinding)
 	}
 	return cc
 }
@@ -245,7 +245,9 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 
 	tb := cc.TBs[uname]
 	if tb != nil {
-		if !tb.Verify(ap) {
+		// compare TB's index with authentication path's index
+		if !bytes.Equal(ap.LookupIndex, tb.Index) ||
+			!bytes.Equal(ap.Leaf.Value, tb.Value) {
 			return ErrorBrokenPromise
 		}
 		delete(cc.TBs, uname)
