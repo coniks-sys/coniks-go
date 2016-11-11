@@ -117,8 +117,8 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 
 // Set inserts or updates the value of the given index
 // calculated from the key to the tree. It will generate a new commitment
-// for the leaf node. In case of updating, the leaf node's value and commitment
-// will be replaced with the new value and new generated commitment.
+// for the leaf node. In case of an update, the leaf node's value and commitment
+// will be replaced with the new value and newly generated commitment.
 func (m *MerkleTree) Set(index []byte, key string, value []byte) error {
 	commitment, err := crypto.NewCommit([]byte(key), value)
 	if err != nil {

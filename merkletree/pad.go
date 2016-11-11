@@ -86,8 +86,8 @@ func (pad *PAD) updateInternal(policies *Policies, epoch uint64) {
 
 // Update generates a new snapshot of the directory.
 // Specifically, it extends the hash chain by issuing
-// new signed tree root. It may remove some older signed tree roots from
-// memory if the cached PAD snapshots exceeded its maximum capacity.
+// a new signed tree root. It may remove some older signed tree roots from
+// memory if the cached PAD snapshots exceeded the maximum capacity.
 // The Policies pointer can be nil if the policies does not change.
 func (pad *PAD) Update(policies *Policies) {
 	// delete older str(s) as needed
@@ -101,7 +101,7 @@ func (pad *PAD) Update(policies *Policies) {
 	pad.updateInternal(policies, pad.latestSTR.Epoch+1)
 }
 
-// Set computes the private index of the given name using
+// Set computes the private index of the given key using
 // the current VRF private key (which will be inserted in the next
 // signed tree root) to create a new index-to-key binding,
 // and then Set inserts it into the Merkle tree underlying the PAD.
@@ -114,7 +114,7 @@ func (pad *PAD) Lookup(name string) (*AuthenticationPath, error) {
 	return pad.LookupInEpoch(name, pad.latestSTR.Epoch)
 }
 
-// LookupInEpoch searches the requested name in the snapshot at requested epoch.
+// LookupInEpoch searches the requested name in the snapshot at the requested epoch.
 // It returns ErrorSTRNotFound if the signed tree root of the requested epoch
 // has been removed from memory.
 func (pad *PAD) LookupInEpoch(name string, epoch uint64) (*AuthenticationPath, error) {
@@ -129,7 +129,7 @@ func (pad *PAD) LookupInEpoch(name string, epoch uint64) (*AuthenticationPath, e
 }
 
 // GetSTR returns the signed tree root of the requested epoch.
-// This signed tree root is read from the caching snapshots of the PAD.
+// This signed tree root is read from the cached snapshots of the PAD.
 // It returns nil if the signed tree root has been removed from the memory.
 func (pad *PAD) GetSTR(epoch uint64) *SignedTreeRoot {
 	if epoch >= pad.latestSTR.Epoch {

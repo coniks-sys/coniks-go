@@ -19,11 +19,5 @@ insert, update and lookup. The tree is append-only which means there is no ways 
 any node from the tree or change a user leaf node to an empty node.
 All the tree hash operations use the hash algorithm provided by our crypto package
 (see https://godoc.org/github.com/coniks-sys/coniks-go/crypto).
-
-Temporary Binding
-
-This module implements a signed promise for registration operations. The main purpose of
-temporary binding is to allow immediate use of the key without having to wait for the next epoch.
-This will be split into a separate protocol extension in a future release.
 */
 package merkletree

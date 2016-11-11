@@ -10,7 +10,7 @@ import (
 // ProofNode can be a leaf node or an empty node,
 // which is included in the returned AuthenticationPath
 // of a given index. The type of that node can be determined
-// by IsEmpty value. It also provides an opening of
+// by the IsEmpty value. It also provides an opening of
 // the commitment if the returned AuthenticationPath
 // is a proof of inclusion.
 type ProofNode struct {
@@ -90,7 +90,9 @@ func (ap *AuthenticationPath) verifyBinding(key, value []byte) bool {
 }
 
 // Verify recomputes the tree's root node from the authentication path,
-// and compares it to the tree hash in the corresponding signed tree root.
+// and compares it to treeHash, which is taken from a STR.
+// Specifically, treeHash has to come from the STR whose tree returns
+// the authentication path.
 // This should be called after the VRF index is verified successfully.
 func (ap *AuthenticationPath) Verify(key, value, treeHash []byte) bool {
 	if ap.ProofType() == ProofOfAbsence { // proof of absence
