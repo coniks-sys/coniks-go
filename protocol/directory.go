@@ -11,7 +11,7 @@ import (
 type ConiksDirectory struct {
 	pad      *merkletree.PAD
 	useTBs   bool
-	tbs      map[string]*merkletree.TemporaryBinding
+	tbs      map[string]*TemporaryBinding
 	policies *merkletree.Policies
 }
 
@@ -32,7 +32,7 @@ func NewDirectory(epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey,
 	d.pad = pad
 	d.useTBs = useTBs
 	if useTBs {
-		d.tbs = make(map[string]*merkletree.TemporaryBinding)
+		d.tbs = make(map[string]*TemporaryBinding)
 	}
 	return d
 }
@@ -57,9 +57,17 @@ func (d *ConiksDirectory) LatestSTR() *merkletree.SignedTreeRoot {
 	return d.pad.LatestSTR()
 }
 
+func (d *ConiksDirectory) NewTB(name string, key []byte) *TemporaryBinding {
+	index := d.pad.Index(name)
+	return &TemporaryBinding{
+		Index:     index,
+		Value:     key,
+		Signature: d.pad.Sign(d.LatestSTR().Signature, index, key),
+	}
+}
+
 func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 	*Response, ErrorCode) {
-
 	// make sure the request is well-formed
 	if len(req.Username) <= 0 || len(req.Key) <= 0 {
 		return NewErrorResponse(ErrorMalformedClientMessage),
@@ -75,26 +83,26 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
 		return NewRegistrationProof(ap, d.LatestSTR(), nil, ErrorNameExisted)
 	}
+
+	var tb *TemporaryBinding
+
 	if d.useTBs {
 		// also check the temporary bindings array
 		// currently the server allows only one registration/key change per epoch
-		if tb := d.tbs[req.Username]; tb != nil {
+		if tb = d.tbs[req.Username]; tb != nil {
 			return NewRegistrationProof(ap, d.LatestSTR(), tb, ErrorNameExisted)
 		}
-
-		// insert new data to the directory on-the-fly
-		tb, err := d.pad.TB(req.Username, req.Key)
-		if err != nil {
-			return NewErrorResponse(ErrorDirectory), ErrorDirectory
-		}
-		d.tbs[req.Username] = tb
-		return NewRegistrationProof(ap, d.LatestSTR(), tb, Success)
-	} else {
-		if err = d.pad.Set(req.Username, req.Key); err != nil {
-			return NewErrorResponse(ErrorDirectory), ErrorDirectory
-		}
-		return NewRegistrationProof(ap, d.LatestSTR(), nil, Success)
+		tb = d.NewTB(req.Username, req.Key)
 	}
+
+	if err = d.pad.Set(req.Username, req.Key); err != nil {
+		return NewErrorResponse(ErrorDirectory), ErrorDirectory
+	}
+
+	if tb != nil {
+		d.tbs[req.Username] = tb
+	}
+	return NewRegistrationProof(ap, d.LatestSTR(), tb, Success)
 }
 
 func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (

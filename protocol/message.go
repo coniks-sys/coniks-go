@@ -67,7 +67,7 @@ type DirectoryResponse interface {
 type DirectoryProof struct {
 	AP  *m.AuthenticationPath
 	STR *m.SignedTreeRoot
-	TB  *m.TemporaryBinding `json:",omitempty"`
+	TB  *TemporaryBinding `json:",omitempty"`
 }
 
 type DirectoryProofs struct {
@@ -83,7 +83,7 @@ var _ DirectoryResponse = (*DirectoryProof)(nil)
 var _ DirectoryResponse = (*DirectoryProofs)(nil)
 
 func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
-	tb *m.TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
+	tb *TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProof{
@@ -95,7 +95,7 @@ func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 }
 
 func NewKeyLookupProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
-	tb *m.TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
+	tb *TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProof{

@@ -1,6 +1,7 @@
 package merkletree
 
 import (
+	"bytes"
 	"crypto/subtle"
 	"errors"
 
@@ -91,8 +92,7 @@ func (pad *PAD) Update(policies *Policies) {
 }
 
 func (pad *PAD) Set(name string, value []byte) error {
-	index, _ := pad.computePrivateIndex(name, pad.policies.vrfPrivateKey)
-	return pad.tree.Set(index, name, value)
+	return pad.tree.Set(pad.Index(name), name, value)
 }
 
 func (pad *PAD) Lookup(name string) (*AuthenticationPath, error) {
@@ -121,11 +121,13 @@ func (pad *PAD) LatestSTR() *SignedTreeRoot {
 	return pad.latestSTR
 }
 
-func (pad *PAD) TB(name string, value []byte) (*TemporaryBinding, error) {
+func (pad *PAD) Sign(msg ...[]byte) []byte {
+	return pad.signKey.Sign(bytes.Join(msg, nil))
+}
+
+func (pad *PAD) Index(name string) []byte {
 	index, _ := pad.computePrivateIndex(name, pad.policies.vrfPrivateKey)
-	tb := NewTB(pad.signKey, pad.latestSTR.Signature, index, value)
-	err := pad.tree.Set(index, name, value)
-	return tb, err
+	return index
 }
 
 // reshuffle recomputes indices of keys and store them with their values in new
@@ -139,8 +141,7 @@ func (pad *PAD) reshuffle() {
 		panic(err)
 	}
 	pad.tree.visitLeafNodes(func(n *userLeafNode) {
-		newIndex, _ := pad.computePrivateIndex(n.key, pad.policies.vrfPrivateKey)
-		if err := newTree.Set(newIndex, n.key, n.value); err != nil {
+		if err := newTree.Set(pad.Index(n.key), n.key, n.value); err != nil {
 			panic(err)
 		}
 	})
