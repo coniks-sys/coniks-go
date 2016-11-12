@@ -36,12 +36,21 @@ func (n *ProofNode) hash(treeNonce []byte) []byte {
 	}
 }
 
+type ProofType int
+
+const (
+	undeterminedProof ProofType = iota
+	ProofOfAbsence
+	ProofOfInclusion
+)
+
 type AuthenticationPath struct {
 	TreeNonce   []byte
 	PrunedTree  [][crypto.HashSizeByte]byte
 	LookupIndex []byte
 	VrfProof    []byte
 	Leaf        *ProofNode
+	proofType   ProofType
 }
 
 func (ap *AuthenticationPath) authPathHash() []byte {
@@ -59,15 +68,14 @@ func (ap *AuthenticationPath) authPathHash() []byte {
 	return hash
 }
 
-func (ap *AuthenticationPath) VerifyBinding(key []byte) bool {
-	return bytes.Equal(ap.Leaf.Value, key)
+func (ap *AuthenticationPath) verifyBinding(key, value []byte) bool {
+	return bytes.Equal(ap.Leaf.Value, value) &&
+		ap.Leaf.Commitment.Verify(key, value)
 }
 
 // Verify should be called after the vrf index is verified successfully
-func (ap *AuthenticationPath) Verify(treeHash []byte) bool {
-	// step 1. Verify if it's a proof of inclusion/proof of absence
-	if !bytes.Equal(ap.Leaf.Index, ap.LookupIndex) {
-		// proof of absence
+func (ap *AuthenticationPath) Verify(key, value, treeHash []byte) bool {
+	if ap.ProofType() == ProofOfAbsence { // proof of absence
 		// Check if i and j match in the first l bits
 		indexBits := util.ToBits(ap.Leaf.Index)
 		lookupIndexBits := util.ToBits(ap.LookupIndex)
@@ -76,10 +84,27 @@ func (ap *AuthenticationPath) Verify(treeHash []byte) bool {
 				return false
 			}
 		}
+	} else { // proof of inclusion
+		// Verify the key-value binding returned in the ProofNode
+		if !ap.verifyBinding(key, value) {
+			return false
+		}
 	}
+
 	// step 2. Verify the auth path of the returned leaf
 	if !bytes.Equal(treeHash, ap.authPathHash()) {
 		return false
 	}
 	return true
+}
+
+func (ap *AuthenticationPath) ProofType() ProofType {
+	if ap.proofType == undeterminedProof {
+		if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
+			ap.proofType = ProofOfInclusion
+		} else {
+			ap.proofType = ProofOfAbsence
+		}
+	}
+	return ap.proofType
 }

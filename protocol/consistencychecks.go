@@ -15,12 +15,6 @@ import (
 	m "github.com/coniks-sys/coniks-go/merkletree"
 )
 
-const (
-	invalidProof int = iota
-	proofOfAbsence
-	proofOfInclusion
-)
-
 // ConsistencyChecks stores the latest consistency check
 // state of a CONIKS client. This includes the latest epoch
 // and SignedTreeRoot value, as well as directory's policies
@@ -116,6 +110,7 @@ func (cc *ConsistencyChecks) verifyRegistration(requestType int,
 
 	ap := df.AP
 	str := df.STR
+	tb := df.TB
 
 	interval := m.Timestamp(time.Now().Unix()) - cc.Timestamp
 	if interval < 0 {
@@ -130,21 +125,23 @@ func (cc *ConsistencyChecks) verifyRegistration(requestType int,
 		}
 	}
 
-	proofType, err := verifyAuthPath(uname, key, ap, str)
-	if err != nil {
-		return nil, err
-	}
-
+	proofType := ap.ProofType()
 	switch {
-	case msg.Error == ErrorNameExisted:
-	case msg.Error == Success && proofType == proofOfAbsence:
+	case msg.Error == ErrorNameExisted && proofType == m.ProofOfInclusion && tb == nil:
+	case msg.Error == ErrorNameExisted && proofType == m.ProofOfAbsence:
+	case msg.Error == Success && proofType == m.ProofOfAbsence:
 	default:
 		return nil, ErrorMalformedDirectoryMessage
 	}
 
-	if err := cc.verifyReturnedPromise(requestType,
-		msg.Error, df, uname, key); err != nil {
+	if err := verifyAuthPath(uname, key, ap, str); err != nil {
 		return nil, err
+	}
+
+	if proofType == m.ProofOfAbsence {
+		if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
+			return nil, err
+		}
 	}
 
 	return str, Passed
@@ -160,31 +157,32 @@ func (cc *ConsistencyChecks) verifyKeyLookup(requestType int,
 
 	ap := df.AP
 	str := df.STR
+	tb := df.TB
 
 	if err := cc.verifySTR(str); err != nil {
 		return err
 	}
 
-	proofType, err := verifyAuthPath(uname, key, ap, str)
-	if err != nil {
-		return err
-	}
-
+	proofType := ap.ProofType()
 	switch {
-	case msg.Error == ErrorNameNotFound && proofType == proofOfAbsence:
-	case msg.Error == Success:
+	case msg.Error == Success && proofType == m.ProofOfInclusion && tb == nil:
+	case msg.Error == Success && proofType == m.ProofOfAbsence:
+	case msg.Error == ErrorNameNotFound && proofType == m.ProofOfAbsence:
 	default:
 		return ErrorMalformedDirectoryMessage
 	}
 
+	if err := verifyAuthPath(uname, key, ap, str); err != nil {
+		return err
+	}
+
 	// determine which kind of TB's verification we should do
 	// based on the response code and proof type
-	if msg.Error == Success && proofType == proofOfAbsence {
-		if err := cc.verifyReturnedPromise(requestType,
-			msg.Error, df, uname, key); err != nil {
+	if msg.Error == Success && proofType == m.ProofOfAbsence {
+		if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
 			return err
 		}
-	} else { // (msg.Error != Success || proofType != proofOfAbsence)
+	} else { // (msg.Error != Success || proofType != m.ProofOfAbsence)
 		if err := cc.verifyFulfilledPromise(uname, str, ap); err != nil {
 			return err
 		}
@@ -195,34 +193,25 @@ func (cc *ConsistencyChecks) verifyKeyLookup(requestType int,
 
 func verifyAuthPath(uname string, key []byte,
 	ap *m.AuthenticationPath,
-	str *m.SignedTreeRoot) (int, error) {
-	proofType := proofOfAbsence
+	str *m.SignedTreeRoot) error {
 
 	// verify VRF Index
 	vrfKey := vrf.PublicKey(str.Policies.VrfPublicKey)
 	if !vrfKey.Verify([]byte(uname), ap.LookupIndex, ap.VrfProof) {
-		return invalidProof, ErrorBadVRFProof
+		return ErrorBadVRFProof
 	}
 
-	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) { // proof of inclusion */
-		// verify name-to-key binding
+	if key == nil {
 		// key is nil when the user does lookup for the first time
-		if key != nil && !ap.VerifyBinding(key) {
-			return invalidProof, ErrorBadBinding
-		}
-		// verify commitment
-		if !ap.Leaf.Commitment.Verify([]byte(uname), ap.Leaf.Value) {
-			return invalidProof, ErrorBadCommitment
-		}
-		proofType = proofOfInclusion
+		key = ap.Leaf.Value
 	}
 
 	// verify auth path
-	if !ap.Verify(str.TreeHash) {
-		return invalidProof, ErrorBadAuthPath
+	if !ap.Verify([]byte(uname), key, str.TreeHash) {
+		return ErrorBadAuthPath
 	}
 
-	return proofType, nil
+	return nil
 }
 
 // verifySTRConsistency checks the consistency between 2 snapshots.
@@ -292,8 +281,8 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 //
 // 	If the request is a key lookup, and
 // 	- the request is successful, then the directory should return a promise for the lookup binding.
-func (cc *ConsistencyChecks) verifyReturnedPromise(requestType int,
-	responseCode ErrorCode, df *DirectoryProof,
+// These above checks should be performed before calling this method.
+func (cc *ConsistencyChecks) verifyReturnedPromise(df *DirectoryProof,
 	uname string, key []byte) error {
 	if !cc.useTBs {
 		return nil
@@ -303,23 +292,8 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(requestType int,
 	str := df.STR
 	tb := df.TB
 
-	// the client should receive a signed promise iff
-	// the directory returns a proof of absence
-	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
-		if tb != nil {
-			// the directory returned a proof of inclusion
-			// _and_ a promise
-			return ErrorMalformedDirectoryMessage
-		}
-		return nil
-	}
-
 	if tb == nil {
-		if (requestType == RegistrationType) ||
-			(requestType == KeyLookupType && responseCode == Success) {
-			return ErrorBadPromise
-		}
-		return nil
+		return ErrorBadPromise
 	}
 
 	// verify TB's Signature
