@@ -57,11 +57,18 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	if ErrorResponses[msg.Error] {
 		return msg.Error
 	}
-	err := cc.updateSTR(requestType, msg)
-	if err != nil {
+	if err := cc.updateSTR(requestType, msg); err != nil {
 		return err.(ErrorCode)
 	}
-	return cc.checkConsistency(requestType, msg, uname, key)
+	if err := cc.checkConsistency(requestType, msg, uname, key); err != Passed {
+		return err
+	}
+	if cc.useTBs {
+		if err := cc.updateTBs(requestType, msg, uname); err != nil {
+			return err.(ErrorCode)
+		}
+	}
+	return Passed
 }
 
 func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
@@ -94,6 +101,44 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	return nil
 }
 
+func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
+	uname string) error {
+	var df *DirectoryProof
+	switch requestType {
+	case RegistrationType, KeyLookupType:
+		var ok bool
+		if df, ok = msg.DirectoryResponse.(*DirectoryProof); !ok {
+			return ErrorMalformedDirectoryMessage
+		}
+	default:
+		panic("[coniks] Unknown request type")
+	}
+	switch requestType {
+	case RegistrationType:
+		if msg.Error == Success {
+			cc.TBs[uname] = df.TB
+		}
+		return nil
+	case KeyLookupType:
+		ap := df.AP
+		proofType := ap.ProofType()
+		// FIXME: Which epoch did this lookup happen in?
+		switch {
+		case msg.Error == Success && proofType == m.ProofOfInclusion:
+			if tb, ok := cc.TBs[uname]; ok {
+				if !bytes.Equal(ap.LookupIndex, tb.Index) ||
+					!bytes.Equal(ap.Leaf.Value, tb.Value) {
+					return ErrorBrokenPromise
+				}
+				delete(cc.TBs, uname)
+			}
+		case msg.Error == Success && proofType == m.ProofOfAbsence:
+			cc.TBs[uname] = df.TB
+		}
+	}
+	return nil
+}
+
 func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *Response,
 	uname string, key []byte) ErrorCode {
 	var err error
@@ -119,7 +164,6 @@ func (cc *ConsistencyChecks) verifyRegistration(requestType int,
 
 	ap := df.AP
 	str := df.STR
-	tb := df.TB
 
 	if err := cc.verifySTR(str); err != nil {
 		return err
@@ -127,21 +171,23 @@ func (cc *ConsistencyChecks) verifyRegistration(requestType int,
 
 	proofType := ap.ProofType()
 	switch {
-	case msg.Error == ErrorNameExisted && proofType == m.ProofOfInclusion && tb == nil:
-	case msg.Error == ErrorNameExisted && proofType == m.ProofOfAbsence:
 	case msg.Error == Success && proofType == m.ProofOfAbsence:
+		if cc.useTBs {
+			if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
+				return err
+			}
+		}
+	case msg.Error == ErrorNameExisted && proofType == m.ProofOfInclusion:
+	case msg.Error == ErrorNameExisted && proofType == m.ProofOfAbsence && cc.useTBs:
+		if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
+			return err
+		}
 	default:
 		return ErrorMalformedDirectoryMessage
 	}
 
 	if err := verifyAuthPath(uname, key, ap, str); err != nil {
 		return err
-	}
-
-	if proofType == m.ProofOfAbsence {
-		if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
-			return err
-		}
 	}
 
 	return Passed
@@ -156,7 +202,6 @@ func (cc *ConsistencyChecks) verifyKeyLookup(requestType int,
 
 	ap := df.AP
 	str := df.STR
-	tb := df.TB
 
 	if err := cc.verifySTR(str); err != nil {
 		return err
@@ -164,27 +209,19 @@ func (cc *ConsistencyChecks) verifyKeyLookup(requestType int,
 
 	proofType := ap.ProofType()
 	switch {
-	case msg.Error == Success && proofType == m.ProofOfInclusion && tb == nil:
-	case msg.Error == Success && proofType == m.ProofOfAbsence:
 	case msg.Error == ErrorNameNotFound && proofType == m.ProofOfAbsence:
+		// FIXME: Do we have a TB for this name?
+	case msg.Error == Success && proofType == m.ProofOfInclusion:
+	case msg.Error == Success && proofType == m.ProofOfAbsence && cc.useTBs:
+		if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
+			return err
+		}
 	default:
 		return ErrorMalformedDirectoryMessage
 	}
 
 	if err := verifyAuthPath(uname, key, ap, str); err != nil {
 		return err
-	}
-
-	// determine which kind of TB's verification we should do
-	// based on the response code and proof type
-	if msg.Error == Success && proofType == m.ProofOfAbsence {
-		if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
-			return err
-		}
-	} else { // (msg.Error != Success || proofType != m.ProofOfAbsence)
-		if err := cc.verifyFulfilledPromise(uname, str, ap); err != nil {
-			return err
-		}
 	}
 
 	return Passed
@@ -245,31 +282,6 @@ func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
 	return ErrorBadSTR
 }
 
-// verifyFulfilledPromise verifies issued TBs were inserted
-// in the directory as promised.
-func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
-	str *m.SignedTreeRoot,
-	ap *m.AuthenticationPath) error {
-	if !cc.useTBs {
-		return nil
-	}
-
-	if cc.SavedSTR.Epoch != str.Epoch {
-		panic("[coniks] Malformed consistency state. Probably should do self monitoring first to update the state.")
-	}
-
-	tb := cc.TBs[uname]
-	if tb != nil {
-		// compare TB's index with authentication path's index
-		if !bytes.Equal(ap.LookupIndex, tb.Index) ||
-			!bytes.Equal(ap.Leaf.Value, tb.Value) {
-			return ErrorBrokenPromise
-		}
-		delete(cc.TBs, uname)
-	}
-	return nil
-}
-
 // verifyReturnedPromise validates the returned promise
 // based on the request type. Note that the directory
 // returns a promise iff the returned proof is
@@ -283,10 +295,6 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 // These above checks should be performed before calling this method.
 func (cc *ConsistencyChecks) verifyReturnedPromise(df *DirectoryProof,
 	uname string, key []byte) error {
-	if !cc.useTBs {
-		return nil
-	}
-
 	ap := df.AP
 	str := df.STR
 	tb := df.TB
@@ -310,9 +318,6 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(df *DirectoryProof,
 	if key != nil && !bytes.Equal(tb.Value, key) {
 		return ErrorBadPromise
 	}
-
-	// get a valid promise
-	cc.TBs[uname] = tb
 
 	return nil
 }
