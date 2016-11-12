@@ -6,10 +6,8 @@ var (
 	key = []byte("key")
 )
 
-func doRequestAndVerify(d *ConiksDirectory,
-	cc *ConsistencyChecks,
+func doRequestAndVerify(d *ConiksDirectory, cc *ConsistencyChecks,
 	requestType int, name string) error {
-
 	switch requestType {
 	case RegistrationType:
 		request := &RegistrationRequest{
@@ -17,17 +15,16 @@ func doRequestAndVerify(d *ConiksDirectory,
 			Key:      key,
 		}
 		res, _ := d.Register(request)
-		return cc.UpdateConsistency(requestType, res, name, key)
+		return cc.HandleResponse(requestType, res, name, key)
 	case KeyLookupType:
 		request := &KeyLookupRequest{
 			Username: name,
 		}
 		res, _ := d.KeyLookup(request)
-		return cc.UpdateConsistency(requestType, res, name, key)
+		return cc.HandleResponse(requestType, res, name, key)
 	case MonitoringType:
 	case KeyLookupInEpochType:
 	}
-
 	panic("Unknown request type")
 }
 
@@ -60,6 +57,7 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	}
 
 	// test error name existed
+	// FIXME: Check that we got an ErrorNameExisted
 	if doRequestAndVerify(d, cc, RegistrationType, "alice") != Passed {
 		t.Fatal("Unexpected verification result")
 	}
@@ -73,7 +71,7 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
 	}
 	// expect a proof of absence since this binding wasn't included in this epoch
-	if err := cc.UpdateConsistency(RegistrationType, res, "alice", key); err != Passed {
+	if err := cc.HandleResponse(RegistrationType, res, "alice", key); err != Passed {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -85,8 +83,8 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	// Since the fulfilled promise verification would be perform
 	// when the client is monitoring, we do _not_ expect a TB's verification here.
 	d.Update()
-	cc.Timestamp += d.LatestSTR().Policies.EpochDeadline
 
+	// FIXME: Check that we got an ErrorNameExisted
 	if doRequestAndVerify(d, cc, RegistrationType, "alice") != Passed {
 		t.Fatal("Unexpected verification result")
 	}
@@ -109,7 +107,7 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 	}
 
 	d.Update()
-	cc.Timestamp += d.LatestSTR().Policies.EpochDeadline
+
 	cc.SavedSTR = d.LatestSTR() // bypass monitoring check
 
 	for i := 0; i < 2; i++ {
@@ -145,7 +143,7 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 
 	// do lookup in the different epoch
 	d.Update()
-	cc.Timestamp += d.LatestSTR().Policies.EpochDeadline
+
 	cc.SavedSTR = d.LatestSTR() // bypass monitoring check
 
 	if doRequestAndVerify(d, cc, KeyLookupType, "alice") != Passed {

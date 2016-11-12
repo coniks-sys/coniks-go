@@ -8,7 +8,6 @@ package protocol
 import (
 	"bytes"
 	"reflect"
-	"time"
 
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
@@ -24,9 +23,7 @@ import (
 // This ConsistencyChecks instance then will be used to verify
 // the returned responses from the ConiksDirectory.
 type ConsistencyChecks struct {
-	// Timestamp indicates the time when the SavedSTR updated.
-	Timestamp m.Timestamp
-	SavedSTR  *m.SignedTreeRoot
+	SavedSTR *m.SignedTreeRoot
 
 	// extensions settings
 	useTBs bool
@@ -40,89 +37,92 @@ type ConsistencyChecks struct {
 // the pinning directory's STR at epoch 0 or
 // the consistency state read from a persistent storage.
 func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *ConsistencyChecks {
-
 	// TODO: see #110
 	if !useTBs {
 		panic("[coniks] Currently the server is forced to use TBs")
 	}
-
 	cc := &ConsistencyChecks{
-		Timestamp: m.Timestamp(time.Now().Unix()),
-		SavedSTR:  savedSTR,
-		useTBs:    useTBs,
-		signKey:   signKey,
+		SavedSTR: savedSTR,
+		useTBs:   useTBs,
+		signKey:  signKey,
 	}
-
 	if useTBs {
 		cc.TBs = make(map[string]*TemporaryBinding)
 	}
 	return cc
 }
 
-// UpdateConsistency verifies the directory's response for a request.
-// It will also update the state if the requestType is
-// either RegistrationType or MonitoringType.
-// It first verifies the directory's returned status code of the request.
-// If the status code is not in the ErrorResponses array, it means
-// the directory has successfully handled the request.
-// The verifier will then verify the consistency state of the response.
-// This will panic if it is called with an int
-// which isn't a valid/known request-type.
-func (cc *ConsistencyChecks) UpdateConsistency(requestType int, msg *Response,
+func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	uname string, key []byte) ErrorCode {
 	if ErrorResponses[msg.Error] {
 		return msg.Error
 	}
+	err := cc.updateSTR(requestType, msg)
+	if err != nil {
+		return err.(ErrorCode)
+	}
+	return cc.checkConsistency(requestType, msg, uname, key)
+}
 
+func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	var str *m.SignedTreeRoot
-	var err error
+	switch requestType {
+	case RegistrationType, KeyLookupType:
+		df, ok := msg.DirectoryResponse.(*DirectoryProof)
+		if !ok {
+			return ErrorMalformedDirectoryMessage
+		}
+		str = df.STR
+	default:
+		panic("[coniks] Unknown request type")
+	}
+	// First response
+	if cc.SavedSTR == nil {
+		cc.SavedSTR = str
+		return nil
+	}
+	// Try to verify w/ what's been saved
+	if err := cc.verifySTR(str); err == nil {
+		return nil
+	}
+	// Otherwise, expect that we've enterred a new epoch
+	if err := cc.verifySTRConsistency(cc.SavedSTR, str); err != nil {
+		return err
+	}
+	// And update the saved STR
+	cc.SavedSTR = str
+	return nil
+}
 
+func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *Response,
+	uname string, key []byte) ErrorCode {
+	var err error
 	switch requestType {
 	case RegistrationType:
-		str, err = cc.verifyRegistration(requestType, msg, uname, key)
-
+		err = cc.verifyRegistration(requestType, msg, uname, key)
 	case KeyLookupType:
 		err = cc.verifyKeyLookup(requestType, msg, uname, key)
-
 	case MonitoringType:
 	case KeyLookupInEpochType:
 	default:
 		panic("[coniks] Unknown request type")
 	}
-
-	if err == Passed &&
-		requestType == RegistrationType || requestType == MonitoringType {
-		// update the state
-		cc.Timestamp = m.Timestamp(time.Now().Unix())
-		cc.SavedSTR = str
-	}
-
 	return err.(ErrorCode)
 }
 
 func (cc *ConsistencyChecks) verifyRegistration(requestType int,
-	msg *Response, uname string, key []byte) (*m.SignedTreeRoot, error) {
-
+	msg *Response, uname string, key []byte) error {
 	df, ok := msg.DirectoryResponse.(*DirectoryProof)
 	if !ok {
-		return nil, ErrorMalformedDirectoryMessage
+		return ErrorMalformedDirectoryMessage
 	}
 
 	ap := df.AP
 	str := df.STR
 	tb := df.TB
 
-	interval := m.Timestamp(time.Now().Unix()) - cc.Timestamp
-	if interval < 0 {
-		panic("[coniks] Malformed consistency state.")
-	} else if interval <= cc.SavedSTR.Policies.EpochDeadline { // same str
-		if err := cc.verifySTR(str); err != nil {
-			return nil, err
-		}
-	} else { // new str
-		if err := cc.verifySTRConsistency(cc.SavedSTR, str); err != nil {
-			return nil, err
-		}
+	if err := cc.verifySTR(str); err != nil {
+		return err
 	}
 
 	proofType := ap.ProofType()
@@ -131,25 +131,24 @@ func (cc *ConsistencyChecks) verifyRegistration(requestType int,
 	case msg.Error == ErrorNameExisted && proofType == m.ProofOfAbsence:
 	case msg.Error == Success && proofType == m.ProofOfAbsence:
 	default:
-		return nil, ErrorMalformedDirectoryMessage
+		return ErrorMalformedDirectoryMessage
 	}
 
 	if err := verifyAuthPath(uname, key, ap, str); err != nil {
-		return nil, err
+		return err
 	}
 
 	if proofType == m.ProofOfAbsence {
 		if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return str, Passed
+	return Passed
 }
 
 func (cc *ConsistencyChecks) verifyKeyLookup(requestType int,
 	msg *Response, uname string, key []byte) error {
-
 	df, ok := msg.DirectoryResponse.(*DirectoryProof)
 	if !ok {
 		return ErrorMalformedDirectoryMessage
