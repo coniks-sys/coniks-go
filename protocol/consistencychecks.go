@@ -57,6 +57,15 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 	return cc
 }
 
+// HandleResponse verifies the directory's response for a request.
+// It first verifies the directory's returned status code of the request.
+// If the status code is not in the ErrorResponses array, it means
+// the directory has successfully handled the request.
+// The verifier will then verify the consistency state of the response.
+// This will panic if it is called with an int
+// which isn't a valid/known request-type.
+// Note that the consistency state would be updated regardless of
+// whether the checks pass / fail, since it contains proof of being issued.
 func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	uname string, key []byte) ErrorCode {
 	if ErrorResponses[msg.Error] {
