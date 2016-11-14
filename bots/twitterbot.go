@@ -1,3 +1,6 @@
+// An account verification proxy for Twitter accounts that implements the CONIKS
+// registration Bot interface.
+
 package bots
 
 import (
@@ -14,6 +17,13 @@ import (
 	"github.com/dghubble/oauth1"
 )
 
+// A TwitterBot is an account verification proxy for
+// CONIKS clients registering Twitter usernames
+// with a CONIKS key server.
+// A TwitterBot maintains information about a
+// twitter client and stream, the address of its
+// corresponding CONIKS server, and its reserved
+// Twitter handle.
 type TwitterBot struct {
 	client        *twitter.Client
 	stream        *twitter.Stream
@@ -23,12 +33,21 @@ type TwitterBot struct {
 
 var _ Bot = (*TwitterBot)(nil)
 
+// A TwitterConfig contains the address of the named UNIX socket
+// through which the bot and the CONIKS server communicate,
+// the OAuth information needed to authenticate the bot with Twitter,
+// and the bot's reserved Twitter handle. These values are specified
+// in a configuration file, which is read at initialization time.
 type TwitterConfig struct {
 	CONIKSAddress string `toml:"coniks_address"`
 	TwitterOAuth  `toml:"twitter_oauth"`
 	Handle        string `toml:"twitter_bot_handle"`
 }
 
+// A TwitterOAuth contains the four secret values needed to authenticate
+// the bot with Twitter. These values are unique to each application
+// that uses the Twitter API to access an account's feed and direct
+// messages, and must be generated via Twitter's developer portal.
 type TwitterOAuth struct {
 	ConsumerKey    string
 	ConsumerSecret string
@@ -36,6 +55,14 @@ type TwitterOAuth struct {
 	AccessSecret   string
 }
 
+// NewTwitterBot creates a new TwitterBot that implements the Bot
+// interface.
+// NewTwitterBot loads the TwitterConfig for this bot from the
+// corresponding config file, checks that the CONIKS key server
+// is live, and authenticates the bot's Twitter client via OAuth.
+// If any of these steps fail, NewTwitterBot returns a (nil, error)
+// tuple. Otherwise, it returns a TwitterBot struct
+// with the appropriate values obtained during the setup.
 func NewTwitterBot(path string) (Bot, error) {
 	var conf TwitterConfig
 	if _, err := toml.DecodeFile(path, &conf); err != nil {
@@ -74,6 +101,12 @@ func NewTwitterBot(path string) (Bot, error) {
 	return bot, nil
 }
 
+// Run implements the main functionality of the TwitterBot bot.
+// It listens for a Twitter direct message (DM) sent to the bot's
+// reserved handle and calls HandleRegistration() upon receiving a valid
+// DM sent by a CONIKS client connected to a Twitter account.
+// The result of HandleRegistration() is returned to the CONIKS client
+// via DM.
 func (bot *TwitterBot) Run() {
 	demux := twitter.NewSwitchDemux()
 	demux.DM = func(dm *twitter.DirectMessage) {
@@ -107,10 +140,23 @@ func (bot *TwitterBot) Run() {
 	go demux.HandleChan(stream.Messages)
 }
 
+// Stop closes the bot's open stream through which it communicates with Twitter.
 func (bot *TwitterBot) Stop() {
 	bot.stream.Stop()
 }
 
+// HandleRegistration verifies the authenticity of a CONIKS registration
+// request msg for a Twitter user, and forwards this request to the bot's
+// corresponding CONIKS key server the Twitter account for username is valid.
+//
+// HandleRegistration() validates a registration request sent by a CONIKS client
+// on behalf of the Twitter user via Twitter DM.
+// It does so by comparing the username indicated in the request with the
+// Twitter handle which sent the DM. HandleRegistration() forwards the registration
+// request to the CONIKS server via SendRequestToCONIKS() if username matches
+// request.Username, and returns the server's response as a string.
+// See https://godoc.org/github.com/coniks-sys/coniks-go/protocol/#ConiksDirectory.Register
+// for details on the possible server responses.
 func (bot *TwitterBot) HandleRegistration(username string, msg []byte) string {
 	// validate request message
 	invalid := false
@@ -149,6 +195,8 @@ func (bot *TwitterBot) HandleRegistration(username string, msg []byte) string {
 	return string(res)
 }
 
+// SendDM sends a Twitter direct message msg to the given Twitter screenname.
+// The sender screenname is set to the bot's reserved Twitter handle.
 func (bot *TwitterBot) SendDM(screenname, msg string) error {
 	params := &twitter.DirectMessageNewParams{ScreenName: screenname, Text: msg}
 	_, _, err := bot.client.DirectMessages.New(params)
