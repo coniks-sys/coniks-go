@@ -81,10 +81,15 @@ func (pad *PAD) updateInternal(policies *Policies, epoch uint64) {
 }
 
 // Update generates a new snapshot of the tree.
+// It should be called in the beginning of each epoch.
 // Specifically, it extends the hash chain by issuing
 // a new signed tree root. It may remove some older signed tree roots from
 // memory if the cached PAD snapshots exceeded the maximum capacity.
-// The Policies pointer can be nil if the policies does not change.
+// policies could be nil if the PAD's policies do not change.
+// If the VRF private key is changed (by passing a new Policies),
+// the underlying tree would be reshuffled. It also means
+// the private index of all new key-to-value bindings
+// would be computed using the new VRF private key.
 func (pad *PAD) Update(policies *Policies) {
 	// delete older str(s) as needed
 	if len(pad.loadedEpochs) == cap(pad.loadedEpochs) {
