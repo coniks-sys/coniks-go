@@ -89,6 +89,10 @@ func (d *ConiksDirectory) LatestSTR() *merkletree.SignedTreeRoot {
 	return d.pad.LatestSTR()
 }
 
+// NewTB creates a new temporary binding for the given name-to-key mapping.
+// NewTB computes the private index corresponding to the name, and
+// generates a digital signature of the index, the given key, and the latest STR
+// signature.
 func (d *ConiksDirectory) NewTB(name string, key []byte) *TemporaryBinding {
 	index := d.pad.Index(name)
 	return &TemporaryBinding{

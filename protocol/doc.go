@@ -36,5 +36,16 @@ This module defines the message format of the CONIKS client requests
 and corresponding CONIKS server responses for each CONIKS protocol.
 It also provides constructors for the response messages for each
 protocol.
+
+Temporary Binding
+
+This module implements a temporary binding, which serves both as a proof of
+registration with a directory and as a signed promise by a CONIKS server
+to include the corresponding name-to-key binding in the next directory snapshot.
+As such, TBs allow clients to begin using a newly registered name-to-key binding for
+encryption/signing immediately without having to wait for the binding's inclusion
+in the next snapshot. However, clients must still check in the next epoch that the
+binding has been included in the snapshot to ensure that the server has not
+equivocated about it.
 */
 package protocol
