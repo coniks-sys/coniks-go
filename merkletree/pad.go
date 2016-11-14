@@ -89,7 +89,7 @@ func (pad *PAD) updateInternal(policies *Policies, epoch uint64) {
 // If the VRF private key is changed (by passing a new Policies),
 // the underlying tree would be reshuffled. It also means
 // the private index of all new key-to-value bindings
-// would be computed using the new VRF private key.
+// will be computed using the new VRF private key.
 func (pad *PAD) Update(policies *Policies) {
 	// delete older str(s) as needed
 	if len(pad.loadedEpochs) == cap(pad.loadedEpochs) {

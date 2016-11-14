@@ -21,11 +21,11 @@ wish to obtain information about users by querying the key directory.
 Merkle Prefix Tree
 
 This module implements the Merkle prefix tree, which is the data structure
-underlying our PAD implementation. It is a binary tree, and that there are
+underlying our PAD implementation. It is a binary tree with
 two types of leaf nodes: empty leaf node and user leaf node. Each node contains
 its prefix index and its level value. It provides methods to insert, update
 (to update an existing key-value pair) and lookup.
-The tree has the property of not being able to remove user leafs.
+The tree has the property of not being able to remove user leaves.
 This Merkle prefix tree implementation also preserves the privacy feature:
 the prefix used to search in the tree is a cryptographic transformation (VRF)
 of the search key, and values are concealed using cryptographic commitments.
