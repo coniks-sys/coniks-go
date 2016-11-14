@@ -39,7 +39,10 @@ type ConsistencyChecks struct {
 func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *ConsistencyChecks {
 	// TODO: see #110
 	if !useTBs {
-		panic("[coniks] Currently the server is forced to use TBs")
+		panic("[coniks] Currently the server is forced to use TBs.")
+	}
+	if savedSTR == nil {
+		panic("[coniks] Expect a non-nil consistency state.")
 	}
 	cc := &ConsistencyChecks{
 		SavedSTR: savedSTR,
@@ -81,12 +84,7 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 		}
 		str = df.STR
 	default:
-		panic("[coniks] Unknown request type")
-	}
-	// First response
-	if cc.SavedSTR == nil {
-		cc.SavedSTR = str
-		return nil
+		panic("[coniks] Unknown request type.")
 	}
 	// Try to verify w/ what's been saved
 	if err := cc.verifySTR(str); err == nil {
@@ -111,7 +109,7 @@ func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
 			return ErrorMalformedDirectoryMessage
 		}
 	default:
-		panic("[coniks] Unknown request type")
+		panic("[coniks] Unknown request type.")
 	}
 	switch requestType {
 	case RegistrationType:
@@ -150,7 +148,7 @@ func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *Response,
 	case MonitoringType:
 	case KeyLookupInEpochType:
 	default:
-		panic("[coniks] Unknown request type")
+		panic("[coniks] Unknown request type.")
 	}
 	return err.(ErrorCode)
 }
