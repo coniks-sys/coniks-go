@@ -15,8 +15,6 @@ const (
 	messagePrefix = "?CONIKS?"
 )
 
-type BotHandleFunc func(string, []byte)
-
 // A Bot is a CONIKS registration proxy that verifies
 // the authenticity of a user account with an
 // identity provider (i.e. communication service
