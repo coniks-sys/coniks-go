@@ -86,6 +86,8 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	default:
 		panic("[coniks] Unknown request type.")
 	}
+	// FIXME: check whether the STR was issued on time and whatnot.
+	// Maybe it has something to do w/ #81 and client transitioning between epochs.
 	// Try to verify w/ what's been saved
 	if err := cc.verifySTR(str); err == nil {
 		return nil
@@ -258,9 +260,7 @@ func (cc *ConsistencyChecks) verifySTRConsistency(savedSTR, str *m.SignedTreeRoo
 	if !cc.signKey.Verify(str.Serialize(), str.Signature) {
 		return ErrorBadSignature
 	}
-
-	// TODO: clearly verify which is the client's actual expectation. See #81
-	if str.Epoch == savedSTR.Epoch+1 && str.VerifyHashChain(savedSTR.Signature) {
+	if str.VerifyHashChain(savedSTR) {
 		return nil
 	}
 
