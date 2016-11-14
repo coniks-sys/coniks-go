@@ -60,16 +60,22 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	if ErrorResponses[msg.Error] {
 		return msg.Error
 	}
+	switch requestType {
+	case RegistrationType, KeyLookupType:
+		if _, ok := msg.DirectoryResponse.(*DirectoryProof); !ok {
+			return ErrorMalformedDirectoryMessage
+		}
+	default:
+		panic("[coniks] Unknown request type.")
+	}
 	if err := cc.updateSTR(requestType, msg); err != nil {
 		return err.(ErrorCode)
 	}
 	if err := cc.checkConsistency(requestType, msg, uname, key); err != Passed {
 		return err
 	}
-	if cc.useTBs {
-		if err := cc.updateTBs(requestType, msg, uname); err != nil {
-			return err.(ErrorCode)
-		}
+	if err := cc.updateTBs(requestType, msg, uname, key); err != nil {
+		return err.(ErrorCode)
 	}
 	return Passed
 }
@@ -78,13 +84,7 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	var str *m.SignedTreeRoot
 	switch requestType {
 	case RegistrationType, KeyLookupType:
-		df, ok := msg.DirectoryResponse.(*DirectoryProof)
-		if !ok {
-			return ErrorMalformedDirectoryMessage
-		}
-		str = df.STR
-	default:
-		panic("[coniks] Unknown request type.")
+		str = msg.DirectoryResponse.(*DirectoryProof).STR
 	}
 	// FIXME: check whether the STR was issued on time and whatnot.
 	// Maybe it has something to do w/ #81 and client transitioning between epochs.
@@ -102,37 +102,36 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 }
 
 func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
-	uname string) error {
-	var df *DirectoryProof
-	switch requestType {
-	case RegistrationType, KeyLookupType:
-		var ok bool
-		if df, ok = msg.DirectoryResponse.(*DirectoryProof); !ok {
-			return ErrorMalformedDirectoryMessage
-		}
-	default:
-		panic("[coniks] Unknown request type.")
+	uname string, key []byte) error {
+	if !cc.useTBs {
+		return nil
 	}
 	switch requestType {
 	case RegistrationType:
-		if msg.Error == Success {
+		df := msg.DirectoryResponse.(*DirectoryProof)
+		if df.AP.ProofType() == m.ProofOfAbsence {
+			if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
+				return err
+			}
 			cc.TBs[uname] = df.TB
 		}
 		return nil
+
 	case KeyLookupType:
+		df := msg.DirectoryResponse.(*DirectoryProof)
 		ap := df.AP
 		proofType := ap.ProofType()
 		// FIXME: Which epoch did this lookup happen in?
 		switch {
 		case msg.Error == Success && proofType == m.ProofOfInclusion:
-			if tb, ok := cc.TBs[uname]; ok {
-				if !bytes.Equal(ap.LookupIndex, tb.Index) ||
-					!bytes.Equal(ap.Leaf.Value, tb.Value) {
-					return ErrorBrokenPromise
-				}
-				delete(cc.TBs, uname)
+			if err := cc.verifyFulfilledPromise(uname, ap); err != nil {
+				return err
 			}
+
 		case msg.Error == Success && proofType == m.ProofOfAbsence:
+			if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
+				return err
+			}
 			cc.TBs[uname] = df.TB
 		}
 	}
@@ -147,8 +146,6 @@ func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *Response,
 		err = cc.verifyRegistration(requestType, msg, uname, key)
 	case KeyLookupType:
 		err = cc.verifyKeyLookup(requestType, msg, uname, key)
-	case MonitoringType:
-	case KeyLookupInEpochType:
 	default:
 		panic("[coniks] Unknown request type.")
 	}
@@ -157,31 +154,16 @@ func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *Response,
 
 func (cc *ConsistencyChecks) verifyRegistration(requestType int,
 	msg *Response, uname string, key []byte) error {
-	df, ok := msg.DirectoryResponse.(*DirectoryProof)
-	if !ok {
-		return ErrorMalformedDirectoryMessage
-	}
-
+	df := msg.DirectoryResponse.(*DirectoryProof)
 	ap := df.AP
 	str := df.STR
-
-	if err := cc.verifySTR(str); err != nil {
-		return err
-	}
+	tb := df.TB
 
 	proofType := ap.ProofType()
 	switch {
+	case msg.Error == ErrorNameExisted && proofType == m.ProofOfInclusion && tb == nil:
+	case msg.Error == ErrorNameExisted && proofType == m.ProofOfAbsence:
 	case msg.Error == Success && proofType == m.ProofOfAbsence:
-		if cc.useTBs {
-			if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
-				return err
-			}
-		}
-	case msg.Error == ErrorNameExisted && proofType == m.ProofOfInclusion:
-	case msg.Error == ErrorNameExisted && proofType == m.ProofOfAbsence && cc.useTBs:
-		if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
-			return err
-		}
 	default:
 		return ErrorMalformedDirectoryMessage
 	}
@@ -195,27 +177,16 @@ func (cc *ConsistencyChecks) verifyRegistration(requestType int,
 
 func (cc *ConsistencyChecks) verifyKeyLookup(requestType int,
 	msg *Response, uname string, key []byte) error {
-	df, ok := msg.DirectoryResponse.(*DirectoryProof)
-	if !ok {
-		return ErrorMalformedDirectoryMessage
-	}
-
+	df := msg.DirectoryResponse.(*DirectoryProof)
 	ap := df.AP
 	str := df.STR
-
-	if err := cc.verifySTR(str); err != nil {
-		return err
-	}
+	tb := df.TB
 
 	proofType := ap.ProofType()
 	switch {
 	case msg.Error == ErrorNameNotFound && proofType == m.ProofOfAbsence:
-		// FIXME: Do we have a TB for this name?
-	case msg.Error == Success && proofType == m.ProofOfInclusion:
-	case msg.Error == Success && proofType == m.ProofOfAbsence && cc.useTBs:
-		if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
-			return err
-		}
+	case msg.Error == Success && proofType == m.ProofOfInclusion && tb == nil:
+	case msg.Error == Success && proofType == m.ProofOfAbsence:
 	default:
 		return ErrorMalformedDirectoryMessage
 	}
@@ -278,6 +249,20 @@ func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
 		return nil
 	}
 	return ErrorBadSTR
+}
+
+// verifyFulfilledPromise verifies issued TBs were inserted
+// in the directory as promised.
+func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
+	ap *m.AuthenticationPath) error {
+	if tb, ok := cc.TBs[uname]; ok {
+		if !bytes.Equal(ap.LookupIndex, tb.Index) ||
+			!bytes.Equal(ap.Leaf.Value, tb.Value) {
+			return ErrorBrokenPromise
+		}
+		delete(cc.TBs, uname)
+	}
+	return nil
 }
 
 // verifyReturnedPromise validates the returned promise
