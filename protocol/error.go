@@ -18,12 +18,8 @@ const (
 	ErrorMalformedDirectoryMessage
 	ErrorBadSignature
 	ErrorBadVRFProof
-	ErrorBadIndex
 	ErrorBadAuthPath
 	ErrorBadSTR
-	ErrorBadCommitment
-	ErrorBadBinding
-	ErrorCouldNotVerify
 	ErrorBadPromise
 	ErrorBrokenPromise
 )
@@ -47,12 +43,8 @@ var (
 		ErrorMalformedDirectoryMessage: "[coniks] Malformed directory message",
 		ErrorBadSignature:              "[coniks] Directory's signature on STR or TB is invalid",
 		ErrorBadVRFProof:               "[coniks] Returned index is not valid for the given name",
-		ErrorBadIndex:                  "[coniks] The index in the TB and the index in the auth path do not match",
 		ErrorBadAuthPath:               "[coniks] Returned binding is inconsistent with the tree root hash",
 		ErrorBadSTR:                    "[coniks] The hash chain is inconsistent",
-		ErrorBadCommitment:             "[coniks] The binding commitment is invalid",
-		ErrorBadBinding:                "[coniks] Key in the binding is inconsistent",
-		ErrorCouldNotVerify:            "[coniks] Could not verify",
 		ErrorBadPromise:                "[coniks] The directory returned either an invalid registration promise or no promise",
 		ErrorBrokenPromise:             "[coniks] The directory broke the registration promise by not inserting the binding to the tree in the expected epoch",
 	}

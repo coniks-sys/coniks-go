@@ -308,7 +308,7 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(df *DirectoryProof,
 
 	// verify TB's VRF index
 	if !bytes.Equal(tb.Index, ap.LookupIndex) {
-		return ErrorBadIndex
+		return ErrorBadPromise
 	}
 
 	// verify TB's value
