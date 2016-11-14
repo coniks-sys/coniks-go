@@ -23,6 +23,7 @@ import (
 // This ConsistencyChecks instance then will be used to verify
 // the returned responses from the ConiksDirectory.
 type ConsistencyChecks struct {
+	oldSTR   *m.SignedTreeRoot // keep a copy of SavedSTR before it gets updated
 	SavedSTR *m.SignedTreeRoot
 
 	// extensions settings
@@ -45,6 +46,7 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 		panic("[coniks] Expect a non-nil consistency state.")
 	}
 	cc := &ConsistencyChecks{
+		oldSTR:   savedSTR,
 		SavedSTR: savedSTR,
 		useTBs:   useTBs,
 		signKey:  signKey,
@@ -85,18 +87,20 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	switch requestType {
 	case RegistrationType, KeyLookupType:
 		str = msg.DirectoryResponse.(*DirectoryProof).STR
+		// FIXME: check whether the STR was issued on time and whatnot.
+		// Maybe it has something to do w/ #81 and client transitioning between epochs.
+		// Try to verify w/ what's been saved
+		if err := cc.verifySTR(str); err == nil {
+			return nil
+		}
+		// Otherwise, expect that we've enterred a new epoch
+		if err := cc.verifySTRConsistency(cc.SavedSTR, str); err != nil {
+			return err
+		}
 	}
-	// FIXME: check whether the STR was issued on time and whatnot.
-	// Maybe it has something to do w/ #81 and client transitioning between epochs.
-	// Try to verify w/ what's been saved
-	if err := cc.verifySTR(str); err == nil {
-		return nil
-	}
-	// Otherwise, expect that we've enterred a new epoch
-	if err := cc.verifySTRConsistency(cc.SavedSTR, str); err != nil {
-		return err
-	}
+
 	// And update the saved STR
+	cc.oldSTR = cc.SavedSTR
 	cc.SavedSTR = str
 	return nil
 }
@@ -120,11 +124,11 @@ func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
 	case KeyLookupType:
 		df := msg.DirectoryResponse.(*DirectoryProof)
 		ap := df.AP
+		str := df.STR
 		proofType := ap.ProofType()
-		// FIXME: Which epoch did this lookup happen in?
 		switch {
 		case msg.Error == Success && proofType == m.ProofOfInclusion:
-			if err := cc.verifyFulfilledPromise(uname, ap); err != nil {
+			if err := cc.verifyFulfilledPromise(uname, str, ap); err != nil {
 				return err
 			}
 
@@ -254,8 +258,12 @@ func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
 // verifyFulfilledPromise verifies issued TBs were inserted
 // in the directory as promised.
 func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
+	str *m.SignedTreeRoot,
 	ap *m.AuthenticationPath) error {
 	if tb, ok := cc.TBs[uname]; ok {
+		if str.Epoch != cc.oldSTR.Epoch+1 {
+			return ErrorBadPromise
+		}
 		if !bytes.Equal(ap.LookupIndex, tb.Index) ||
 			!bytes.Equal(ap.Leaf.Value, tb.Value) {
 			return ErrorBrokenPromise
