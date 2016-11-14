@@ -44,7 +44,7 @@ func NewSTR(key sign.PrivateKey, policies Policies, m *MerkleTree, epoch uint64,
 }
 
 // Serialize serializes the signed tree root into
-// the correct format for signing.
+// a specified format for signing.
 func (str *SignedTreeRoot) Serialize() []byte {
 	var strBytes []byte
 	strBytes = append(strBytes, util.ULongToBytes(str.Epoch)...) // t - epoch number

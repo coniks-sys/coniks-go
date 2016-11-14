@@ -14,8 +14,8 @@ This module implements the Merkle prefix tree, which is the data structure
 underlying our PAD implementation. It is a binary tree, and that there are
 two types of leaf nodes: empty leaf node and user leaf node. Each node contains
 its prefix index and its level value. It provides methods to insert, update
-(to update an existing key-value pair) and lookup. The tree is append-only,
-and it does not support the deletion of values.
+(to update an existing key-value pair) and lookup.
+The tree has the property of not being able to remove user leafs.
 This Merkle prefix tree implementation also preserves the privacy feature:
 the prefix used to search in the tree is a cryptographic transformation (VRF)
 of the search key, and values are concealed using cryptographic commitments.

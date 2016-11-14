@@ -7,7 +7,7 @@ import (
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
-// ProofNode can be a leaf node or an empty node,
+// ProofNode can be a user node or an empty node,
 // which is included in the returned AuthenticationPath
 // of a given index. The type of that node can be determined
 // by the IsEmpty value. It also provides an opening of
@@ -54,12 +54,8 @@ const (
 // the prefix path between the corresponding leaf node
 // (of type ProofNode) and the root. This is a proof
 // of inclusion or absence of requested index.
-// The proof type can be determined by
-//  if !bytes.Equal(ap.Leaf.Index, ap.LookupIndex) {
-//	 // Proof of absence
-//	} else {
-//	 // Proof of inclusion
-//  }
+// A proof of inclusion is when the leaf index
+// equals the lookup index.
 type AuthenticationPath struct {
 	TreeNonce   []byte
 	PrunedTree  [][crypto.HashSizeByte]byte
