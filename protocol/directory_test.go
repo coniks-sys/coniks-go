@@ -138,7 +138,7 @@ func TestDirectoryMonitoring(t *testing.T) {
 		Key:      []byte("key")})
 
 	d.Update()
-	savedSTR := d.LatestSTR().Signature
+	savedSTR := d.LatestSTR()
 	for i := 2; i < N; i++ {
 		d.Update()
 	}
@@ -161,7 +161,7 @@ func TestDirectoryMonitoring(t *testing.T) {
 		}
 		// we can ignore the auth path verification
 		// since it is already tested in merkletree package
-		savedSTR = str.Signature
+		savedSTR = str
 	}
 
 	// assert the number of STRs returned is correct

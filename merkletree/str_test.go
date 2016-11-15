@@ -4,7 +4,6 @@ import "testing"
 
 func TestVerifyHashChain(t *testing.T) {
 	var N uint64 = 100
-	var savedSTR []byte
 
 	keyPrefix := "key"
 	valuePrefix := []byte("value")
@@ -13,7 +12,7 @@ func TestVerifyHashChain(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	savedSTR = pad.LatestSTR().Signature
+	savedSTR := pad.LatestSTR()
 
 	pk, ok := pad.signKey.Public()
 	if !ok {
@@ -38,6 +37,6 @@ func TestVerifyHashChain(t *testing.T) {
 		if !str.VerifyHashChain(savedSTR) {
 			t.Fatal("Spurious STR at epoch", i)
 		}
-		savedSTR = str.Signature
+		savedSTR = str
 	}
 }

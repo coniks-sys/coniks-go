@@ -1,9 +1,6 @@
 package protocol
 
-import (
-	"github.com/coniks-sys/coniks-go/crypto/sign"
-	m "github.com/coniks-sys/coniks-go/merkletree"
-)
+import m "github.com/coniks-sys/coniks-go/merkletree"
 
 // Defines constants representing the types
 // of messages exchanged by clients and servers.
@@ -59,10 +56,7 @@ type Response struct {
 }
 
 // DirectoryResponse messages
-type DirectoryResponse interface {
-	// TODO: refactor the function signature after resolving #47
-	Verify(string, []byte, uint64, []byte, sign.PublicKey) ErrorCode
-}
+type DirectoryResponse interface{}
 
 type DirectoryProof struct {
 	AP  *m.AuthenticationPath
@@ -127,16 +121,4 @@ func NewMonitoringProof(ap []*m.AuthenticationPath,
 			STR: str,
 		},
 	}, e
-}
-
-// Verify implementations
-
-func (df *DirectoryProof) Verify(uname string, key []byte,
-	curEp uint64, savedSTR []byte, signKey sign.PublicKey) ErrorCode {
-	return Passed
-}
-
-func (df *DirectoryProofs) Verify(uname string, key []byte,
-	curEp uint64, savedSTR []byte, signKey sign.PublicKey) ErrorCode {
-	return Passed
 }
