@@ -118,6 +118,13 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 	if len(cc.TBs) != 1 || cc.TBs["bob"] == nil {
 		t.Error("Expect the directory to insert the binding as promised")
 	}
+
+	if doRequestAndVerify(d, cc, KeyLookupType, "bob") != Passed {
+		t.Fatal("Unexpected verification result")
+	}
+	if len(cc.TBs) != 0 {
+		t.Error("Expect the directory to insert the binding as promised")
+	}
 }
 
 func TestVerifyKeyLookupResponseWithTB(t *testing.T) {

@@ -35,7 +35,7 @@ type ConsistencyChecks struct {
 }
 
 // NewCC creates an instance of ConsistencyChecks using
-// the pinning directory's STR at epoch 0 or
+// the pinned directory's STR at epoch 0 or
 // the consistency state read from a persistent storage.
 func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *ConsistencyChecks {
 	// TODO: see #110
@@ -102,53 +102,42 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 		if err := cc.verifySTR(str); err == nil {
 			return nil
 		}
-		// Otherwise, expect that we've enterred a new epoch
+		// Otherwise, expect that we've entered a new epoch
 		if err := cc.verifySTRConsistency(cc.SavedSTR, str); err != nil {
 			return err
 		}
 	}
 
 	// And update the saved STR
-	cc.oldSTR = cc.SavedSTR
+	cc.oldSTR = cc.SavedSTR // assert(cc.oldSTR.Epoch+1 == cc.SavedSTR)
 	cc.SavedSTR = str
 	return nil
 }
 
-func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
-	uname string, key []byte) error {
-	if !cc.useTBs {
+// verifySTR checks whether the received STR is the same with
+// the SavedSTR using reflect.DeepEqual().
+func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
+	if reflect.DeepEqual(cc.SavedSTR, str) {
 		return nil
 	}
-	switch requestType {
-	case RegistrationType:
-		df := msg.DirectoryResponse.(*DirectoryProof)
-		if df.AP.ProofType() == m.ProofOfAbsence {
-			if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
-				return err
-			}
-			cc.TBs[uname] = df.TB
-		}
-		return nil
+	return ErrorBadSTR
+}
 
-	case KeyLookupType:
-		df := msg.DirectoryResponse.(*DirectoryProof)
-		ap := df.AP
-		str := df.STR
-		proofType := ap.ProofType()
-		switch {
-		case msg.Error == Success && proofType == m.ProofOfInclusion:
-			if err := cc.verifyFulfilledPromise(uname, str, ap); err != nil {
-				return err
-			}
-
-		case msg.Error == Success && proofType == m.ProofOfAbsence:
-			if err := cc.verifyReturnedPromise(df, uname, key); err != nil {
-				return err
-			}
-			cc.TBs[uname] = df.TB
-		}
+// verifySTRConsistency checks the consistency between 2 snapshots.
+// It uses the pinned signing key in cc
+// to verify the STR's signature and should not verify
+// the hash chain using the STR stored in cc.
+func (cc *ConsistencyChecks) verifySTRConsistency(savedSTR, str *m.SignedTreeRoot) error {
+	// verify STR's signature
+	if !cc.signKey.Verify(str.Serialize(), str.Signature) {
+		return ErrorBadSignature
 	}
-	return nil
+	if str.VerifyHashChain(savedSTR) {
+		return nil
+	}
+
+	// TODO: verify the directory's policies as well. See #115
+	return ErrorBadSTR
 }
 
 func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *Response,
@@ -156,17 +145,17 @@ func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *Response,
 	var err error
 	switch requestType {
 	case RegistrationType:
-		err = cc.verifyRegistration(requestType, msg, uname, key)
+		err = cc.verifyRegistration(msg, uname, key)
 	case KeyLookupType:
-		err = cc.verifyKeyLookup(requestType, msg, uname, key)
+		err = cc.verifyKeyLookup(msg, uname, key)
 	default:
 		panic("[coniks] Unknown request type.")
 	}
 	return err.(ErrorCode)
 }
 
-func (cc *ConsistencyChecks) verifyRegistration(requestType int,
-	msg *Response, uname string, key []byte) error {
+func (cc *ConsistencyChecks) verifyRegistration(msg *Response,
+	uname string, key []byte) error {
 	df := msg.DirectoryResponse.(*DirectoryProof)
 	ap := df.AP
 	str := df.STR
@@ -188,8 +177,8 @@ func (cc *ConsistencyChecks) verifyRegistration(requestType int,
 	return Passed
 }
 
-func (cc *ConsistencyChecks) verifyKeyLookup(requestType int,
-	msg *Response, uname string, key []byte) error {
+func (cc *ConsistencyChecks) verifyKeyLookup(msg *Response,
+	uname string, key []byte) error {
 	df := msg.DirectoryResponse.(*DirectoryProof)
 	ap := df.AP
 	str := df.STR
@@ -198,6 +187,7 @@ func (cc *ConsistencyChecks) verifyKeyLookup(requestType int,
 	proofType := ap.ProofType()
 	switch {
 	case msg.Error == ErrorNameNotFound && proofType == m.ProofOfAbsence:
+	// FIXME: This would be changed when we support key changes
 	case msg.Error == Success && proofType == m.ProofOfInclusion && tb == nil:
 	case msg.Error == Success && proofType == m.ProofOfAbsence:
 	default:
@@ -222,7 +212,8 @@ func verifyAuthPath(uname string, key []byte,
 	}
 
 	if key == nil {
-		// key is nil when the user does lookup for the first time
+		// key is nil when the user does lookup for the first time.
+		// Accept the received key as TOFU
 		key = ap.Leaf.Value
 	}
 
@@ -234,34 +225,41 @@ func verifyAuthPath(uname string, key []byte,
 	return nil
 }
 
-// verifySTRConsistency checks the consistency between 2 snapshots.
-// This should be called if the request is either registration or
-// monitoring. It uses the pinning signing key in cc
-// to verify the STR's signature and should not verify
-// the hash chain using the STR stored in cc.
-func (cc *ConsistencyChecks) verifySTRConsistency(savedSTR, str *m.SignedTreeRoot) error {
-	// verify STR's signature
-	if !cc.signKey.Verify(str.Serialize(), str.Signature) {
-		return ErrorBadSignature
-	}
-	if str.VerifyHashChain(savedSTR) {
+func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
+	uname string, key []byte) error {
+	if !cc.useTBs {
 		return nil
 	}
-
-	// TODO: verify the directory's policies as well. See #115
-	return ErrorBadSTR
-}
-
-// verifySTR checks whether the received STR is the same with
-// the SavedSTR using reflect.DeepEqual().
-// This should be called if the request is lookup, since the SavedSTR
-// should only be updated in the beginning of each epoch by registration
-// or monitoring requests.
-func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
-	if reflect.DeepEqual(cc.SavedSTR, str) {
+	switch requestType {
+	case RegistrationType:
+		df := msg.DirectoryResponse.(*DirectoryProof)
+		if df.AP.ProofType() == m.ProofOfAbsence {
+			if err := cc.verifyReturnedPromise(df, key); err != nil {
+				return err
+			}
+			cc.TBs[uname] = df.TB
+		}
 		return nil
+
+	case KeyLookupType:
+		df := msg.DirectoryResponse.(*DirectoryProof)
+		ap := df.AP
+		str := df.STR
+		proofType := ap.ProofType()
+		switch {
+		case msg.Error == Success && proofType == m.ProofOfInclusion:
+			if err := cc.verifyFulfilledPromise(uname, str, ap); err != nil {
+				return err
+			}
+
+		case msg.Error == Success && proofType == m.ProofOfAbsence:
+			if err := cc.verifyReturnedPromise(df, key); err != nil {
+				return err
+			}
+			cc.TBs[uname] = df.TB
+		}
 	}
-	return ErrorBadSTR
+	return nil
 }
 
 // verifyFulfilledPromise verifies issued TBs were inserted
@@ -282,9 +280,8 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 	return nil
 }
 
-// verifyReturnedPromise validates the returned promise
-// based on the request type. Note that the directory
-// returns a promise iff the returned proof is
+// verifyReturnedPromise validates a returned promise.
+// Note that the directory returns a promise iff the returned proof is
 // _a proof of absence_.
 // 	If the request is a registration, and
 // 	- the request is successful, then the directory should return a promise for the new binding.
@@ -294,7 +291,7 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 // 	- the request is successful, then the directory should return a promise for the lookup binding.
 // These above checks should be performed before calling this method.
 func (cc *ConsistencyChecks) verifyReturnedPromise(df *DirectoryProof,
-	uname string, key []byte) error {
+	key []byte) error {
 	ap := df.AP
 	str := df.STR
 	tb := df.TB
