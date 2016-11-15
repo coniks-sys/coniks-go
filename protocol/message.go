@@ -92,8 +92,9 @@ type Response struct {
 	DirectoryResponse `json:",omitempty"`
 }
 
-// A CONIKS server sends a DirectoryResponse message when it returns cryptographic proofs
-// about the key directory to a CONIKS client.
+// A DirectoryResponse is a message that includes cryptographic proofs
+// about the key directory that a CONIKS key server returns to a
+// CONIKS client.
 type DirectoryResponse interface{}
 
 // A DirectoryProof response includes an authentication path AP for a
