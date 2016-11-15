@@ -35,6 +35,10 @@ func ULongToBytes(num uint64) []byte {
 	return LongToBytes(int64(num))
 }
 
+func BytesToULong(buf []byte) uint64 {
+	return binary.LittleEndian.Uint64(buf[0:8])
+}
+
 // UInt32ToBytes converts an uint32 variable to byte array
 // in little endian format
 func UInt32ToBytes(num uint32) []byte {

@@ -22,10 +22,10 @@ type SignedTreeRoot struct {
 	PreviousEpoch   uint64
 	PreviousSTRHash []byte
 	Signature       []byte
-	Policies        Policies
+	Policies        []byte
 }
 
-func NewSTR(key sign.PrivateKey, policies Policies, m *MerkleTree, epoch uint64, prevHash []byte) *SignedTreeRoot {
+func NewSTR(key sign.PrivateKey, policies []byte, m *MerkleTree, epoch uint64, prevHash []byte) *SignedTreeRoot {
 	prevEpoch := epoch - 1
 	if epoch == 0 {
 		prevEpoch = 0
@@ -51,9 +51,9 @@ func (str *SignedTreeRoot) Serialize() []byte {
 	if str.Epoch > 0 {
 		strBytes = append(strBytes, utils.ULongToBytes(str.PreviousEpoch)...) // t_prev - previous epoch number
 	}
-	strBytes = append(strBytes, str.TreeHash...)             // root
-	strBytes = append(strBytes, str.PreviousSTRHash...)      // previous STR hash
-	strBytes = append(strBytes, str.Policies.Serialize()...) // P
+	strBytes = append(strBytes, str.TreeHash...)        // root
+	strBytes = append(strBytes, str.PreviousSTRHash...) // previous STR hash
+	strBytes = append(strBytes, str.Policies...)        // P
 	return strBytes
 }
 

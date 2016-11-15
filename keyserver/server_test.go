@@ -11,7 +11,6 @@ import (
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/keyserver/testutil"
-	"github.com/coniks-sys/coniks-go/merkletree"
 	. "github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/utils"
@@ -38,7 +37,7 @@ var keylookupMsg = `
 }
 `
 
-func startServer(t *testing.T, kvdb kv.DB, epDeadline merkletree.Timestamp, policiesPath string) (*ConiksServer, func()) {
+func startServer(t *testing.T, kvdb kv.DB, epDeadline Timestamp, policiesPath string) (*ConiksServer, func()) {
 	dir, teardown := testutil.CreateTLSCertForTest(t)
 
 	signKey, err := sign.GenerateKey(nil)

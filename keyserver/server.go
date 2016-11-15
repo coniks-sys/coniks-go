@@ -15,7 +15,6 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
-	"github.com/coniks-sys/coniks-go/merkletree"
 	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/storage/kv"
 	"github.com/coniks-sys/coniks-go/storage/kv/leveldbkv"
@@ -38,9 +37,9 @@ type TLSConnection struct {
 }
 
 type ServerPolicies struct {
-	EpochDeadline merkletree.Timestamp `toml:"epoch_deadline"`
-	VRFKeyPath    string               `toml:"vrf_key_path"`
-	SignKeyPath   string               `toml:"sign_key_path"` // it should be a part of policies, see #47
+	EpochDeadline protocol.Timestamp `toml:"epoch_deadline"`
+	VRFKeyPath    string             `toml:"vrf_key_path"`
+	SignKeyPath   string             `toml:"sign_key_path"` // it should be a part of policies, see #47
 	vrfKey        vrf.PrivateKey
 	signKey       sign.PrivateKey
 }
@@ -216,7 +215,7 @@ func (server *ConiksServer) updatePolicies() {
 				return
 			}
 			server.Lock()
-			server.dir.SetPolicies(conf.Policies.EpochDeadline, conf.Policies.vrfKey)
+			server.dir.SetPolicies(conf.Policies.EpochDeadline)
 			server.Unlock()
 			log.Println("Policies reloaded!")
 		}

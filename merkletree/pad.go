@@ -2,7 +2,6 @@ package merkletree
 
 import (
 	"bytes"
-	"crypto/subtle"
 	"errors"
 
 	"github.com/coniks-sys/coniks-go/crypto"
@@ -19,27 +18,29 @@ var (
 // PAD is an acronym for persistent authenticated dictionary
 type PAD struct {
 	signKey      sign.PrivateKey
+	vrfKey       vrf.PrivateKey
 	tree         *MerkleTree // will be used to create the next STR
 	snapshots    map[uint64]*SignedTreeRoot
 	loadedEpochs []uint64 // slice of epochs in snapshots
 	latestSTR    *SignedTreeRoot
-	policies     Policies // the current policies in place
+	policies     []byte // the current policies in place
 }
 
 // NewPAD creates new PAD consisting of an array of hash chain
 // indexed by the epoch and its maximum length is len.
-func NewPAD(policies *Policies, signKey sign.PrivateKey, len uint64) (*PAD, error) {
+func NewPAD(policies []byte, signKey sign.PrivateKey, vrfKey vrf.PrivateKey, len uint64) (*PAD, error) {
 	if policies == nil {
 		panic("[merkletree] PAD must be created with a non-NULL Policies struct")
 	}
 	var err error
 	pad := new(PAD)
 	pad.signKey = signKey
+	pad.vrfKey = vrfKey
 	pad.tree, err = NewMerkleTree()
 	if err != nil {
 		return nil, err
 	}
-	pad.policies = *policies
+	pad.policies = policies
 	pad.snapshots = make(map[uint64]*SignedTreeRoot, len)
 	pad.loadedEpochs = make([]uint64, 0, len)
 	pad.updateInternal(nil, 0)
@@ -63,20 +64,14 @@ func (pad *PAD) signTreeRoot(epoch uint64) {
 	pad.latestSTR = NewSTR(pad.signKey, pad.policies, m, epoch, prevHash)
 }
 
-func (pad *PAD) updateInternal(policies *Policies, epoch uint64) {
+func (pad *PAD) updateInternal(policies []byte, epoch uint64) {
 	// create STR with the policies that were actually used in the prev.
 	// Set() operation
 	pad.signTreeRoot(epoch)
 	pad.snapshots[epoch] = pad.latestSTR
 	pad.loadedEpochs = append(pad.loadedEpochs, epoch)
 	if policies != nil { // update the policies if necessary
-		vrfKeyChanged := 1 != subtle.ConstantTimeCompare(
-			pad.policies.vrfPrivateKey,
-			policies.vrfPrivateKey)
-		pad.policies = *policies
-		if vrfKeyChanged {
-			pad.reshuffle()
-		}
+		pad.policies = policies
 	}
 }
 
@@ -90,7 +85,7 @@ func (pad *PAD) updateInternal(policies *Policies, epoch uint64) {
 // the underlying tree would be reshuffled. It also means
 // the private index of all new key-to-value bindings
 // will be computed using the new VRF private key.
-func (pad *PAD) Update(policies *Policies) {
+func (pad *PAD) Update(policies []byte) {
 	// delete older str(s) as needed
 	if len(pad.loadedEpochs) == cap(pad.loadedEpochs) {
 		n := cap(pad.loadedEpochs) / 2
@@ -123,7 +118,9 @@ func (pad *PAD) LookupInEpoch(key string, epoch uint64) (*AuthenticationPath, er
 	if str == nil {
 		return nil, ErrorSTRNotFound
 	}
-	lookupIndex, proof := pad.computePrivateIndex(key, str.Policies.vrfPrivateKey)
+	// TODO: If the vrf key is rotated, we'd need to use the key corresponding
+	// to the `epoch` here.  See #120
+	lookupIndex, proof := pad.computePrivateIndex(key, pad.vrfKey)
 	ap := str.tree.Get(lookupIndex)
 	ap.VrfProof = proof
 	return ap, nil
@@ -152,7 +149,7 @@ func (pad *PAD) Sign(msg ...[]byte) []byte {
 // Index uses the _current_ VRF private key of the PAD to compute
 // the private index of the requested key.
 func (pad *PAD) Index(key string) []byte {
-	index, _ := pad.computePrivateIndex(key, pad.policies.vrfPrivateKey)
+	index, _ := pad.computePrivateIndex(key, pad.vrfKey)
 	return index
 }
 
@@ -174,8 +171,7 @@ func (pad *PAD) reshuffle() {
 	pad.tree = newTree
 }
 
-func (pad *PAD) computePrivateIndex(key string,
-	vrfPrivKey vrf.PrivateKey) (index, proof []byte) {
-	index, proof = vrfPrivKey.Prove([]byte(key))
+func (pad *PAD) computePrivateIndex(key string, vrfKey vrf.PrivateKey) (index, proof []byte) {
+	index, proof = vrfKey.Prove([]byte(key))
 	return
 }
