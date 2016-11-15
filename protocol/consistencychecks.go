@@ -23,7 +23,6 @@ import (
 // This ConsistencyChecks instance then will be used to verify
 // the returned responses from the ConiksDirectory.
 type ConsistencyChecks struct {
-	oldSTR   *m.SignedTreeRoot // keep a copy of SavedSTR before it gets updated
 	SavedSTR *m.SignedTreeRoot
 
 	// extensions settings
@@ -46,7 +45,6 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 		panic("[coniks] Expect a non-nil consistency state.")
 	}
 	cc := &ConsistencyChecks{
-		oldSTR:   savedSTR,
 		SavedSTR: savedSTR,
 		useTBs:   useTBs,
 		signKey:  signKey,
@@ -109,7 +107,6 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	}
 
 	// And update the saved STR
-	cc.oldSTR = cc.SavedSTR // assert(cc.oldSTR.Epoch+1 == cc.SavedSTR)
 	cc.SavedSTR = str
 	return nil
 }
@@ -267,10 +264,8 @@ func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
 func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 	str *m.SignedTreeRoot,
 	ap *m.AuthenticationPath) error {
+	// FIXME: Which epoch did this lookup happen in?
 	if tb, ok := cc.TBs[uname]; ok {
-		if str.Epoch != cc.oldSTR.Epoch+1 {
-			return ErrorBadPromise
-		}
 		if !bytes.Equal(ap.LookupIndex, tb.Index) ||
 			!bytes.Equal(ap.Leaf.Value, tb.Value) {
 			return ErrorBrokenPromise
