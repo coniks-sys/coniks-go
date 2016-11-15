@@ -300,16 +300,8 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(df *DirectoryProof,
 		return ErrorBadSignature
 	}
 
-	// verify TB's VRF index
-	if !bytes.Equal(tb.Index, ap.LookupIndex) {
-		return ErrorBadPromise
+	if tb.Verify(ap.LookupIndex, key) {
+		return nil
 	}
-
-	// verify TB's value
-	// key could be nil if we may have no information about the existed binding
-	if key != nil && !bytes.Equal(tb.Value, key) {
-		return ErrorBadPromise
-	}
-
-	return nil
+	return ErrorBadPromise
 }
