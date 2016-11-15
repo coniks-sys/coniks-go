@@ -106,6 +106,8 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 		if err := cc.verifySTRConsistency(cc.SavedSTR, str); err != nil {
 			return err
 		}
+	default:
+		panic("[coniks] Unknown request type.")
 	}
 
 	// And update the saved STR
@@ -248,6 +250,7 @@ func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
 			if err := cc.verifyFulfilledPromise(uname, str, ap); err != nil {
 				return err
 			}
+			delete(cc.TBs, uname)
 
 		case msg.Error == Success && proofType == m.ProofOfAbsence:
 			if err := cc.verifyReturnedPromise(df, key); err != nil {
@@ -255,6 +258,8 @@ func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
 			}
 			cc.TBs[uname] = df.TB
 		}
+	default:
+		panic("[coniks] Unknown request type.")
 	}
 	return nil
 }
@@ -270,7 +275,6 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 			!bytes.Equal(ap.Leaf.Value, tb.Value) {
 			return ErrorBrokenPromise
 		}
-		delete(cc.TBs, uname)
 	}
 	return nil
 }
