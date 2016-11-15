@@ -3,8 +3,6 @@ package protocol
 import (
 	"bytes"
 	"testing"
-
-	"github.com/coniks-sys/coniks-go/crypto/vrf"
 )
 
 func TestRegisterWithTB(t *testing.T) {
@@ -257,30 +255,26 @@ func TestMonitoringBadStartEpoch(t *testing.T) {
 
 func TestPoliciesChanges(t *testing.T) {
 	d, _ := NewTestDirectory(t, true)
-	if p := d.LatestSTR().Policies.EpochDeadline; p != 1 {
+	if p := GetPolicies(d.LatestSTR()).EpochDeadline; p != 1 {
 		t.Fatal("Unexpected policies", "want", 1, "got", p)
 	}
 
 	// change the policies
-	vrfKey, err := vrf.GenerateKey(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	d.SetPolicies(2, vrfKey)
+	d.SetPolicies(2)
 	d.Update()
 	// expect the policies doesn't change yet
-	if p := d.LatestSTR().Policies.EpochDeadline; p != 1 {
+	if p := GetPolicies(d.LatestSTR()).EpochDeadline; p != 1 {
 		t.Fatal("Unexpected policies", "want", 1, "got", p)
 	}
 
 	d.Update()
 	// expect the new policies
-	if p := d.LatestSTR().Policies.EpochDeadline; p != 2 {
+	if p := GetPolicies(d.LatestSTR()).EpochDeadline; p != 2 {
 		t.Fatal("Unexpected policies", "want", 2, "got", p)
 	}
-	p0 := d.pad.GetSTR(0).Policies.EpochDeadline
-	p1 := d.pad.GetSTR(1).Policies.EpochDeadline
-	p2 := d.pad.GetSTR(2).Policies.EpochDeadline
+	p0 := GetPolicies(d.pad.GetSTR(0)).EpochDeadline
+	p1 := GetPolicies(d.pad.GetSTR(1)).EpochDeadline
+	p2 := GetPolicies(d.pad.GetSTR(2)).EpochDeadline
 	if p0 != 1 || p1 != 1 || p2 != 2 {
 		t.Fatal("Maybe the STR's policies were malformed")
 	}

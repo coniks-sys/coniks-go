@@ -27,7 +27,7 @@ type ConiksDirectory struct {
 	pad      *merkletree.PAD
 	useTBs   bool
 	tbs      map[string]*TemporaryBinding
-	policies *merkletree.Policies
+	policies *Policies
 }
 
 // NewDirectory constructs a new ConiksDirectory given the key server's PAD
@@ -38,17 +38,19 @@ type ConiksDirectory struct {
 // dirSize indicates the number of PAD snapshots the server keeps in memory.
 // useTBs indicates whether the key server returns TBs upon a successful
 // registration.
-func NewDirectory(epDeadline merkletree.Timestamp, vrfKey vrf.PrivateKey,
+func NewDirectory(epDeadline Timestamp, vrfKey vrf.PrivateKey,
 	signKey sign.PrivateKey, dirSize uint64, useTBs bool) *ConiksDirectory {
-
 	// FIXME: see #110
 	if !useTBs {
 		panic("Currently the server is forced to use TBs")
 	}
-
 	d := new(ConiksDirectory)
-	d.SetPolicies(epDeadline, vrfKey)
-	pad, err := merkletree.NewPAD(d.policies, signKey, dirSize)
+	vrfPublicKey, ok := vrfKey.Public()
+	if !ok {
+		panic(vrf.ErrorGetPubKey)
+	}
+	d.policies = NewPolicies(epDeadline, vrfPublicKey)
+	pad, err := merkletree.NewPAD(d.policies, signKey, vrfKey, dirSize)
 	if err != nil {
 		panic(err)
 	}
@@ -72,16 +74,16 @@ func (d *ConiksDirectory) Update() {
 	}
 }
 
-// SetPolicies sets this ConiksDirectory's epoch deadline and VRF
-// private key, which will be used in the next epoch.
-func (d *ConiksDirectory) SetPolicies(epDeadline merkletree.Timestamp, vrfKey vrf.PrivateKey) {
-	d.policies = merkletree.NewPolicies(epDeadline, vrfKey)
+// SetPolicies sets this ConiksDirectory's epoch deadline, which will be used
+// in the next epoch.
+func (d *ConiksDirectory) SetPolicies(epDeadline Timestamp) {
+	d.policies = NewPolicies(epDeadline, d.policies.VrfPublicKey)
 }
 
 // EpochDeadline returns this ConiksDirectory's latest epoch deadline
 // as a timestamp.
-func (d *ConiksDirectory) EpochDeadline() merkletree.Timestamp {
-	return d.pad.LatestSTR().Policies.EpochDeadline
+func (d *ConiksDirectory) EpochDeadline() Timestamp {
+	return GetPolicies(d.pad.LatestSTR()).EpochDeadline
 }
 
 // LatestSTR Returns this ConiksDirectory's latest STR.

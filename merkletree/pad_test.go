@@ -22,6 +22,14 @@ func init() {
 	}
 }
 
+type TestAd struct {
+	data string
+}
+
+func (t TestAd) Serialize() []byte {
+	return []byte(t.data)
+}
+
 // 1st: epoch = 0 (empty tree)
 // 2nd: epoch = 1 (key1)
 // 3rd: epoch = 2 (key1, key2)
@@ -38,7 +46,7 @@ func TestPADHashChain(t *testing.T) {
 
 	treeHashes := make(map[uint64][]byte)
 
-	pad, err := NewPAD(NewPolicies(2, vrfPrivKey1), signKey, 10)
+	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey1, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +152,7 @@ func TestPADHashChain(t *testing.T) {
 func TestHashChainExceedsMaximumSize(t *testing.T) {
 	var hashChainLimit uint64 = 4
 
-	pad, err := NewPAD(NewPolicies(2, vrfPrivKey1), signKey, hashChainLimit)
+	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey2, hashChainLimit)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +182,8 @@ func TestHashChainExceedsMaximumSize(t *testing.T) {
 	}
 }
 
-func TestPoliciesChange(t *testing.T) {
+// TODO: This test will be more useful after #120
+func TestAssocDataChange(t *testing.T) {
 	key1 := "key"
 	val1 := []byte("value")
 
@@ -184,7 +193,7 @@ func TestPoliciesChange(t *testing.T) {
 	key3 := "key3"
 	val3 := []byte("value3")
 
-	pad, err := NewPAD(NewPolicies(3, vrfPrivKey1), signKey, 10)
+	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey1, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -192,8 +201,8 @@ func TestPoliciesChange(t *testing.T) {
 	if err := pad.Set(key1, val1); err != nil {
 		t.Fatal(err)
 	}
-	// key change between epoch 1 and 2:
-	pad.Update(NewPolicies(3, vrfPrivKey2))
+	// TODO: key change between epoch 1 and 2:
+	pad.Update(TestAd{""})
 
 	if err := pad.Set(key2, val2); err != nil {
 		t.Fatal(err)
@@ -241,13 +250,13 @@ func TestPoliciesChange(t *testing.T) {
 	}
 }
 
-func TestNewPADMissingPolicies(t *testing.T) {
+func TestNewPADMissingAssocData(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("Expected NewPAD to panic if policies are missing.")
+			t.Fatal("Expected NewPAD to panic if ad are missing.")
 		}
 	}()
-	if _, err := NewPAD(nil, signKey, 10); err != nil {
+	if _, err := NewPAD(nil, signKey, vrfPrivKey1, 10); err != nil {
 		t.Fatal("Expected NewPAD to panic but got error.")
 	}
 }
@@ -273,7 +282,7 @@ func TestNewPADErrorWhileCreatingTree(t *testing.T) {
 	origRand := mockRandReadWithErroringReader()
 	defer unMockRandReader(origRand)
 
-	pad, err := NewPAD(NewPolicies(3, vrfPrivKey1), signKey, 3)
+	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey1, 3)
 	if err == nil || pad != nil {
 		t.Fatal("NewPad should return an error in case the tree creation failed")
 	}
@@ -379,7 +388,7 @@ func benchPADLookup(b *testing.B, entries uint64) {
 // `updateEvery`. If `updateEvery > N` createPAD won't update the STR.
 func createPad(N uint64, keyPrefix string, valuePrefix []byte, snapLen uint64,
 	updateEvery uint64) (*PAD, error) {
-	pad, err := NewPAD(NewPolicies(3, vrfPrivKey1), signKey, snapLen)
+	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey1, snapLen)
 	if err != nil {
 		return nil, err
 	}

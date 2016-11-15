@@ -10,7 +10,6 @@ import (
 	"reflect"
 
 	"github.com/coniks-sys/coniks-go/crypto/sign"
-	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	m "github.com/coniks-sys/coniks-go/merkletree"
 )
 
@@ -218,7 +217,7 @@ func verifyAuthPath(uname string, key []byte,
 	str *m.SignedTreeRoot) error {
 
 	// verify VRF Index
-	vrfKey := vrf.PublicKey(str.Policies.VrfPublicKey)
+	vrfKey := GetPolicies(str).VrfPublicKey
 	if !vrfKey.Verify([]byte(uname), ap.LookupIndex, ap.VrfProof) {
 		return ErrorBadVRFProof
 	}
