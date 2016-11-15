@@ -41,9 +41,6 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 	if !useTBs {
 		panic("[coniks] Currently the server is forced to use TBs.")
 	}
-	if savedSTR == nil {
-		panic("[coniks] Expect a non-nil consistency state.")
-	}
 	cc := &ConsistencyChecks{
 		SavedSTR: savedSTR,
 		useTBs:   useTBs,
@@ -94,6 +91,11 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	switch requestType {
 	case RegistrationType, KeyLookupType:
 		str = msg.DirectoryResponse.(*DirectoryProof).STR
+		// First response
+		if cc.SavedSTR == nil {
+			cc.SavedSTR = str
+			return nil
+		}
 		// FIXME: check whether the STR was issued on time and whatnot.
 		// Maybe it has something to do w/ #81 and client transitioning between epochs.
 		// Try to verify w/ what's been saved
