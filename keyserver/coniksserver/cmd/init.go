@@ -67,7 +67,7 @@ func mkConfig(dir string) {
 		log.Println(err)
 		return
 	}
-	util.WriteFile(file, confBuf)
+	utils.WriteFile(file, confBuf)
 }
 
 func mkSigningKey(dir string) {

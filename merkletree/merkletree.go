@@ -48,7 +48,7 @@ func NewMerkleTree() (*MerkleTree, error) {
 // Get returns an AuthenticationPath corresponding to the proof
 // of inclusion/absence of the requested index.
 func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
-	lookupIndexBits := util.ToBits(lookupIndex)
+	lookupIndexBits := utils.ToBits(lookupIndex)
 	depth := 0
 	var nodePointer merkleNode
 	nodePointer = m.root
@@ -135,7 +135,7 @@ func (m *MerkleTree) Set(index []byte, key string, value []byte) error {
 }
 
 func (m *MerkleTree) insertNode(index []byte, toAdd *userLeafNode) {
-	indexBits := util.ToBits(index)
+	indexBits := utils.ToBits(index)
 	var depth uint32 // = 0
 	var nodePointer merkleNode
 	nodePointer = m.root
@@ -162,7 +162,7 @@ insertLoop:
 
 			newInteriorNode := newInteriorNode(currentNodeUL.parent, depth, indexBits[:depth])
 
-			direction := util.GetNthBit(currentNodeUL.index, depth)
+			direction := utils.GetNthBit(currentNodeUL.index, depth)
 			if direction {
 				newInteriorNode.rightChild = currentNodeUL
 			} else {

@@ -43,7 +43,7 @@ func (p *Policies) Serialize() []byte {
 	var bs []byte
 	bs = append(bs, []byte(p.LibVersion)...)                       // lib Version
 	bs = append(bs, []byte(p.HashID)...)                           // cryptographic algorithms in use
-	bs = append(bs, util.ULongToBytes(uint64(p.EpochDeadline))...) // epoch deadline
+	bs = append(bs, utils.ULongToBytes(uint64(p.EpochDeadline))...) // epoch deadline
 	bs = append(bs, p.VrfPublicKey...)                             // vrf public key
 	return bs
 }
