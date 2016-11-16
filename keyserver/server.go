@@ -22,21 +22,46 @@ import (
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
+// A ServerConfig contains configuration values
+// which are read at initialization time from
+// a TOML format configuration file.
 type ServerConfig struct {
-	configFilePath      string
-	DatabasePath        string          `toml:"database"`
-	LoadedHistoryLength uint64          `toml:"loaded_history_length"`
-	Policies            *ServerPolicies `toml:"policies"`
-	Addresses           []*Address      `toml:"addresses"`
+	// DatabasePath is a path to the database for storing the server's directory.
+	DatabasePath string `toml:"database"`
+	// LoadedHistoryLength is the maximum length of current snapshots stored in memory.
+	LoadedHistoryLength uint64 `toml:"loaded_history_length"`
+	// Policies contains the server's CONIKS policies configuration.
+	Policies *ServerPolicies `toml:"policies"`
+	// Addresses contains the server's connections configuration.
+	Addresses      []*Address `toml:"addresses"`
+	configFilePath string
 }
 
+// An Address declares a server's connection.
+// It makes the server connections configurable
+// so that a key server implementation can easily
+// be used by a first-party identity provider or
+// a third-party communication service.
+// It supports two types of connections: a TCP connection ("tcp")
+// and a Unix socket connection ("unix").
+//
+// Allowing registration has to be explicitly defined for each connection.
+// Other types of requests are allowed by default.
+// One can think of a registration is considered as a "write",
+// while the other requests are of the "read" type.
+// So, by default, addresses are "read-only".
 type Address struct {
+	// Address is formated as a url: scheme://address.
 	Address           string `toml:"address"`
 	AllowRegistration bool   `toml:"allow_registration,omitempty"`
-	TLSCertPath       string `toml:"cert,omitempty"`
-	TLSKeyPath        string `toml:"key,omitempty"`
+	// TLSCertPath is a path to the server's TLS Certificate, which has to be set if the connection is TCP.
+	TLSCertPath string `toml:"cert,omitempty"`
+	// TLSKeyPath is a path to the server's TLS private key, which has to be set if the connection is TCP.
+	TLSKeyPath string `toml:"key,omitempty"`
 }
 
+// ServerPolicies contains server's policies including paths to
+// the VRF private key, the signing private key and the epoch deadline value.
 type ServerPolicies struct {
 	EpochDeadline protocol.Timestamp `toml:"epoch_deadline"`
 	VRFKeyPath    string             `toml:"vrf_key_path"`
@@ -45,6 +70,11 @@ type ServerPolicies struct {
 	signKey       sign.PrivateKey
 }
 
+// A ConiksServer represents a CONIKS key server.
+// It wraps a ConiksDirectory with a network layer which
+// handles requests/responses encoding/decoding. It also
+// supports handling concurrent requests and a mechanism
+// to automatically update the underlying ConiksDirectory.
 type ConiksServer struct {
 	sync.RWMutex
 	dir *protocol.ConiksDirectory
@@ -60,6 +90,10 @@ type ConiksServer struct {
 	epochTimer     *time.Timer
 }
 
+// LoadServerConfig loads the ServerConfig for the server from the
+// corresponding config file. It reads the siging key, the VRF key
+// into the ServerConfig instance and updates the path of
+// TLS certificate files of each Address to absolute path.
 func LoadServerConfig(file string) (*ServerConfig, error) {
 	var conf ServerConfig
 	if _, err := toml.DecodeFile(file, &conf); err != nil {
@@ -98,6 +132,8 @@ func LoadServerConfig(file string) (*ServerConfig, error) {
 	return &conf, nil
 }
 
+// NewConiksServer creates a new reference implementation of
+// a CONIKS key server.
 func NewConiksServer(conf *ServerConfig) *ConiksServer {
 	// open db
 	kvdb := leveldbkv.OpenDB(conf.DatabasePath)
@@ -120,10 +156,15 @@ func NewConiksServer(conf *ServerConfig) *ConiksServer {
 	return server
 }
 
+// Run implements the main functionality of the key server.
+// It listens for all declared connections with corresponding
+// permissions.
+// It also supports hot-reloading configuration by listening for
+// SIGUSR2 signal.
 func (server *ConiksServer) Run(addrs []*Address) {
 	server.waitStop.Add(1)
 	go func() {
-		server.EpochUpdate()
+		server.epochUpdate()
 		server.waitStop.Done()
 	}()
 
@@ -150,7 +191,7 @@ func (server *ConiksServer) Run(addrs []*Address) {
 	}()
 }
 
-func (server *ConiksServer) EpochUpdate() {
+func (server *ConiksServer) epochUpdate() {
 	for {
 		select {
 		case <-server.stop:
@@ -162,12 +203,6 @@ func (server *ConiksServer) EpochUpdate() {
 			server.Unlock()
 		}
 	}
-}
-
-func (server *ConiksServer) Shutdown() error {
-	close(server.stop)
-	server.waitStop.Wait()
-	return server.db.Close()
 }
 
 func (server *ConiksServer) updatePolicies() {
@@ -235,4 +270,11 @@ func resolveAndListen(addr *Address) (ln net.Listener,
 	default:
 		panic("Unknown network type")
 	}
+}
+
+// Shutdown closes all of the server's connections and shuts down the server.
+func (server *ConiksServer) Shutdown() error {
+	close(server.stop)
+	server.waitStop.Wait()
+	return server.db.Close()
 }

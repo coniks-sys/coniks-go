@@ -22,6 +22,7 @@ The packages in this library implement the various components of the CONIKS syst
 - ``bots``: Registration bots for user account verification
 - ``client``: Client-side protocol cgo hooks
 - ``crypto``: Cryptographic algorithms and operations
+- ``keyserver``: A reference implementation of a CONIKS key server
 - ``merkletree``: Merkle prefix tree and related data structures
 - ``utils``: Utility functions
 - ``protocol``: CONIKS protocols implementation/library
