@@ -68,7 +68,7 @@ func LoadServerConfig(file string) (*ServerConfig, error) {
 	}
 
 	// load signing key
-	signPath := util.ResolvePath(conf.Policies.SignKeyPath, file)
+	signPath := utils.ResolvePath(conf.Policies.SignKeyPath, file)
 	signKey, err := ioutil.ReadFile(signPath)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot read signing key: %v", err)
@@ -78,7 +78,7 @@ func LoadServerConfig(file string) (*ServerConfig, error) {
 	}
 
 	// load VRF key
-	vrfPath := util.ResolvePath(conf.Policies.VRFKeyPath, file)
+	vrfPath := utils.ResolvePath(conf.Policies.VRFKeyPath, file)
 	vrfKey, err := ioutil.ReadFile(vrfPath)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot read VRF key: %v", err)
@@ -91,9 +91,9 @@ func LoadServerConfig(file string) (*ServerConfig, error) {
 	conf.Policies.vrfKey = vrfKey
 	conf.Policies.signKey = signKey
 	// also update path for db & TLS cert files
-	conf.DatabasePath = util.ResolvePath(conf.DatabasePath, file)
-	conf.TLS.TLSCertPath = util.ResolvePath(conf.TLS.TLSCertPath, file)
-	conf.TLS.TLSKeyPath = util.ResolvePath(conf.TLS.TLSKeyPath, file)
+	conf.DatabasePath = utils.ResolvePath(conf.DatabasePath, file)
+	conf.TLS.TLSCertPath = utils.ResolvePath(conf.TLS.TLSCertPath, file)
+	conf.TLS.TLSKeyPath = utils.ResolvePath(conf.TLS.TLSKeyPath, file)
 
 	return &conf, nil
 }

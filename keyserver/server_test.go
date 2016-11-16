@@ -77,14 +77,14 @@ func startServer(t *testing.T, kvdb kv.DB, epDeadline merkletree.Timestamp, poli
 }
 
 func TestServerStartStop(t *testing.T) {
-	util.WithDB(func(db kv.DB) {
+	utils.WithDB(func(db kv.DB) {
 		_, teardown := startServer(t, db, 60, "")
 		defer teardown()
 	})
 }
 
 func TestServerReloadPoliciesWithError(t *testing.T) {
-	util.WithDB(func(db kv.DB) {
+	utils.WithDB(func(db kv.DB) {
 		server, teardown := startServer(t, db, 1, "")
 		defer teardown()
 		syscall.Kill(syscall.Getpid(), syscall.SIGUSR2)
@@ -98,7 +98,7 @@ func TestServerReloadPoliciesWithError(t *testing.T) {
 }
 
 func TestBotSendsRegistration(t *testing.T) {
-	util.WithDB(func(db kv.DB) {
+	utils.WithDB(func(db kv.DB) {
 		_, teardown := startServer(t, db, 60, "")
 		defer teardown()
 
@@ -120,7 +120,7 @@ func TestBotSendsRegistration(t *testing.T) {
 }
 
 func TestSendsRegistrationFromOutside(t *testing.T) {
-	util.WithDB(func(db kv.DB) {
+	utils.WithDB(func(db kv.DB) {
 		_, teardown := startServer(t, db, 60, "")
 		defer teardown()
 
@@ -140,7 +140,7 @@ func TestSendsRegistrationFromOutside(t *testing.T) {
 }
 
 func TestUpdateDirectory(t *testing.T) {
-	util.WithDB(func(db kv.DB) {
+	utils.WithDB(func(db kv.DB) {
 		server, teardown := startServer(t, db, 1, "")
 		defer teardown()
 		str0 := server.dir.LatestSTR()
@@ -178,7 +178,7 @@ func createMultiRegistrationRequests(N uint64) []*Request {
 }
 
 func TestRegisterDuplicateUserInOneEpoch(t *testing.T) {
-	util.WithDB(func(db kv.DB) {
+	utils.WithDB(func(db kv.DB) {
 		server, teardown := startServer(t, db, 60, "")
 		defer teardown()
 		r0 := createMultiRegistrationRequests(1)[0]
@@ -206,7 +206,7 @@ func TestRegisterDuplicateUserInOneEpoch(t *testing.T) {
 }
 
 func TestRegisterDuplicateUserInDifferentEpoches(t *testing.T) {
-	util.WithDB(func(db kv.DB) {
+	utils.WithDB(func(db kv.DB) {
 		server, teardown := startServer(t, db, 1, "")
 		defer teardown()
 		r0 := createMultiRegistrationRequests(1)[0]
@@ -232,7 +232,7 @@ func TestRegisterDuplicateUserInDifferentEpoches(t *testing.T) {
 }
 
 func TestBotSendsLookup(t *testing.T) {
-	util.WithDB(func(db kv.DB) {
+	utils.WithDB(func(db kv.DB) {
 		_, teardown := startServer(t, db, 60, "")
 		defer teardown()
 
@@ -257,7 +257,7 @@ func TestBotSendsLookup(t *testing.T) {
 }
 
 func TestRegisterAndLookupInTheSameEpoch(t *testing.T) {
-	util.WithDB(func(db kv.DB) {
+	utils.WithDB(func(db kv.DB) {
 		_, teardown := startServer(t, db, 60, "")
 		defer teardown()
 
@@ -301,7 +301,7 @@ func TestRegisterAndLookupInTheSameEpoch(t *testing.T) {
 }
 
 func TestRegisterAndLookup(t *testing.T) {
-	util.WithDB(func(db kv.DB) {
+	utils.WithDB(func(db kv.DB) {
 		server, teardown := startServer(t, db, 1, "")
 		defer teardown()
 
@@ -346,7 +346,7 @@ func TestRegisterAndLookup(t *testing.T) {
 }
 
 func TestKeyLookup(t *testing.T) {
-	util.WithDB(func(db kv.DB) {
+	utils.WithDB(func(db kv.DB) {
 		server, teardown := startServer(t, db, 60, "")
 		defer teardown()
 
@@ -391,7 +391,7 @@ func TestKeyLookup(t *testing.T) {
 }
 
 func TestKeyLookupInEpoch(t *testing.T) {
-	util.WithDB(func(db kv.DB) {
+	utils.WithDB(func(db kv.DB) {
 		server, teardown := startServer(t, db, 60, "")
 		defer teardown()
 
@@ -433,7 +433,7 @@ func TestKeyLookupInEpoch(t *testing.T) {
 }
 
 func TestMonitoring(t *testing.T) {
-	util.WithDB(func(db kv.DB) {
+	utils.WithDB(func(db kv.DB) {
 		N := 5
 		server, teardown := startServer(t, db, 60, "")
 		defer teardown()

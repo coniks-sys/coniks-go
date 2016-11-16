@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
-package util
+package utils
 
 import (
 	"io/ioutil"
@@ -23,7 +23,9 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-// In each byte, the bits are ordered MSB to LSB
+// ToBytes converts a slice of bits into
+// a slice of bytes.
+// In each byte, the bits are ordered MSB to LSB.
 func ToBytes(bits []bool) []byte {
 	bs := make([]byte, (len(bits)+7)/8)
 	for i := 0; i < len(bits); i++ {
@@ -34,7 +36,9 @@ func ToBytes(bits []bool) []byte {
 	return bs
 }
 
-// In each byte, the bits are ordered MSB to LSB
+// ToBits converts a slice of bytes into
+// a slice of bits.
+// In each byte, the bits are ordered MSB to LSB.
 func ToBits(bs []byte) []bool {
 	bits := make([]bool, len(bs)*8)
 	for i := 0; i < len(bits); i++ {
@@ -43,6 +47,11 @@ func ToBits(bs []byte) []bool {
 	return bits
 }
 
+// WithDB is used to run tests with a database backend.
+// It creates a temporary directory named "merkletree"
+// in system's tmp directory and then creates an empty
+// key-value database. This temporary directory will
+// be removed after this function returns.
 func WithDB(f func(kv.DB)) {
 	dir, err := ioutil.TempDir("", "merkletree")
 	if err != nil {

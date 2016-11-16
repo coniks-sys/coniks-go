@@ -36,8 +36,8 @@ func TestOneEntry(t *testing.T) {
 	h := sha3.NewShake128()
 	h.Write([]byte{EmptyBranchIdentifier})
 	h.Write(m.nonce)
-	h.Write(util.ToBytes([]bool{true}))
-	h.Write(util.UInt32ToBytes(1))
+	h.Write(utils.ToBytes([]bool{true}))
+	h.Write(utils.UInt32ToBytes(1))
 	h.Read(expect[:])
 	if !bytes.Equal(m.root.rightHash, expect[:]) {
 		t.Error("Wrong righ hash!",
@@ -66,7 +66,7 @@ func TestOneEntry(t *testing.T) {
 	h.Write([]byte{LeafIdentifier})
 	h.Write(m.nonce)
 	h.Write(index)
-	h.Write(util.UInt32ToBytes(1))
+	h.Write(utils.UInt32ToBytes(1))
 	h.Write(commit[:])
 	h.Read(expect[:])
 

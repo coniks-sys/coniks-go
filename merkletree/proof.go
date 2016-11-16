@@ -25,19 +25,19 @@ func (n *ProofNode) hash(treeNonce []byte) []byte {
 	if n.IsEmpty {
 		// empty leaf node
 		return crypto.Digest(
-			[]byte{EmptyBranchIdentifier},       // K_empty
-			[]byte(treeNonce),                   // K_n
-			[]byte(n.Index),                     // i
-			[]byte(util.UInt32ToBytes(n.Level)), // l
+			[]byte{EmptyBranchIdentifier},        // K_empty
+			[]byte(treeNonce),                    // K_n
+			[]byte(n.Index),                      // i
+			[]byte(utils.UInt32ToBytes(n.Level)), // l
 		)
 	} else {
 		// user leaf node
 		return crypto.Digest(
-			[]byte{LeafIdentifier},              // K_leaf
-			[]byte(treeNonce),                   // K_n
-			[]byte(n.Index),                     // i
-			[]byte(util.UInt32ToBytes(n.Level)), // l
-			[]byte(n.Commitment.Value),          // commit(key|| value)
+			[]byte{LeafIdentifier},               // K_leaf
+			[]byte(treeNonce),                    // K_n
+			[]byte(n.Index),                      // i
+			[]byte(utils.UInt32ToBytes(n.Level)), // l
+			[]byte(n.Commitment.Value),           // commit(key|| value)
 		)
 	}
 }
@@ -67,7 +67,7 @@ type AuthenticationPath struct {
 
 func (ap *AuthenticationPath) authPathHash() []byte {
 	hash := ap.Leaf.hash(ap.TreeNonce)
-	indexBits := util.ToBits(ap.Leaf.Index)
+	indexBits := utils.ToBits(ap.Leaf.Index)
 	depth := ap.Leaf.Level
 	for depth > 0 {
 		depth -= 1
@@ -93,8 +93,8 @@ func (ap *AuthenticationPath) verifyBinding(key, value []byte) bool {
 func (ap *AuthenticationPath) Verify(key, value, treeHash []byte) bool {
 	if ap.ProofType() == ProofOfAbsence { // proof of absence
 		// Check if i and j match in the first l bits
-		indexBits := util.ToBits(ap.Leaf.Index)
-		lookupIndexBits := util.ToBits(ap.LookupIndex)
+		indexBits := utils.ToBits(ap.Leaf.Index)
+		lookupIndexBits := utils.ToBits(ap.LookupIndex)
 		for i := 0; i < int(ap.Leaf.Level); i++ {
 			if indexBits[i] != lookupIndexBits[i] {
 				return false

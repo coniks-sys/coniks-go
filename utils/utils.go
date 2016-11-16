@@ -1,4 +1,4 @@
-package util
+package utils
 
 import (
 	"bytes"
@@ -43,25 +43,22 @@ func UInt32ToBytes(num uint32) []byte {
 	return buf
 }
 
-func BoolToByte(b bool) byte {
-	if b {
-		return 1
-	}
-	return 0
-}
-
+// WriteFile writes buf to a file whose path is indicated by filename.
+// The file permissions are set to 0644.
 func WriteFile(filename string, buf bytes.Buffer) {
 	if _, err := os.Stat(filename); err == nil {
 		log.Printf("%s already exists\n", filename)
 		return
 	}
 
-	if err := ioutil.WriteFile(filename, []byte(buf.String()), 0644); err != nil {
+	if err := ioutil.WriteFile(filename, buf.Bytes(), 0644); err != nil {
 		log.Printf(err.Error())
 		return
 	}
 }
 
+// ResolvePath returns the absolute path of file.
+// This will use other as a base path if file is just a file name.
 func ResolvePath(file, other string) string {
 	if !filepath.IsAbs(file) {
 		file = filepath.Join(filepath.Dir(other), file)
