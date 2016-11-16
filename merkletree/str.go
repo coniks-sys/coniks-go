@@ -56,7 +56,13 @@ func (str *SignedTreeRoot) Serialize() []byte {
 	return strBytes
 }
 
+// VerifyHashChain computes the hash of savedSTR's signature,
+// and compares it to the hash of previous STR included
+// in the issued STR. The hash chain is valid if
+// these two hash values are equal and consecutive.
 func (str *SignedTreeRoot) VerifyHashChain(savedSTR *SignedTreeRoot) bool {
 	hash := crypto.Digest(savedSTR.Signature)
-	return str.Epoch == savedSTR.Epoch+1 && bytes.Equal(hash, str.PreviousSTRHash)
+	return str.PreviousEpoch == savedSTR.Epoch &&
+		str.Epoch == savedSTR.Epoch+1 &&
+		bytes.Equal(hash, str.PreviousSTRHash)
 }
