@@ -55,7 +55,7 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 
 // HandleResponse verifies the directory's response for a request.
 // It first verifies the directory's returned status code of the request.
-// If the status code is not in the ErrorResponses array, it means
+// If the status code is not in the Errors array, it means
 // the directory has successfully handled the request.
 // The verifier will then check the consistency (i.e. binding validity
 // and non-equivocation) of the response.
@@ -66,7 +66,7 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 // cryptographic proof of having been issued nonetheless.
 func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	uname string, key []byte) ErrorCode {
-	if ErrorResponses[msg.Error] {
+	if Errors[msg.Error] {
 		return msg.Error
 	}
 	if err := validateResponse(requestType, msg); err != nil {
@@ -75,13 +75,13 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	if err := cc.updateSTR(requestType, msg); err != nil {
 		return err.(ErrorCode)
 	}
-	if err := cc.checkConsistency(requestType, msg, uname, key); err != Passed {
+	if err := cc.checkConsistency(requestType, msg, uname, key); err != CheckPassed {
 		return err
 	}
 	if err := cc.updateTBs(requestType, msg, uname, key); err != nil {
 		return err.(ErrorCode)
 	}
-	return Passed
+	return CheckPassed
 }
 
 func validateResponse(requestType int, msg *Response) error {
@@ -89,7 +89,7 @@ func validateResponse(requestType int, msg *Response) error {
 	case RegistrationType, KeyLookupType:
 		if df, ok := msg.DirectoryResponse.(*DirectoryProof); !ok ||
 			(df.AP == nil || df.STR == nil) {
-			return ErrorMalformedDirectoryMessage
+			return ErrMalformedDirectoryMessage
 		}
 	default:
 		panic("[coniks] Unknown request type")
@@ -133,7 +133,7 @@ func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
 	if reflect.DeepEqual(cc.SavedSTR, str) {
 		return nil
 	}
-	return ErrorBadSTR
+	return CheckBadSTR
 }
 
 // verifySTRConsistency checks the consistency between 2 snapshots.
@@ -143,14 +143,14 @@ func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
 func (cc *ConsistencyChecks) verifySTRConsistency(savedSTR, str *m.SignedTreeRoot) error {
 	// verify STR's signature
 	if !cc.signKey.Verify(str.Serialize(), str.Signature) {
-		return ErrorBadSignature
+		return CheckBadSignature
 	}
 	if str.VerifyHashChain(savedSTR) {
 		return nil
 	}
 
 	// TODO: verify the directory's policies as well. See #115
-	return ErrorBadSTR
+	return CheckBadSTR
 }
 
 func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *Response,
@@ -175,18 +175,18 @@ func (cc *ConsistencyChecks) verifyRegistration(msg *Response,
 
 	proofType := ap.ProofType()
 	switch {
-	case msg.Error == ErrorNameExisted && proofType == m.ProofOfInclusion:
-	case msg.Error == ErrorNameExisted && proofType == m.ProofOfAbsence && cc.useTBs:
-	case msg.Error == Success && proofType == m.ProofOfAbsence:
+	case msg.Error == ReqNameExisted && proofType == m.ProofOfInclusion:
+	case msg.Error == ReqNameExisted && proofType == m.ProofOfAbsence && cc.useTBs:
+	case msg.Error == ReqSuccess && proofType == m.ProofOfAbsence:
 	default:
-		return ErrorMalformedDirectoryMessage
+		return ErrMalformedDirectoryMessage
 	}
 
 	if err := verifyAuthPath(uname, key, ap, str); err != nil {
 		return err
 	}
 
-	return Passed
+	return CheckPassed
 }
 
 func (cc *ConsistencyChecks) verifyKeyLookup(msg *Response,
@@ -197,19 +197,19 @@ func (cc *ConsistencyChecks) verifyKeyLookup(msg *Response,
 
 	proofType := ap.ProofType()
 	switch {
-	case msg.Error == ErrorNameNotFound && proofType == m.ProofOfAbsence:
+	case msg.Error == ReqNameNotFound && proofType == m.ProofOfAbsence:
 	// FIXME: This would be changed when we support key changes
-	case msg.Error == Success && proofType == m.ProofOfInclusion:
-	case msg.Error == Success && proofType == m.ProofOfAbsence && cc.useTBs:
+	case msg.Error == ReqSuccess && proofType == m.ProofOfInclusion:
+	case msg.Error == ReqSuccess && proofType == m.ProofOfAbsence && cc.useTBs:
 	default:
-		return ErrorMalformedDirectoryMessage
+		return ErrMalformedDirectoryMessage
 	}
 
 	if err := verifyAuthPath(uname, key, ap, str); err != nil {
 		return err
 	}
 
-	return Passed
+	return CheckPassed
 }
 
 func verifyAuthPath(uname string, key []byte,
@@ -219,7 +219,7 @@ func verifyAuthPath(uname string, key []byte,
 	// verify VRF Index
 	vrfKey := GetPolicies(str).VrfPublicKey
 	if !vrfKey.Verify([]byte(uname), ap.LookupIndex, ap.VrfProof) {
-		return ErrorBadVRFProof
+		return CheckBadVRFProof
 	}
 
 	if key == nil {
@@ -230,7 +230,7 @@ func verifyAuthPath(uname string, key []byte,
 
 	// verify auth path
 	if !ap.Verify([]byte(uname), key, str.TreeHash) {
-		return ErrorBadAuthPath
+		return CheckBadAuthPath
 	}
 
 	return nil
@@ -258,13 +258,13 @@ func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
 		str := df.STR
 		proofType := ap.ProofType()
 		switch {
-		case msg.Error == Success && proofType == m.ProofOfInclusion:
+		case msg.Error == ReqSuccess && proofType == m.ProofOfInclusion:
 			if err := cc.verifyFulfilledPromise(uname, str, ap); err != nil {
 				return err
 			}
 			delete(cc.TBs, uname)
 
-		case msg.Error == Success && proofType == m.ProofOfAbsence:
+		case msg.Error == ReqSuccess && proofType == m.ProofOfAbsence:
 			if err := cc.verifyReturnedPromise(df, key); err != nil {
 				return err
 			}
@@ -286,7 +286,7 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 	if tb, ok := cc.TBs[uname]; ok {
 		if !bytes.Equal(ap.LookupIndex, tb.Index) ||
 			!bytes.Equal(ap.Leaf.Value, tb.Value) {
-			return ErrorBrokenPromise
+			return CheckBrokenPromise
 		}
 	}
 	return nil
@@ -297,7 +297,7 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 // _a proof of absence_.
 // 	If the request is a registration, and
 // 	- the request is successful, then the directory should return a promise for the new binding.
-// 	- the request is failed because of ErrorNameExisted, then the directory should return a promise for that existed binding.
+// 	- the request is failed because of ReqNameExisted, then the directory should return a promise for that existed binding.
 //
 // 	If the request is a key lookup, and
 // 	- the request is successful, then the directory should return a promise for the lookup binding.
@@ -309,16 +309,16 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(df *DirectoryProof,
 	tb := df.TB
 
 	if tb == nil {
-		return ErrorBadPromise
+		return CheckBadPromise
 	}
 
 	// verify TB's Signature
 	if !cc.signKey.Verify(tb.Serialize(str.Signature), tb.Signature) {
-		return ErrorBadSignature
+		return CheckBadSignature
 	}
 
 	if tb.Verify(ap.LookupIndex, key) {
 		return nil
 	}
-	return ErrorBadPromise
+	return CheckBadPromise
 }

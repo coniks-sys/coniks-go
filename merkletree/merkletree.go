@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	// ErrorInvalidTree is used to panic if there occurs
+	// ErrInvalidTree is used to panic if there occurs
 	// a malformed operation on the tree.
-	ErrorInvalidTree = errors.New("[merkletree] invalid tree")
+	ErrInvalidTree = errors.New("[merkletree] Invalid tree")
 )
 
 const (
@@ -81,7 +81,7 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 	}
 
 	if nodePointer == nil {
-		panic(ErrorInvalidTree)
+		panic(ErrInvalidTree)
 	}
 	switch nodePointer.(type) {
 	case *userLeafNode:
@@ -112,7 +112,7 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 		}
 		return authPath
 	}
-	panic(ErrorInvalidTree)
+	panic(ErrInvalidTree)
 }
 
 // Set inserts or updates the value of the given index
@@ -149,7 +149,7 @@ insertLoop:
 			// then continue insertion
 			currentNodeUL := nodePointer.(*userLeafNode)
 			if currentNodeUL.parent == nil {
-				panic(ErrorInvalidTree)
+				panic(ErrInvalidTree)
 			}
 
 			if bytes.Equal(currentNodeUL.index, toAdd.index) {
@@ -202,7 +202,7 @@ insertLoop:
 			}
 			depth += 1
 		default:
-			panic(ErrorInvalidTree)
+			panic(ErrInvalidTree)
 		}
 	}
 }
@@ -227,7 +227,7 @@ func visitULNsInternal(nodePtr merkleNode, callBack func(*userLeafNode)) {
 	case *emptyNode:
 		// do nothing
 	default:
-		panic(ErrorInvalidTree)
+		panic(ErrInvalidTree)
 	}
 }
 

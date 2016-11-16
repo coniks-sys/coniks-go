@@ -112,7 +112,7 @@ func TestBotSendsRegistration(t *testing.T) {
 			t.Log(string(rev))
 			t.Fatal(err)
 		}
-		if response.Error != Success {
+		if response.Error != ReqSuccess {
 			t.Fatal("Expect a successful registration", "got", response.Error)
 		}
 	})
@@ -132,8 +132,8 @@ func TestSendsRegistrationFromOutside(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if response.Error != ErrorMalformedClientMessage {
-			t.Fatalf("Expect error code %d", ErrorMalformedClientMessage)
+		if response.Error != ErrMalformedClientMessage {
+			t.Fatalf("Expect error code %d", ErrMalformedClientMessage)
 		}
 	})
 }
@@ -146,7 +146,7 @@ func TestUpdateDirectory(t *testing.T) {
 		rs := createMultiRegistrationRequests(10)
 		for i := range rs {
 			_, err := server.handleOps(rs[i])
-			if err != Success {
+			if err != ReqSuccess {
 				t.Fatal("Error while submitting registration request number", i, "to server")
 			}
 		}
@@ -183,7 +183,7 @@ func TestRegisterDuplicateUserInOneEpoch(t *testing.T) {
 		r0 := createMultiRegistrationRequests(1)[0]
 		r1 := createMultiRegistrationRequests(1)[0]
 		_, err := server.handleOps(r0)
-		if err != Success {
+		if err != ReqSuccess {
 			t.Fatal("Error while submitting registration request")
 		}
 		rev, err := server.handleOps(r1)
@@ -191,9 +191,9 @@ func TestRegisterDuplicateUserInOneEpoch(t *testing.T) {
 		if !ok {
 			t.Fatal("Expect a directory proof response")
 		}
-		if err != ErrorNameExisted ||
-			rev.Error != ErrorNameExisted {
-			t.Fatal("Expect error code", ErrorNameExisted)
+		if err != ReqNameExisted ||
+			rev.Error != ReqNameExisted {
+			t.Fatal("Expect error code", ReqNameExisted)
 		}
 		if response.STR == nil || response.AP == nil || response.TB == nil {
 			t.Fatal("Unexpected response")
@@ -210,7 +210,7 @@ func TestRegisterDuplicateUserInDifferentEpoches(t *testing.T) {
 		defer teardown()
 		r0 := createMultiRegistrationRequests(1)[0]
 		_, err := server.handleOps(r0)
-		if err != Success {
+		if err != ReqSuccess {
 			t.Fatal("Error while submitting registration request")
 		}
 		timer := time.NewTimer(2 * time.Second)
@@ -220,9 +220,9 @@ func TestRegisterDuplicateUserInDifferentEpoches(t *testing.T) {
 		if !ok {
 			t.Fatal("Expect a directory proof response")
 		}
-		if err != ErrorNameExisted ||
-			rev.Error != ErrorNameExisted {
-			t.Fatal("Expect error code", ErrorNameExisted, "got", err)
+		if err != ReqNameExisted ||
+			rev.Error != ReqNameExisted {
+			t.Fatal("Expect error code", ReqNameExisted, "got", err)
 		}
 		if response.STR == nil || response.AP == nil || response.TB != nil {
 			t.Fatal("Unexpected response")
@@ -249,8 +249,8 @@ func TestBotSendsLookup(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if response.Error != ErrorMalformedClientMessage {
-			t.Fatalf("Expect error code %d", ErrorMalformedClientMessage)
+		if response.Error != ErrMalformedClientMessage {
+			t.Fatalf("Expect error code %d", ErrMalformedClientMessage)
 		}
 	})
 }
@@ -275,7 +275,7 @@ func TestRegisterAndLookupInTheSameEpoch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if response.Error != Success {
+		if response.Error != ReqSuccess {
 			t.Fatal("Expect no error", "got", response.Error)
 		}
 		if response.DirectoryResponse.STR == nil {
@@ -320,7 +320,7 @@ func TestRegisterAndLookup(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if res.Error != Success {
+		if res.Error != ReqSuccess {
 			t.Fatal("Expect no error", "got", res.Error)
 		}
 		if res.DirectoryResponse.STR == nil {
@@ -365,7 +365,7 @@ func TestKeyLookup(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if response.Error != Success {
+		if response.Error != ReqSuccess {
 			t.Fatal("Expect no error", "got", response.Error)
 		}
 		if response.DirectoryResponse.STR == nil {
@@ -422,8 +422,8 @@ func TestKeyLookupInEpoch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if response.Error != ErrorNameNotFound {
-			t.Fatal("Expect error", ErrorNameNotFound, "got", response.Error)
+		if response.Error != ReqNameNotFound {
+			t.Fatal("Expect error", ReqNameNotFound, "got", response.Error)
 		}
 		if len(response.DirectoryResponse.STR) != 3 {
 			t.Fatal("Expect", 3, "STRs in reponse")
@@ -471,8 +471,8 @@ func TestMonitoring(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if response.Error != Success {
-			t.Fatal("Expect error", Success, "got", response.Error)
+		if response.Error != ReqSuccess {
+			t.Fatal("Expect error", ReqSuccess, "got", response.Error)
 		}
 		if len(response.DirectoryResponse.STR) != N ||
 			len(response.DirectoryResponse.AP) != len(response.DirectoryResponse.STR) {

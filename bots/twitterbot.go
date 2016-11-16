@@ -174,7 +174,7 @@ func (bot *TwitterBot) HandleRegistration(username string, msg []byte) string {
 	if invalid {
 		log.Println("[registration bot] Malformed client request")
 		res, err := keyserver.MarshalResponse(
-			p.NewErrorResponse(p.ErrorMalformedClientMessage))
+			p.NewErrorResponse(p.ErrMalformedClientMessage))
 		if err != nil {
 			panic(err)
 		}
@@ -186,7 +186,7 @@ func (bot *TwitterBot) HandleRegistration(username string, msg []byte) string {
 	if err != nil {
 		log.Println("[registration bot] " + err.Error())
 		res, err := keyserver.MarshalResponse(
-			p.NewErrorResponse(p.ErrorDirectory))
+			p.NewErrorResponse(p.ErrDirectory))
 		if err != nil {
 			panic(err)
 		}

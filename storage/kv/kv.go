@@ -17,8 +17,6 @@
 // synchronously persistent.
 package kv
 
-import "errors"
-
 // DB is an abstract ordered key-value store. All operations are assumed to be
 // synchronous, atomic and linearizable. This includes the following guarantee:
 // After Put(k, v) has returned, and as long as no other Put(k, ?) has been
@@ -58,7 +56,3 @@ type Iterator interface {
 	Release()
 	Error() error
 }
-
-var (
-	ErrorBadBufferLength = errors.New("[kv] Bad KV buffer's length")
-)

@@ -8,27 +8,27 @@ import (
 )
 
 func TestUnmarshalErrorResponse(t *testing.T) {
-	errResponse := protocol.NewErrorResponse(protocol.ErrorMalformedClientMessage)
+	errResponse := protocol.NewErrorResponse(protocol.ErrMalformedClientMessage)
 	msg, err := json.Marshal(errResponse)
 	if err != nil {
 		t.Fatal(err)
 	}
 	res, e := UnmarshalResponse(protocol.RegistrationType, msg)
-	if res != nil || e != protocol.ErrorMalformedClientMessage {
-		t.Error("Expect error", protocol.ErrorMalformedClientMessage,
+	if res != nil || e != protocol.ErrMalformedClientMessage {
+		t.Error("Expect error", protocol.ErrMalformedClientMessage,
 			"got", e)
 	}
 }
 
 func TestUnmarshalMalformedErrorResponse(t *testing.T) {
-	errResponse := protocol.NewErrorResponse(protocol.ErrorNameNotFound)
+	errResponse := protocol.NewErrorResponse(protocol.ReqNameNotFound)
 	msg, err := json.Marshal(errResponse)
 	if err != nil {
 		t.Fatal(err)
 	}
 	res, e := UnmarshalResponse(protocol.RegistrationType, msg)
-	if res != nil || e != protocol.ErrorMalformedDirectoryMessage {
-		t.Error("Expect error", protocol.ErrorMalformedDirectoryMessage,
+	if res != nil || e != protocol.ErrMalformedDirectoryMessage {
+		t.Error("Expect error", protocol.ErrMalformedDirectoryMessage,
 			"got", e)
 	}
 }

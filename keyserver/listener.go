@@ -61,7 +61,7 @@ func (server *ConiksServer) acceptClient(conn net.Conn, handler func(msg []byte)
 	res, err := handler(buf.Bytes())
 	// TODO: The `err` returned here is purely for logging purposes.  It
 	// would be better for `handler` not to return any error, and instead
-	// log if the error code in the `res` is not `Success`.
+	// log if the error code in the `res` is not `ReqSuccess`.
 	if err != nil {
 		log.Printf("client handle %v: %v", conn.RemoteAddr(), err)
 	}
@@ -76,9 +76,9 @@ func (server *ConiksServer) acceptClient(conn net.Conn, handler func(msg []byte)
 func malformedClientMsg(err error) ([]byte, error) {
 	// check if we're just propagating a message
 	if err == nil {
-		err = ErrorMalformedClientMessage
+		err = ErrMalformedClientMessage
 	}
-	response := NewErrorResponse(ErrorMalformedClientMessage)
+	response := NewErrorResponse(ErrMalformedClientMessage)
 	res, e := MarshalResponse(response)
 	if e != nil {
 		panic(e)
@@ -107,8 +107,8 @@ func (server *ConiksServer) handleOps(req *Request) (*Response, ErrorCode) {
 			return server.dir.Monitor(msg)
 		}
 	}
-	return NewErrorResponse(ErrorMalformedClientMessage),
-		ErrorMalformedClientMessage
+	return NewErrorResponse(ErrMalformedClientMessage),
+		ErrMalformedClientMessage
 }
 
 func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(msg []byte) ([]byte, error) {
@@ -120,7 +120,7 @@ func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(msg [
 		}
 		if !acceptableTypes[req.Type] {
 			log.Printf("unacceptable message type: %q", req.Type)
-			return malformedClientMsg(ErrorMalformedClientMessage)
+			return malformedClientMsg(ErrMalformedClientMessage)
 		}
 
 		switch req.Type {

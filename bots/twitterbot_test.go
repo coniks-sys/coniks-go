@@ -2,6 +2,7 @@ package bots
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/coniks-sys/coniks-go/protocol"
@@ -14,8 +15,8 @@ func TestCannotUnmarshallRequest(t *testing.T) {
     }`
 	bot := new(TwitterBot)
 	response := bot.HandleRegistration(username, []byte(request))
-	if response != `{"Error":14}` {
-		t.Error("Expected response", "got", response)
+	if response != fmt.Sprintf(`{"Error":%d}`, protocol.ErrMalformedClientMessage) {
+		t.Error("Unexpected response", "got", response)
 	}
 }
 
@@ -31,8 +32,8 @@ func TestInvalidRequestType(t *testing.T) {
 
 	bot := new(TwitterBot)
 	response := bot.HandleRegistration(username, []byte(request))
-	if response != `{"Error":14}` {
-		t.Error("Expected response", "got", response)
+	if response != fmt.Sprintf(`{"Error":%d}`, protocol.ErrMalformedClientMessage) {
+		t.Error("Unexpected response", "got", response)
 	}
 }
 
@@ -47,7 +48,7 @@ func TestInvalidUsername(t *testing.T) {
 	})
 	bot := new(TwitterBot)
 	response := bot.HandleRegistration(username, []byte(request))
-	if response != `{"Error":14}` {
-		t.Error("Expected response", "got", response)
+	if response != fmt.Sprintf(`{"Error":%d}`, protocol.ErrMalformedClientMessage) {
+		t.Error("Unexpected response", "got", response)
 	}
 }

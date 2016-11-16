@@ -114,35 +114,35 @@ func (d *ConiksDirectory) NewTB(name string, key []byte) *TemporaryBinding {
 //
 // A request without a username or without a public key is considered
 // malformed, and causes Register() to return a
-// message.NewErrorResponse(ErrorMalformedClientMessage) tuple.
+// message.NewErrorResponse(ErrMalformedClientMessage) tuple.
 // Register() inserts the new mapping in req
 // into a pending version of the directory so it can be included in the
 // snapshot taken at the end of the latest epoch, and returns a
-// message.NewRegistrationProof(ap=proof of absence, str, tb, Success) tuple
+// message.NewRegistrationProof(ap=proof of absence, str, tb, ReqSuccess) tuple
 // if this operation succeeds.
 // Otherwise, if the username already exists, Register() returns a
-// message.NewRegistrationProof(ap=proof of inclusion, str, null, ErrorNameExisted)
+// message.NewRegistrationProof(ap=proof of inclusion, str, null, ReqNameExisted)
 // tuple. ap will be a proof of absence with a non-null TB, if the username
 // is still pending inclusion in the next directory snapshot.
 // In any case, str is the signed tree root for the latest epoch.
 // If Register() encounters an internal error at any point, it returns
-// a message.NewErrorRespose(ErrorDirectory) tuple.
+// a message.NewErrorRespose(ErrDirectory) tuple.
 func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 	*Response, ErrorCode) {
 	// make sure the request is well-formed
 	if len(req.Username) <= 0 || len(req.Key) <= 0 {
-		return NewErrorResponse(ErrorMalformedClientMessage),
-			ErrorMalformedClientMessage
+		return NewErrorResponse(ErrMalformedClientMessage),
+			ErrMalformedClientMessage
 	}
 
 	// check whether the name already exists
 	// in the directory before we register
 	ap, err := d.pad.Lookup(req.Username)
 	if err != nil {
-		return NewErrorResponse(ErrorDirectory), ErrorDirectory
+		return NewErrorResponse(ErrDirectory), ErrDirectory
 	}
 	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
-		return NewRegistrationProof(ap, d.LatestSTR(), nil, ErrorNameExisted)
+		return NewRegistrationProof(ap, d.LatestSTR(), nil, ReqNameExisted)
 	}
 
 	var tb *TemporaryBinding
@@ -151,19 +151,19 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 		// also check the temporary bindings array
 		// currently the server allows only one registration/key change per epoch
 		if tb = d.tbs[req.Username]; tb != nil {
-			return NewRegistrationProof(ap, d.LatestSTR(), tb, ErrorNameExisted)
+			return NewRegistrationProof(ap, d.LatestSTR(), tb, ReqNameExisted)
 		}
 		tb = d.NewTB(req.Username, req.Key)
 	}
 
 	if err = d.pad.Set(req.Username, req.Key); err != nil {
-		return NewErrorResponse(ErrorDirectory), ErrorDirectory
+		return NewErrorResponse(ErrDirectory), ErrDirectory
 	}
 
 	if tb != nil {
 		d.tbs[req.Username] = tb
 	}
-	return NewRegistrationProof(ap, d.LatestSTR(), tb, Success)
+	return NewRegistrationProof(ap, d.LatestSTR(), tb, ReqSuccess)
 }
 
 // KeyLookup gets the public key for the username indicated in the
@@ -176,42 +176,42 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 //
 // A request without a username is considered
 // malformed, and causes KeyLookup() to return a
-// message.NewErrorResponse(ErrorMalformedClientMessage) tuple.
+// message.NewErrorResponse(ErrMalformedClientMessage) tuple.
 // If the username doesn't have an entry in the latest directory
 // snapshot and also isn't pending registration (i.e. has a corresponding TB),
 // KeyLookup() returns a message.NewKeyLookupProof(ap=proof of absence,
-// str, null ErrorNameNotFound) tuple.
-// Otherwise, KeyLookup() returns a message.NewKeyLookupProof(ap=proof of absence, str, tb, Success)
+// str, null ReqNameNotFound) tuple.
+// Otherwise, KeyLookup() returns a message.NewKeyLookupProof(ap=proof of absence, str, tb, ReqSuccess)
 // tuple if, if there is a corresponding TB for the username,
 // but there isn't an entry in the directory yet, and a
-// a message.NewKeyLookupProof(ap=proof of inclusion, str, null, Success).
+// a message.NewKeyLookupProof(ap=proof of inclusion, str, null, ReqSuccess).
 // In any case, str is the signed tree root for the latest epoch.
 // If KeyLookup() encounters an internal error at any point, it returns
-// a message.NewErrorResponse(ErrorDirectory) tuple.
+// a message.NewErrorResponse(ErrDirectory) tuple.
 func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 	*Response, ErrorCode) {
 
 	// make sure the request is well-formed
 	if len(req.Username) <= 0 {
-		return NewErrorResponse(ErrorMalformedClientMessage),
-			ErrorMalformedClientMessage
+		return NewErrorResponse(ErrMalformedClientMessage),
+			ErrMalformedClientMessage
 	}
 
 	ap, err := d.pad.Lookup(req.Username)
 	if err != nil {
-		return NewErrorResponse(ErrorDirectory), ErrorDirectory
+		return NewErrorResponse(ErrDirectory), ErrDirectory
 	}
 
 	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
-		return NewKeyLookupProof(ap, d.LatestSTR(), nil, Success)
+		return NewKeyLookupProof(ap, d.LatestSTR(), nil, ReqSuccess)
 	}
 	// if not found in the tree, do lookup in tb array
 	if d.useTBs {
 		if tb := d.tbs[req.Username]; tb != nil {
-			return NewKeyLookupProof(ap, d.LatestSTR(), tb, Success)
+			return NewKeyLookupProof(ap, d.LatestSTR(), tb, ReqSuccess)
 		}
 	}
-	return NewKeyLookupProof(ap, d.LatestSTR(), nil, ErrorNameNotFound)
+	return NewKeyLookupProof(ap, d.LatestSTR(), nil, ReqNameNotFound)
 }
 
 // KeyLookupInEpoch gets the public key for the username for a prior
@@ -225,13 +225,13 @@ func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 // A request without a username or with an epoch greater than the latest
 // epoch of this directory is considered malformed, and causes
 // KeyLookupInEpoch() to return a
-// message.NewErrorResponse(ErrorMalformedClientMessage) tuple.
+// message.NewErrorResponse(ErrMalformedClientMessage) tuple.
 // If the username doesn't have an entry in the directory,
 // in the directory snapshot for the indicated epoch, KeyLookupInEpoch()
 // returns a message.NewKeyLookupInEpochProof(ap=proof of absence, str,
-// ErrorNameNotFound) tuple.
+// ReqNameNotFound) tuple.
 // Otherwise, KeyLookupInEpoch() returns a
-// message.NewKeyLookupInEpochProof(ap=proof of inclusion, str, Success) tuple.
+// message.NewKeyLookupInEpochProof(ap=proof of inclusion, str, ReqSuccess) tuple.
 // In either case, str is a list of STRs for the epoch range [ep,
 // d.LatestSTR().Epoch], where ep is the past epoch for which
 // the client has requested the user's key.
@@ -239,15 +239,15 @@ func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 // the TB corresponding to a registered binding is discarded at the time
 // the binding is included in a directory snapshot.
 // If KeyLookupInEpoch() encounters an internal error at any point,
-// it returns a message.NewErrorResponse(ErrorDirectory) tuple.
+// it returns a message.NewErrorResponse(ErrDirectory) tuple.
 func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 	*Response, ErrorCode) {
 
 	// make sure the request is well-formed
 	if len(req.Username) <= 0 ||
 		req.Epoch > d.LatestSTR().Epoch {
-		return NewErrorResponse(ErrorMalformedClientMessage),
-			ErrorMalformedClientMessage
+		return NewErrorResponse(ErrMalformedClientMessage),
+			ErrMalformedClientMessage
 	}
 
 	var strs []*merkletree.SignedTreeRoot
@@ -256,7 +256,7 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 
 	ap, err := d.pad.LookupInEpoch(req.Username, startEp)
 	if err != nil {
-		return NewErrorResponse(ErrorDirectory), ErrorDirectory
+		return NewErrorResponse(ErrDirectory), ErrDirectory
 	}
 	for ep := startEp; ep <= endEp; ep++ {
 		str := d.pad.GetSTR(ep)
@@ -264,9 +264,9 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 	}
 
 	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
-		return NewKeyLookupInEpochProof(ap, strs, Success)
+		return NewKeyLookupInEpochProof(ap, strs, ReqSuccess)
 	}
-	return NewKeyLookupInEpochProof(ap, strs, ErrorNameNotFound)
+	return NewKeyLookupInEpochProof(ap, strs, ReqNameNotFound)
 }
 
 // Monitor gets the directory proofs for the username for the range of
@@ -280,7 +280,7 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 // A request without a username, with a start epoch greater than the
 // latest epoch of this directory, or a start epoch greater than the end epoch
 // is considered malformed, and causes Monitor() to return a
-// message.NewErrorResponse(ErrorMalformedClientMessage) tuple.
+// message.NewErrorResponse(ErrMalformedClientMessage) tuple.
 // Monitor() returns a message.NewMonitoringProof(ap, str) tuple.
 // ap is a list of proofs of inclusion, and str is a list of STRs for the epoch
 // range [startEpoch, endEpoch], where startEpoch
@@ -288,7 +288,7 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 // request. If req.endEpoch is greater than d.LatestSTR().Epoch,
 // the end of the range will be set to d.LatestSTR().Epoch.
 // If Monitor() encounters an internal error at any point,
-// it returns a message.NewErrorResponse(ErrorDirectory) tuple.
+// it returns a message.NewErrorResponse(ErrDirectory) tuple.
 func (d *ConiksDirectory) Monitor(req *MonitoringRequest) (
 	*Response, ErrorCode) {
 
@@ -296,8 +296,8 @@ func (d *ConiksDirectory) Monitor(req *MonitoringRequest) (
 	if len(req.Username) <= 0 ||
 		req.StartEpoch > d.LatestSTR().Epoch ||
 		req.StartEpoch > req.EndEpoch {
-		return NewErrorResponse(ErrorMalformedClientMessage),
-			ErrorMalformedClientMessage
+		return NewErrorResponse(ErrMalformedClientMessage),
+			ErrMalformedClientMessage
 	}
 
 	var strs []*merkletree.SignedTreeRoot
@@ -310,7 +310,7 @@ func (d *ConiksDirectory) Monitor(req *MonitoringRequest) (
 	for ep := startEp; ep <= endEp; ep++ {
 		ap, err := d.pad.LookupInEpoch(req.Username, ep)
 		if err != nil {
-			return NewErrorResponse(ErrorDirectory), ErrorDirectory
+			return NewErrorResponse(ErrDirectory), ErrDirectory
 		}
 		aps = append(aps, ap)
 		str := d.pad.GetSTR(ep)

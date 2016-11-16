@@ -39,7 +39,7 @@ const (
 )
 
 var (
-	ErrorGetPubKey = errors.New("[vrf] Couldn't get correspoding public-key from private-key")
+	ErrGetPubKey = errors.New("[vrf] Couldn't get correspoding public-key from private-key")
 )
 
 type PrivateKey []byte

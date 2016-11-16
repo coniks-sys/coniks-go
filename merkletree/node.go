@@ -115,7 +115,7 @@ func (n *interiorNode) clone(parent *interiorNode) merkleNode {
 	}
 	if n.leftChild == nil ||
 		n.rightChild == nil {
-		panic(ErrorInvalidTree)
+		panic(ErrInvalidTree)
 	}
 	newNode.leftChild = n.leftChild.clone(newNode)
 	newNode.rightChild = n.rightChild.clone(newNode)

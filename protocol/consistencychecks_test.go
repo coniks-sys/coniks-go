@@ -38,8 +38,8 @@ func TestVerifyWithError(t *testing.T) {
 
 	cc := NewCC(&str, true, pk)
 
-	if err := doRequestAndVerify(d, cc, RegistrationType, "alice"); err != ErrorBadSTR {
-		t.Fatal("Expect", ErrorBadSTR, "got", err)
+	if err := doRequestAndVerify(d, cc, RegistrationType, "alice"); err != CheckBadSTR {
+		t.Fatal("Expect", CheckBadSTR, "got", err)
 	}
 }
 
@@ -54,7 +54,7 @@ func TestMalformedDirectoryMessage(t *testing.T) {
 	res, _ := d.Register(request)
 	// modify response message
 	res.DirectoryResponse.(*DirectoryProof).STR = nil
-	if err := cc.HandleResponse(RegistrationType, res, "alice", key); err != ErrorMalformedDirectoryMessage {
+	if err := cc.HandleResponse(RegistrationType, res, "alice", key); err != ErrMalformedDirectoryMessage {
 		t.Error("Unexpected verification result")
 	}
 }
@@ -64,7 +64,7 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 
 	cc := NewCC(d.LatestSTR(), true, pk)
 
-	if doRequestAndVerify(d, cc, RegistrationType, "alice") != Passed {
+	if doRequestAndVerify(d, cc, RegistrationType, "alice") != CheckPassed {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -73,8 +73,8 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	}
 
 	// test error name existed
-	// FIXME: Check that we got an ErrorNameExisted
-	if doRequestAndVerify(d, cc, RegistrationType, "alice") != Passed {
+	// FIXME: Check that we got an ReqNameExisted
+	if doRequestAndVerify(d, cc, RegistrationType, "alice") != CheckPassed {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -83,11 +83,11 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 		Username: "alice",
 		Key:      []byte{1, 2, 3},
 	})
-	if err != ErrorNameExisted {
-		t.Fatal("Expect error code", ErrorNameExisted, "got", err)
+	if err != ReqNameExisted {
+		t.Fatal("Expect error code", ReqNameExisted, "got", err)
 	}
 	// expect a proof of absence since this binding wasn't included in this epoch
-	if err := cc.HandleResponse(RegistrationType, res, "alice", key); err != Passed {
+	if err := cc.HandleResponse(RegistrationType, res, "alice", key); err != CheckPassed {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -100,8 +100,8 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	// when the client is monitoring, we do _not_ expect a TB's verification here.
 	d.Update()
 
-	// FIXME: Check that we got an ErrorNameExisted
-	if doRequestAndVerify(d, cc, RegistrationType, "alice") != Passed {
+	// FIXME: Check that we got an ReqNameExisted
+	if doRequestAndVerify(d, cc, RegistrationType, "alice") != CheckPassed {
 		t.Fatal("Unexpected verification result")
 	}
 }
@@ -111,10 +111,10 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 
 	cc := NewCC(d.LatestSTR(), true, pk)
 
-	if doRequestAndVerify(d, cc, RegistrationType, "alice") != Passed {
+	if doRequestAndVerify(d, cc, RegistrationType, "alice") != CheckPassed {
 		t.Fatal("Unexpected verification result")
 	}
-	if doRequestAndVerify(d, cc, RegistrationType, "bob") != Passed {
+	if doRequestAndVerify(d, cc, RegistrationType, "bob") != CheckPassed {
 		t.Fatal("Unexpected verification result")
 	}
 
@@ -125,7 +125,7 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 	d.Update()
 
 	for i := 0; i < 2; i++ {
-		if doRequestAndVerify(d, cc, KeyLookupType, "alice") != Passed {
+		if doRequestAndVerify(d, cc, KeyLookupType, "alice") != CheckPassed {
 			t.Error("Unexpected verification result")
 		}
 	}
@@ -135,7 +135,7 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 		t.Error("Expect the directory to insert the binding as promised")
 	}
 
-	if doRequestAndVerify(d, cc, KeyLookupType, "bob") != Passed {
+	if doRequestAndVerify(d, cc, KeyLookupType, "bob") != CheckPassed {
 		t.Fatal("Unexpected verification result")
 	}
 	if len(cc.TBs) != 0 {
@@ -149,28 +149,28 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	cc := NewCC(d.LatestSTR(), true, pk)
 
 	// do lookup first
-	if doRequestAndVerify(d, cc, KeyLookupType, "alice") != Passed {
+	if doRequestAndVerify(d, cc, KeyLookupType, "alice") != CheckPassed {
 		t.Fatal("Unexpected verification result")
 	}
 
 	// register
-	if doRequestAndVerify(d, cc, RegistrationType, "alice") != Passed {
+	if doRequestAndVerify(d, cc, RegistrationType, "alice") != CheckPassed {
 		t.Fatal("Unexpected verification result")
 	}
 	// do lookup in the same epoch
-	if doRequestAndVerify(d, cc, KeyLookupType, "alice") != Passed {
+	if doRequestAndVerify(d, cc, KeyLookupType, "alice") != CheckPassed {
 		t.Fatal("Unexpected verification result")
 	}
 
 	// do lookup in the different epoch
 	d.Update()
 
-	if doRequestAndVerify(d, cc, KeyLookupType, "alice") != Passed {
+	if doRequestAndVerify(d, cc, KeyLookupType, "alice") != CheckPassed {
 		t.Fatal("Unexpected verification result")
 	}
 
 	// test error name not found
-	if doRequestAndVerify(d, cc, KeyLookupType, "bob") != Passed {
+	if doRequestAndVerify(d, cc, KeyLookupType, "bob") != CheckPassed {
 		t.Fatal("Unexpected verification result")
 	}
 }

@@ -201,10 +201,10 @@ func NewKeyLookupInEpochProof(ap *m.AuthenticationPath,
 func NewMonitoringProof(ap []*m.AuthenticationPath,
 	str []*m.SignedTreeRoot) (*Response, ErrorCode) {
 	return &Response{
-		Error: Success,
+		Error: ReqSuccess,
 		DirectoryResponse: &DirectoryProofs{
 			AP:  ap,
 			STR: str,
 		},
-	}, Success
+	}, ReqSuccess
 }
