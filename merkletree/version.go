@@ -1,5 +1,6 @@
 package merkletree
 
 const (
-	Version = "0.1"
+	// Version indicates the current protocol version.
+	Version = "3.0"
 )
