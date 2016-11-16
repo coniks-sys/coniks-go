@@ -48,5 +48,5 @@ func mkBotConfig(dir string) {
 		log.Print(err)
 		return
 	}
-	util.WriteFile(file, confBuf)
+	utils.WriteFile(file, confBuf)
 }

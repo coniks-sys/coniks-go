@@ -40,14 +40,14 @@ func newInteriorNode(parent merkleNode, level uint32, prefixBits []bool) *interi
 		node: node{
 			level: level + 1,
 		},
-		index: util.ToBytes(prefixLeft),
+		index: utils.ToBytes(prefixLeft),
 	}
 
 	rightBranch := &emptyNode{
 		node: node{
 			level: level + 1,
 		},
-		index: util.ToBytes(prefixRight),
+		index: utils.ToBytes(prefixRight),
 	}
 	newNode := &interiorNode{
 		node: node{
@@ -90,7 +90,7 @@ func (n *userLeafNode) hash(m *MerkleTree) []byte {
 		[]byte{LeafIdentifier},              // K_leaf
 		[]byte(m.nonce),                     // K_n
 		[]byte(n.index),                     // i
-		[]byte(util.UInt32ToBytes(n.level)), // l
+		[]byte(utils.UInt32ToBytes(n.level)), // l
 		[]byte(n.commitment.Value),          // commit(key|| value)
 	)
 }
@@ -100,7 +100,7 @@ func (n *emptyNode) hash(m *MerkleTree) []byte {
 		[]byte{EmptyBranchIdentifier},       // K_empty
 		[]byte(m.nonce),                     // K_n
 		[]byte(n.index),                     // i
-		[]byte(util.UInt32ToBytes(n.level)), // l
+		[]byte(utils.UInt32ToBytes(n.level)), // l
 	)
 }
 

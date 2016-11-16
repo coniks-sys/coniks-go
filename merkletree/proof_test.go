@@ -107,8 +107,8 @@ func TestVerifyProofSamePrefix(t *testing.T) {
 		t.Fatal("Expect a proof of absence")
 	}
 	// assert these indices share the same prefix in the first bit
-	if !bytes.Equal(util.ToBytes(util.ToBits(index1)[:proof.Leaf.Level]),
-		util.ToBytes(util.ToBits(absentIndex)[:proof.Leaf.Level])) {
+	if !bytes.Equal(utils.ToBytes(utils.ToBits(index1)[:proof.Leaf.Level]),
+		utils.ToBytes(utils.ToBits(absentIndex)[:proof.Leaf.Level])) {
 		t.Fatal("Expect these indices share the same prefix in the first bit")
 	}
 	if !proof.Verify([]byte("a"), nil, m.hash) {
