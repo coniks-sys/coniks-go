@@ -10,10 +10,13 @@ import (
 	. "github.com/coniks-sys/coniks-go/protocol"
 )
 
+// MarshalResponse returns a JSON encoding of the server's response.
 func MarshalResponse(response *Response) ([]byte, error) {
 	return json.Marshal(response)
 }
 
+// UnmarshalRequest parses a JSON-encoded request and
+// creates the corresponding request which will be handled by the server.
 func UnmarshalRequest(msg []byte) (*Request, error) {
 	var content json.RawMessage
 	req := Request{

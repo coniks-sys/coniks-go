@@ -1,3 +1,12 @@
+/*
+Package testutil provides utility functions for
+writing server's tests or generating a test server configuration.
+
+Package testutil provides functions to create a self-signed TLS
+certificate which can be used for a test server. It also provides
+functions to create a basic test client which can send requests
+to the server via a TLS socket connection or a Unix socket connection.
+*/
 package testutil
 
 import (
