@@ -51,7 +51,7 @@ func WriteFile(filename string, buf bytes.Buffer) {
 		return
 	}
 
-	if err := ioutil.WriteFile(filename, []byte(buf.String()), 0644); err != nil {
+	if err := ioutil.WriteFile(filename, buf.Bytes(), 0644); err != nil {
 		log.Printf(err.Error())
 		return
 	}
