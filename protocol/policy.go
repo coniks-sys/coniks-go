@@ -15,20 +15,20 @@ type Timestamp uint64
 // the cryptographic algorithms in use, as well as
 // the protocol version number.
 type Policies struct {
+	Version       string
+	HashID        string
 	VrfPublicKey  vrf.PublicKey
 	EpochDeadline Timestamp
-	LibVersion    string
-	HashID        string
 }
 
 var _ merkletree.AssocData = (*Policies)(nil)
 
 func NewPolicies(epDeadline Timestamp, vrfPublicKey vrf.PublicKey) *Policies {
 	return &Policies{
+		Version:       Version,
+		HashID:        crypto.HashID,
 		VrfPublicKey:  vrfPublicKey,
 		EpochDeadline: epDeadline,
-		LibVersion:    Version,
-		HashID:        crypto.HashID,
 	}
 }
 
@@ -38,10 +38,10 @@ func NewPolicies(epDeadline Timestamp, vrfPublicKey vrf.PublicKey) *Policies {
 // the epoch deadline and the public part of the VRF key.
 func (p *Policies) Serialize() []byte {
 	var bs []byte
+	bs = append(bs, []byte(p.Version)...)                           // protocol version
+	bs = append(bs, []byte(p.HashID)...)                            // cryptographic algorithms in use
 	bs = append(bs, p.VrfPublicKey...)                              // vrf public key
 	bs = append(bs, utils.ULongToBytes(uint64(p.EpochDeadline))...) // epoch deadline
-	bs = append(bs, []byte(p.LibVersion)...)                        // lib Version
-	bs = append(bs, []byte(p.HashID)...)                            // cryptographic algorithms in use
 	return bs
 }
 
