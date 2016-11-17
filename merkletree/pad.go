@@ -23,14 +23,14 @@ type PAD struct {
 	snapshots    map[uint64]*SignedTreeRoot
 	loadedEpochs []uint64 // slice of epochs in snapshots
 	latestSTR    *SignedTreeRoot
-	policies     []byte // the current policies in place
+	ad           AssocData
 }
 
 // NewPAD creates new PAD consisting of an array of hash chain
 // indexed by the epoch and its maximum length is len.
-func NewPAD(policies []byte, signKey sign.PrivateKey, vrfKey vrf.PrivateKey, len uint64) (*PAD, error) {
-	if policies == nil {
-		panic("[merkletree] PAD must be created with a non-NULL Policies struct")
+func NewPAD(ad AssocData, signKey sign.PrivateKey, vrfKey vrf.PrivateKey, len uint64) (*PAD, error) {
+	if ad == nil {
+		panic("[merkletree] PAD must be created with non-nil associated data")
 	}
 	var err error
 	pad := new(PAD)
@@ -40,7 +40,7 @@ func NewPAD(policies []byte, signKey sign.PrivateKey, vrfKey vrf.PrivateKey, len
 	if err != nil {
 		return nil, err
 	}
-	pad.policies = policies
+	pad.ad = ad
 	pad.snapshots = make(map[uint64]*SignedTreeRoot, len)
 	pad.loadedEpochs = make([]uint64, 0, len)
 	pad.updateInternal(nil, 0)
@@ -61,17 +61,16 @@ func (pad *PAD) signTreeRoot(epoch uint64) {
 	}
 	pad.tree.recomputeHash()
 	m := pad.tree.Clone()
-	pad.latestSTR = NewSTR(pad.signKey, pad.policies, m, epoch, prevHash)
+	pad.latestSTR = NewSTR(pad.signKey, pad.ad, m, epoch, prevHash)
 }
 
-func (pad *PAD) updateInternal(policies []byte, epoch uint64) {
-	// create STR with the policies that were actually used in the prev.
-	// Set() operation
+func (pad *PAD) updateInternal(ad AssocData, epoch uint64) {
+	// Create STR with the `ad` that was used in the prev. Set() operation.
 	pad.signTreeRoot(epoch)
 	pad.snapshots[epoch] = pad.latestSTR
 	pad.loadedEpochs = append(pad.loadedEpochs, epoch)
-	if policies != nil { // update the policies if necessary
-		pad.policies = policies
+	if ad != nil { // update the `ad` if necessary
+		pad.ad = ad
 	}
 }
 
@@ -80,12 +79,8 @@ func (pad *PAD) updateInternal(policies []byte, epoch uint64) {
 // Specifically, it extends the hash chain by issuing
 // a new signed tree root. It may remove some older signed tree roots from
 // memory if the cached PAD snapshots exceeded the maximum capacity.
-// policies could be nil if the PAD's policies do not change.
-// If the VRF private key is changed (by passing a new Policies),
-// the underlying tree would be reshuffled. It also means
-// the private index of all new key-to-value bindings
-// will be computed using the new VRF private key.
-func (pad *PAD) Update(policies []byte) {
+// `ad` could be nil if the PAD's `ad` do not change.
+func (pad *PAD) Update(ad AssocData) {
 	// delete older str(s) as needed
 	if len(pad.loadedEpochs) == cap(pad.loadedEpochs) {
 		n := cap(pad.loadedEpochs) / 2
@@ -94,7 +89,7 @@ func (pad *PAD) Update(policies []byte) {
 		}
 		pad.loadedEpochs = append(pad.loadedEpochs[:0], pad.loadedEpochs[n:]...)
 	}
-	pad.updateInternal(policies, pad.latestSTR.Epoch+1)
+	pad.updateInternal(ad, pad.latestSTR.Epoch+1)
 }
 
 // Set computes the private index of the given key using

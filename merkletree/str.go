@@ -8,6 +8,11 @@ import (
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
+// AssocData is associated data to be hashed into the STR.
+type AssocData interface {
+	Serialize() []byte
+}
+
 // SignedTreeRoot represents a signed tree root (STR), which is generated
 // at the beginning of every epoch.
 // Signed tree roots contain the current root node,
@@ -22,10 +27,10 @@ type SignedTreeRoot struct {
 	PreviousEpoch   uint64
 	PreviousSTRHash []byte
 	Signature       []byte
-	Policies        []byte
+	Ad              AssocData
 }
 
-func NewSTR(key sign.PrivateKey, policies []byte, m *MerkleTree, epoch uint64, prevHash []byte) *SignedTreeRoot {
+func NewSTR(key sign.PrivateKey, ad AssocData, m *MerkleTree, epoch uint64, prevHash []byte) *SignedTreeRoot {
 	prevEpoch := epoch - 1
 	if epoch == 0 {
 		prevEpoch = 0
@@ -36,7 +41,7 @@ func NewSTR(key sign.PrivateKey, policies []byte, m *MerkleTree, epoch uint64, p
 		Epoch:           epoch,
 		PreviousEpoch:   prevEpoch,
 		PreviousSTRHash: prevHash,
-		Policies:        policies,
+		Ad:              ad,
 	}
 	bytesPreSig := str.Serialize()
 	str.Signature = key.Sign(bytesPreSig)
@@ -53,7 +58,7 @@ func (str *SignedTreeRoot) Serialize() []byte {
 	}
 	strBytes = append(strBytes, str.TreeHash...)        // root
 	strBytes = append(strBytes, str.PreviousSTRHash...) // previous STR hash
-	strBytes = append(strBytes, str.Policies...)        // P
+	strBytes = append(strBytes, str.Ad.Serialize()...)
 	return strBytes
 }
 

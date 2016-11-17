@@ -3,6 +3,7 @@ package protocol
 import (
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
+	"github.com/coniks-sys/coniks-go/merkletree"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
@@ -19,6 +20,8 @@ type Policies struct {
 	LibVersion    string
 	HashID        string
 }
+
+var _ merkletree.AssocData = (*Policies)(nil)
 
 func NewPolicies(epDeadline Timestamp, vrfPublicKey vrf.PublicKey) *Policies {
 	return &Policies{
@@ -42,12 +45,7 @@ func (p *Policies) Serialize() []byte {
 	return bs
 }
 
-// FIXME: I'm just being lazy :(
-func ParsePubKey(policies []byte) vrf.PublicKey {
-	return vrf.PublicKey(policies[0:vrf.PublicKeySize])
-}
-
-// FIXME: Same.
-func ParseEpochDeadline(policies []byte) Timestamp {
-	return Timestamp(utils.BytesToULong(policies[vrf.PublicKeySize:]))
+// GetPolicies returns the set of policies hashed in the STR.
+func GetPolicies(str *merkletree.SignedTreeRoot) *Policies {
+	return str.Ad.(*Policies)
 }

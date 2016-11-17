@@ -255,7 +255,7 @@ func TestMonitoringBadStartEpoch(t *testing.T) {
 
 func TestPoliciesChanges(t *testing.T) {
 	d, _ := NewTestDirectory(t, true)
-	if p := ParseEpochDeadline(d.LatestSTR().Policies); p != 1 {
+	if p := GetPolicies(d.LatestSTR()).EpochDeadline; p != 1 {
 		t.Fatal("Unexpected policies", "want", 1, "got", p)
 	}
 
@@ -263,18 +263,18 @@ func TestPoliciesChanges(t *testing.T) {
 	d.SetPolicies(2)
 	d.Update()
 	// expect the policies doesn't change yet
-	if p := ParseEpochDeadline(d.LatestSTR().Policies); p != 1 {
+	if p := GetPolicies(d.LatestSTR()).EpochDeadline; p != 1 {
 		t.Fatal("Unexpected policies", "want", 1, "got", p)
 	}
 
 	d.Update()
 	// expect the new policies
-	if p := ParseEpochDeadline(d.LatestSTR().Policies); p != 2 {
+	if p := GetPolicies(d.LatestSTR()).EpochDeadline; p != 2 {
 		t.Fatal("Unexpected policies", "want", 2, "got", p)
 	}
-	p0 := ParseEpochDeadline(d.pad.GetSTR(0).Policies)
-	p1 := ParseEpochDeadline(d.pad.GetSTR(1).Policies)
-	p2 := ParseEpochDeadline(d.pad.GetSTR(2).Policies)
+	p0 := GetPolicies(d.pad.GetSTR(0)).EpochDeadline
+	p1 := GetPolicies(d.pad.GetSTR(1)).EpochDeadline
+	p2 := GetPolicies(d.pad.GetSTR(2)).EpochDeadline
 	if p0 != 1 || p1 != 1 || p2 != 2 {
 		t.Fatal("Maybe the STR's policies were malformed")
 	}

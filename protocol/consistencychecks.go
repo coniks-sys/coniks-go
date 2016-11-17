@@ -208,7 +208,7 @@ func verifyAuthPath(uname string, key []byte,
 	str *m.SignedTreeRoot) error {
 
 	// verify VRF Index
-	vrfKey := ParsePubKey(str.Policies)
+	vrfKey := GetPolicies(str).VrfPublicKey
 	if !vrfKey.Verify([]byte(uname), ap.LookupIndex, ap.VrfProof) {
 		return ErrorBadVRFProof
 	}

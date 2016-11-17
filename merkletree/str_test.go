@@ -7,7 +7,7 @@ func TestVerifyHashChain(t *testing.T) {
 
 	keyPrefix := "key"
 	valuePrefix := []byte("value")
-	pad, err := NewPAD([]byte(""), signKey, vrfPrivKey1, 10)
+	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey1, 10)
 	if err != nil {
 		t.Fatal(err)
 	}

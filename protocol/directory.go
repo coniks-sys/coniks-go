@@ -50,7 +50,7 @@ func NewDirectory(epDeadline Timestamp, vrfKey vrf.PrivateKey,
 		panic(vrf.ErrorGetPubKey)
 	}
 	d.policies = NewPolicies(epDeadline, vrfPublicKey)
-	pad, err := merkletree.NewPAD(d.policies.Serialize(), signKey, vrfKey, dirSize)
+	pad, err := merkletree.NewPAD(d.policies, signKey, vrfKey, dirSize)
 	if err != nil {
 		panic(err)
 	}
@@ -67,7 +67,7 @@ func NewDirectory(epDeadline Timestamp, vrfKey vrf.PrivateKey,
 // also deletes all issued TBs for the ending epoch as their
 // corresponding mappings will have been inserted into the PAD.
 func (d *ConiksDirectory) Update() {
-	d.pad.Update(d.policies.Serialize())
+	d.pad.Update(d.policies)
 	// clear issued temporary bindings
 	for key := range d.tbs {
 		delete(d.tbs, key)
@@ -83,7 +83,7 @@ func (d *ConiksDirectory) SetPolicies(epDeadline Timestamp) {
 // EpochDeadline returns this ConiksDirectory's latest epoch deadline
 // as a timestamp.
 func (d *ConiksDirectory) EpochDeadline() Timestamp {
-	return ParseEpochDeadline(d.pad.LatestSTR().Policies)
+	return GetPolicies(d.pad.LatestSTR()).EpochDeadline
 }
 
 // LatestSTR Returns this ConiksDirectory's latest STR.
