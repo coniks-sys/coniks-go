@@ -41,7 +41,7 @@ type ConsistencyChecks struct {
 func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *ConsistencyChecks {
 	// TODO: see #110
 	if !useTBs {
-		panic("[coniks] Currently the server is forced to use TBs.")
+		panic("[coniks] Currently the server is forced to use TBs")
 	}
 	cc := &ConsistencyChecks{
 		SavedSTR: savedSTR,
@@ -76,7 +76,7 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 			return ErrorMalformedDirectoryMessage
 		}
 	default:
-		panic("[coniks] Unknown request type.")
+		panic("[coniks] Unknown request type")
 	}
 	if err := cc.updateSTR(requestType, msg); err != nil {
 		return err.(ErrorCode)
@@ -110,6 +110,9 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 		if err := cc.verifySTRConsistency(cc.SavedSTR, str); err != nil {
 			return err
 		}
+
+	default:
+		panic("[coniks] Unknown request type")
 	}
 
 	// And update the saved STR
@@ -152,7 +155,7 @@ func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *Response,
 	case KeyLookupType:
 		err = cc.verifyKeyLookup(msg, uname, key)
 	default:
-		panic("[coniks] Unknown request type.")
+		panic("[coniks] Unknown request type")
 	}
 	return err.(ErrorCode)
 }
@@ -254,6 +257,7 @@ func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
 			if err := cc.verifyFulfilledPromise(uname, str, ap); err != nil {
 				return err
 			}
+			delete(cc.TBs, uname)
 
 		case msg.Error == Success && proofType == m.ProofOfAbsence:
 			if err := cc.verifyReturnedPromise(df, key); err != nil {
@@ -261,6 +265,9 @@ func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
 			}
 			cc.TBs[uname] = df.TB
 		}
+
+	default:
+		panic("[coniks] Unknown request type")
 	}
 	return nil
 }
@@ -276,7 +283,6 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
 			!bytes.Equal(ap.Leaf.Value, tb.Value) {
 			return ErrorBrokenPromise
 		}
-		delete(cc.TBs, uname)
 	}
 	return nil
 }
