@@ -50,7 +50,7 @@ Example call:
 		response, errCode := client.UnmarshalResponse(p.RegistrationType,
 			res)
 		switch errCode {
-		case p.Success:
+		case p.ReqSuccess:
 			cc := p.NewCC(nil, true, conf.SigningPubKey)
 			// FIXME creating a *protocol.Response out of what we got here
 			// seems strange: either modify UnmarshalResponse
@@ -58,7 +58,7 @@ Example call:
 			resp := &p.Response{errCode, response}
 			err := cc.HandleResponse(p.RegistrationType, resp,
 				name, nil)
-			if err != p.Passed {
+			if err != p.CheckPassed {
 				fmt.Printf("Couldn't validate response: %s", err)
 				return
 			}
@@ -66,15 +66,15 @@ Example call:
 			fmt.Println("Succesfully registered name: " + name)
 			// TODO Save the cc to verify the TB and for later
 			// usage (TOFU checks)
-		case p.ErrorNameExisted:
+		case p.ReqNameExisted:
 			// Key-change isn't currently supported; see:
 			// https://github.com/coniks-sys/coniks-go/issues/92
 			fmt.Println("Name is already registered.")
-		case p.ErrorDirectory:
+		case p.ErrDirectory:
 			// From a usability perspective: how would a real
 			// client deal with such an error? Retry?
 			fmt.Println("Internal server error.")
-		case p.ErrorMalformedClientMessage:
+		case p.ErrMalformedClientMessage:
 			fmt.Println("Server reported an invalid client request!")
 		}
 	},

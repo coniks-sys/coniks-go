@@ -42,30 +42,30 @@ var lookupCmd = &cobra.Command{
 			os.Exit(-1)
 		}
 		switch errCode {
-		case p.Success:
+		case p.ReqSuccess:
 			// FIXME reuse/load the cc from the registration instead:
 			cc := p.NewCC(nil, true, conf.SigningPubKey)
 			key := res.AP.Leaf.Value
 			// FIXME same comment as in register.go
 			resp := &p.Response{errCode, response}
 			err := cc.HandleResponse(p.KeyLookupType, resp, name, key)
-			if err != p.Passed {
+			if err != p.CheckPassed {
 				fmt.Printf("Couldn't validate response: %s\n", err)
 			} else {
 				fmt.Println("Sucess! Key bound to name is: [" +
 					string(res.AP.Leaf.Value) + "]")
 				fmt.Println("Index:\n" + hex.Dump(res.AP.Leaf.Index))
 			}
-		case p.ErrorMalformedClientMessage:
+		case p.ErrMalformedClientMessage:
 			fmt.Println("Server reported malformed client message.")
-		case p.ErrorNameNotFound:
+		case p.ReqNameNotFound:
 			// TODO refactor common code (see p.Success case above):
 			cc := p.NewCC(nil, true, conf.SigningPubKey)
 			key := res.AP.Leaf.Value
 			// FIXME same comment as in register.go
 			resp := &p.Response{errCode, response}
 			err := cc.HandleResponse(p.KeyLookupType, resp, name, key)
-			if err != p.Passed {
+			if err != p.CheckPassed {
 				fmt.Printf("Couldn't validate response: %s\n", err)
 			}
 			fmt.Println("Name isn't registered.")
