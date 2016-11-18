@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"net/url"
 	"os"
 	"os/signal"
 	"sync"
@@ -26,14 +27,14 @@ type ServerConfig struct {
 	DatabasePath        string          `toml:"database"`
 	LoadedHistoryLength uint64          `toml:"loaded_history_length"`
 	Policies            *ServerPolicies `toml:"policies"`
-	TLS                 *TLSConnection  `toml:"tls"`
+	Addresses           []*Address      `toml:"addresses"`
 }
 
-type TLSConnection struct {
-	PublicAddress string `toml:"public_address"` // address:port
-	LocalAddress  string `toml:"local_address"`  // unix socket
-	TLSCertPath   string `toml:"cert"`
-	TLSKeyPath    string `toml:"key"`
+type Address struct {
+	Address           string `toml:"address"`
+	AllowRegistration bool   `toml:"allow_registration,omitempty"`
+	TLSCertPath       string `toml:"cert,omitempty"`
+	TLSKeyPath        string `toml:"key,omitempty"`
 }
 
 type ServerPolicies struct {
@@ -57,7 +58,6 @@ type ConiksServer struct {
 	configFilePath string
 	reloadChan     chan os.Signal
 	epochTimer     *time.Timer
-	tlsConfig      *tls.Config
 }
 
 func LoadServerConfig(file string) (*ServerConfig, error) {
@@ -91,9 +91,10 @@ func LoadServerConfig(file string) (*ServerConfig, error) {
 	conf.Policies.signKey = signKey
 	// also update path for db & TLS cert files
 	conf.DatabasePath = utils.ResolvePath(conf.DatabasePath, file)
-	conf.TLS.TLSCertPath = utils.ResolvePath(conf.TLS.TLSCertPath, file)
-	conf.TLS.TLSKeyPath = utils.ResolvePath(conf.TLS.TLSKeyPath, file)
-
+	for _, addr := range conf.Addresses {
+		addr.TLSCertPath = utils.ResolvePath(addr.TLSCertPath, file)
+		addr.TLSKeyPath = utils.ResolvePath(addr.TLSKeyPath, file)
+	}
 	return &conf, nil
 }
 
@@ -119,59 +120,28 @@ func NewConiksServer(conf *ServerConfig) *ConiksServer {
 	return server
 }
 
-func (server *ConiksServer) Run(tc *TLSConnection) {
+func (server *ConiksServer) Run(addrs []*Address) {
 	server.waitStop.Add(1)
 	go func() {
 		server.EpochUpdate()
 		server.waitStop.Done()
 	}()
 
-	// Setup server public connection
-	// Setup the TLS config for public connection
-	cer, err := tls.LoadX509KeyPair(tc.TLSCertPath, tc.TLSKeyPath)
-	if err != nil {
-		panic(err)
-	}
-	server.tlsConfig = &tls.Config{Certificates: []tls.Certificate{cer}}
-	addr, err := net.ResolveTCPAddr("tcp", tc.PublicAddress)
-	if err != nil {
-		panic(err)
-	}
-	publicLn, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		panic(err)
+	hasRegistrationPerm := false
+	for i := 0; i < len(addrs); i++ {
+		addr := addrs[i]
+		hasRegistrationPerm = hasRegistrationPerm || addr.AllowRegistration
+		ln, tlsConfig, perms := resolveAndListen(addr)
+		server.waitStop.Add(1)
+		go func() {
+			server.handleRequests(ln, tlsConfig, server.makeHandler(perms))
+			server.waitStop.Done()
+		}()
 	}
 
-	// Setup server local connection
-	scheme := "unix"
-	unixaddr, err := net.ResolveUnixAddr(scheme, tc.LocalAddress)
-	if err != nil {
-		panic(err)
+	if !hasRegistrationPerm {
+		log.Println("[Warning] None of the addresses permit registration")
 	}
-	localLn, err := net.ListenUnix(scheme, unixaddr)
-	if err != nil {
-		panic(err)
-	}
-
-	// acceptable types for public connection
-	publicTypes := make(map[int]bool)
-	publicTypes[protocol.KeyLookupType] = true
-	publicTypes[protocol.KeyLookupInEpochType] = true
-	publicTypes[protocol.MonitoringType] = true
-	server.waitStop.Add(1)
-	go func() {
-		server.listenForRequests(publicLn, server.makeHandler(publicTypes))
-		server.waitStop.Done()
-	}()
-
-	// acceptable types for local connection
-	localTypes := make(map[int]bool)
-	localTypes[protocol.RegistrationType] = true
-	server.waitStop.Add(1)
-	go func() {
-		server.listenForRequests(localLn, server.makeHandler(localTypes))
-		server.waitStop.Done()
-	}()
 
 	server.waitStop.Add(1)
 	go func() {
@@ -219,5 +189,50 @@ func (server *ConiksServer) updatePolicies() {
 			server.Unlock()
 			log.Println("Policies reloaded!")
 		}
+	}
+}
+
+func resolveAndListen(addr *Address) (ln net.Listener,
+	tlsConfig *tls.Config,
+	perms map[int]bool) {
+	perms = make(map[int]bool)
+	perms[protocol.KeyLookupType] = true
+	perms[protocol.KeyLookupInEpochType] = true
+	perms[protocol.MonitoringType] = true
+	perms[protocol.RegistrationType] = addr.AllowRegistration
+
+	u, err := url.Parse(addr.Address)
+	if err != nil {
+		panic(err)
+	}
+	switch u.Scheme {
+	case "tcp":
+		// force to use TLS
+		cer, err := tls.LoadX509KeyPair(addr.TLSCertPath, addr.TLSKeyPath)
+		if err != nil {
+			panic(err)
+		}
+		tlsConfig = &tls.Config{Certificates: []tls.Certificate{cer}}
+		tcpaddr, err := net.ResolveTCPAddr(u.Scheme, u.Host)
+		if err != nil {
+			panic(err)
+		}
+		ln, err = net.ListenTCP(u.Scheme, tcpaddr)
+		if err != nil {
+			panic(err)
+		}
+		return
+	case "unix":
+		unixaddr, err := net.ResolveUnixAddr(u.Scheme, u.Path)
+		if err != nil {
+			panic(err)
+		}
+		ln, err = net.ListenUnix(u.Scheme, unixaddr)
+		if err != nil {
+			panic(err)
+		}
+		return
+	default:
+		panic("Unknown network type")
 	}
 }

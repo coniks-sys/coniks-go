@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"net"
+	"net/url"
 	"os"
 	"path"
 	"testing"
@@ -24,8 +25,8 @@ import (
 
 const (
 	TestDir          = "coniksServerTest"
-	PublicConnection = "127.0.0.1:3000"
-	LocalConnection  = "/tmp/conikstest.sock"
+	PublicConnection = "tcp://127.0.0.1:3000"
+	LocalConnection  = "unix:///tmp/conikstest.sock"
 )
 
 type ExpectingDirProofResponse struct {
@@ -123,8 +124,8 @@ func CreateTLSCertForTest(t *testing.T) (string, func()) {
 
 func NewTCPClient(msg []byte) ([]byte, error) {
 	conf := &tls.Config{InsecureSkipVerify: true}
-
-	conn, err := net.Dial("tcp", PublicConnection)
+	u, _ := url.Parse(PublicConnection)
+	conn, err := net.Dial(u.Scheme, u.Host)
 	if err != nil {
 		return nil, err
 	}
@@ -152,10 +153,9 @@ func NewTCPClient(msg []byte) ([]byte, error) {
 }
 
 func NewUnixClient(msg []byte) ([]byte, error) {
-	scheme := "unix"
-	unixaddr := &net.UnixAddr{Name: LocalConnection, Net: scheme}
-
-	conn, err := net.DialUnix(scheme, nil, unixaddr)
+	u, _ := url.Parse(LocalConnection)
+	unixaddr := &net.UnixAddr{Name: u.Path, Net: u.Scheme}
+	conn, err := net.DialUnix(u.Scheme, nil, unixaddr)
 	if err != nil {
 		return nil, err
 	}

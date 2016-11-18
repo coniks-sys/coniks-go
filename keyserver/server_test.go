@@ -37,7 +37,7 @@ var keylookupMsg = `
 }
 `
 
-func startServer(t *testing.T, kvdb kv.DB, epDeadline Timestamp, policiesPath string) (*ConiksServer, func()) {
+func startServer(t *testing.T, kvdb kv.DB, epDeadline Timestamp, useBot bool, policiesPath string) (*ConiksServer, func()) {
 	dir, teardown := testutil.CreateTLSCertForTest(t)
 
 	signKey, err := sign.GenerateKey(nil)
@@ -50,15 +50,25 @@ func startServer(t *testing.T, kvdb kv.DB, epDeadline Timestamp, policiesPath st
 		t.Fatal(err)
 	}
 
+	addrs := []*Address{
+		&Address{
+			Address:           testutil.PublicConnection,
+			TLSCertPath:       path.Join(dir, "server.pem"),
+			TLSKeyPath:        path.Join(dir, "server.key"),
+			AllowRegistration: !useBot,
+		},
+	}
+	if useBot {
+		addrs = append(addrs, &Address{
+			Address:           testutil.LocalConnection,
+			AllowRegistration: useBot,
+		})
+	}
+
 	conf := &ServerConfig{
 		DatabasePath:        path.Join(dir, "coniks.db"),
 		LoadedHistoryLength: 100,
-		TLS: &TLSConnection{
-			PublicAddress: testutil.PublicConnection,
-			LocalAddress:  testutil.LocalConnection,
-			TLSCertPath:   path.Join(dir, "server.pem"),
-			TLSKeyPath:    path.Join(dir, "server.key"),
-		},
+		Addresses:           addrs,
 		Policies: &ServerPolicies{
 			EpochDeadline: epDeadline,
 			vrfKey:        vrfKey,
@@ -68,7 +78,7 @@ func startServer(t *testing.T, kvdb kv.DB, epDeadline Timestamp, policiesPath st
 
 	server := NewConiksServer(conf)
 	server.db = kvdb
-	server.Run(conf.TLS)
+	server.Run(conf.Addresses)
 	return server, func() {
 		server.Shutdown()
 		teardown()
@@ -77,14 +87,53 @@ func startServer(t *testing.T, kvdb kv.DB, epDeadline Timestamp, policiesPath st
 
 func TestServerStartStop(t *testing.T) {
 	utils.WithDB(func(db kv.DB) {
-		_, teardown := startServer(t, db, 60, "")
+		_, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 	})
 }
 
+func TestResolveAddresses(t *testing.T) {
+	dir, teardown := testutil.CreateTLSCertForTest(t)
+	defer teardown()
+
+	// test TCP network
+	addr := &Address{
+		Address:     testutil.PublicConnection,
+		TLSCertPath: path.Join(dir, "server.pem"),
+		TLSKeyPath:  path.Join(dir, "server.key"),
+	}
+	ln, _, perms := resolveAndListen(addr)
+	defer ln.Close()
+	if perms[RegistrationType] != false {
+		t.Error("Expect disallowing registration permission.")
+	}
+
+	// test Unix network
+	addr = &Address{
+		Address:           testutil.LocalConnection,
+		AllowRegistration: true,
+	}
+	ln, _, perms = resolveAndListen(addr)
+	defer ln.Close()
+	if perms[RegistrationType] != true {
+		t.Error("Expect allowing registration permission.")
+	}
+
+	// test unknown network scheme
+	addr = &Address{
+		Address: testutil.PublicConnection,
+	}
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("Expected resolveAndListen to panic.")
+		}
+	}()
+	resolveAndListen(addr)
+}
+
 func TestServerReloadPoliciesWithError(t *testing.T) {
 	utils.WithDB(func(db kv.DB) {
-		server, teardown := startServer(t, db, 1, "")
+		server, teardown := startServer(t, db, 1, true, "")
 		defer teardown()
 		syscall.Kill(syscall.Getpid(), syscall.SIGUSR2)
 		if server.dir.EpochDeadline() != 1 {
@@ -96,9 +145,29 @@ func TestServerReloadPoliciesWithError(t *testing.T) {
 	})
 }
 
+func TestAcceptOutsideRegistrationRequests(t *testing.T) {
+	utils.WithDB(func(db kv.DB) {
+		_, teardown := startServer(t, db, 60, false, "")
+		defer teardown()
+		rev, err := testutil.NewTCPClient([]byte(registrationMsg))
+		if err != nil {
+			t.Error(err)
+		}
+		var response testutil.ExpectingDirProofResponse
+		err = json.Unmarshal(rev, &response)
+		if err != nil {
+			t.Log(string(rev))
+			t.Error(err)
+		}
+		if response.Error != ReqSuccess {
+			t.Error("Expect a successful registration", "got", response.Error)
+		}
+	})
+}
+
 func TestBotSendsRegistration(t *testing.T) {
 	utils.WithDB(func(db kv.DB) {
-		_, teardown := startServer(t, db, 60, "")
+		_, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 
 		rev, err := testutil.NewUnixClient([]byte(registrationMsg))
@@ -120,7 +189,7 @@ func TestBotSendsRegistration(t *testing.T) {
 
 func TestSendsRegistrationFromOutside(t *testing.T) {
 	utils.WithDB(func(db kv.DB) {
-		_, teardown := startServer(t, db, 60, "")
+		_, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 
 		rev, err := testutil.NewTCPClient([]byte(registrationMsg))
@@ -140,7 +209,7 @@ func TestSendsRegistrationFromOutside(t *testing.T) {
 
 func TestUpdateDirectory(t *testing.T) {
 	utils.WithDB(func(db kv.DB) {
-		server, teardown := startServer(t, db, 1, "")
+		server, teardown := startServer(t, db, 1, true, "")
 		defer teardown()
 		str0 := server.dir.LatestSTR()
 		rs := createMultiRegistrationRequests(10)
@@ -178,7 +247,7 @@ func createMultiRegistrationRequests(N uint64) []*Request {
 
 func TestRegisterDuplicateUserInOneEpoch(t *testing.T) {
 	utils.WithDB(func(db kv.DB) {
-		server, teardown := startServer(t, db, 60, "")
+		server, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 		r0 := createMultiRegistrationRequests(1)[0]
 		r1 := createMultiRegistrationRequests(1)[0]
@@ -206,7 +275,7 @@ func TestRegisterDuplicateUserInOneEpoch(t *testing.T) {
 
 func TestRegisterDuplicateUserInDifferentEpoches(t *testing.T) {
 	utils.WithDB(func(db kv.DB) {
-		server, teardown := startServer(t, db, 1, "")
+		server, teardown := startServer(t, db, 1, true, "")
 		defer teardown()
 		r0 := createMultiRegistrationRequests(1)[0]
 		_, err := server.handleOps(r0)
@@ -232,7 +301,7 @@ func TestRegisterDuplicateUserInDifferentEpoches(t *testing.T) {
 
 func TestBotSendsLookup(t *testing.T) {
 	utils.WithDB(func(db kv.DB) {
-		_, teardown := startServer(t, db, 60, "")
+		_, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 
 		rev, err := testutil.NewUnixClient([]byte(registrationMsg))
@@ -249,15 +318,15 @@ func TestBotSendsLookup(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if response.Error != ErrMalformedClientMessage {
-			t.Fatalf("Expect error code %d", ErrMalformedClientMessage)
+		if response.Error != ReqSuccess {
+			t.Fatalf("Expect error code %d", ReqSuccess)
 		}
 	})
 }
 
 func TestRegisterAndLookupInTheSameEpoch(t *testing.T) {
 	utils.WithDB(func(db kv.DB) {
-		_, teardown := startServer(t, db, 60, "")
+		_, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 
 		_, err := testutil.NewUnixClient([]byte(registrationMsg))
@@ -301,7 +370,7 @@ func TestRegisterAndLookupInTheSameEpoch(t *testing.T) {
 
 func TestRegisterAndLookup(t *testing.T) {
 	utils.WithDB(func(db kv.DB) {
-		server, teardown := startServer(t, db, 1, "")
+		server, teardown := startServer(t, db, 1, true, "")
 		defer teardown()
 
 		_, err := testutil.NewUnixClient([]byte(registrationMsg))
@@ -346,7 +415,7 @@ func TestRegisterAndLookup(t *testing.T) {
 
 func TestKeyLookup(t *testing.T) {
 	utils.WithDB(func(db kv.DB) {
-		server, teardown := startServer(t, db, 60, "")
+		server, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 
 		_, err := testutil.NewUnixClient([]byte(registrationMsg))
@@ -391,7 +460,7 @@ func TestKeyLookup(t *testing.T) {
 
 func TestKeyLookupInEpoch(t *testing.T) {
 	utils.WithDB(func(db kv.DB) {
-		server, teardown := startServer(t, db, 60, "")
+		server, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 
 		for i := 0; i < 3; i++ {
@@ -434,7 +503,7 @@ func TestKeyLookupInEpoch(t *testing.T) {
 func TestMonitoring(t *testing.T) {
 	utils.WithDB(func(db kv.DB) {
 		N := 5
-		server, teardown := startServer(t, db, 60, "")
+		server, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 
 		res, err := testutil.NewUnixClient([]byte(registrationMsg))

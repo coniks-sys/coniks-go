@@ -43,15 +43,21 @@ func init() {
 
 func mkConfig(dir string) {
 	file := path.Join(dir, "config.toml")
+	addrs := []*keyserver.Address{
+		&keyserver.Address{
+			Address:           "unix:///tmp/coniks.sock",
+			AllowRegistration: true,
+		},
+		&keyserver.Address{
+			Address:     "tcp://0.0.0.0:3000",
+			TLSCertPath: "server.pem",
+			TLSKeyPath:  "server.key",
+		},
+	}
 	var conf = keyserver.ServerConfig{
 		DatabasePath:        "coniks.db",
 		LoadedHistoryLength: 1000000,
-		TLS: &keyserver.TLSConnection{
-			LocalAddress:  "/tmp/coniks.sock",
-			PublicAddress: "0.0.0.0:3000",
-			TLSCertPath:   "server.pem",
-			TLSKeyPath:    "server.key",
-		},
+		Addresses:           addrs,
 		Policies: &keyserver.ServerPolicies{
 			EpochDeadline: 60,
 			VRFKeyPath:    "vrf.priv",

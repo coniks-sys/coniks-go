@@ -18,7 +18,7 @@ var runCmd = &cobra.Command{
 	Short: "Run a CONIKS server instance",
 	Long: `Run a CONIKS server instance
 
-This will look for config files with default names (config.toml) 
+This will look for config files with default names (config.toml)
 in the current directory if not specified differently.
 	`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -46,7 +46,7 @@ func run(confPath string) {
 	serv := keyserver.NewConiksServer(conf)
 
 	// run the server until receiving an interrupt signal
-	serv.Run(conf.TLS)
+	serv.Run(conf.Addresses)
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
 	<-ch
