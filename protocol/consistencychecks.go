@@ -70,13 +70,8 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	if ErrorResponses[msg.Error] {
 		return msg.Error
 	}
-	switch requestType {
-	case RegistrationType, KeyLookupType:
-		if _, ok := msg.DirectoryResponse.(*DirectoryProof); !ok {
-			return ErrorMalformedDirectoryMessage
-		}
-	default:
-		panic("[coniks] Unknown request type")
+	if err := validateResponse(requestType, msg); err != nil {
+		return err.(ErrorCode)
 	}
 	if err := cc.updateSTR(requestType, msg); err != nil {
 		return err.(ErrorCode)
@@ -88,6 +83,19 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 		return err.(ErrorCode)
 	}
 	return Passed
+}
+
+func validateResponse(requestType int, msg *Response) error {
+	switch requestType {
+	case RegistrationType, KeyLookupType:
+		if df, ok := msg.DirectoryResponse.(*DirectoryProof); !ok ||
+			(df.AP == nil || df.STR == nil) {
+			return ErrorMalformedDirectoryMessage
+		}
+	default:
+		panic("[coniks] Unknown request type")
+	}
+	return nil
 }
 
 func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {

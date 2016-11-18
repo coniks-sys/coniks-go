@@ -43,6 +43,22 @@ func TestVerifyWithError(t *testing.T) {
 	}
 }
 
+func TestMalformedDirectoryMessage(t *testing.T) {
+	d, pk := NewTestDirectory(t, true)
+	cc := NewCC(d.LatestSTR(), true, pk)
+
+	request := &RegistrationRequest{
+		Username: "alice",
+		Key:      key,
+	}
+	res, _ := d.Register(request)
+	// modify response message
+	res.DirectoryResponse.(*DirectoryProof).STR = nil
+	if err := cc.HandleResponse(RegistrationType, res, "alice", key); err != ErrorMalformedDirectoryMessage {
+		t.Error("Unexpected verification result")
+	}
+}
+
 func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
 
