@@ -37,6 +37,12 @@ and corresponding CONIKS server responses for each CONIKS protocol.
 It also provides constructors for the response messages for each
 protocol.
 
+Policy
+
+This module defines the directory's current security policies, which include
+the public part of the VRF key used to generate private indices, the
+cryptographic algorithms in use, as well as the protocol version number.
+
 Temporary Binding
 
 This module implements a temporary binding, which serves both as a proof of
