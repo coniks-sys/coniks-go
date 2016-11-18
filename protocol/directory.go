@@ -47,7 +47,7 @@ func NewDirectory(epDeadline Timestamp, vrfKey vrf.PrivateKey,
 	d := new(ConiksDirectory)
 	vrfPublicKey, ok := vrfKey.Public()
 	if !ok {
-		panic(vrf.ErrorGetPubKey)
+		panic(vrf.ErrGetPubKey)
 	}
 	d.policies = NewPolicies(epDeadline, vrfPublicKey)
 	pad, err := merkletree.NewPAD(d.policies, signKey, vrfKey, dirSize)
