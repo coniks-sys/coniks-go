@@ -31,7 +31,7 @@ The packages in this library implement the various components of the CONIKS syst
 Please keep in mind that this CONIKS library is under active development. The repository may contain experimental features that aren't fully tested. We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/releases).
 
 ##Documentation
-Coming soon!
+https://godoc.org/github.com/coniks-sys/coniks-go
 
 ## Current Core Developers
 Releases of coniks-go will be signed with one of the following GPG keys:
