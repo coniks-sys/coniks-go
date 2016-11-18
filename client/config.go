@@ -26,7 +26,7 @@ func LoadConfig(file string) (*Config, error) {
 	}
 
 	// load signing key
-	signPath := util.ResolvePath(conf.SignPubkeyPath, file)
+	signPath := utils.ResolvePath(conf.SignPubkeyPath, file)
 	signPubKey, err := ioutil.ReadFile(signPath)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot read signing key: %v", err)
@@ -36,7 +36,7 @@ func LoadConfig(file string) (*Config, error) {
 	}
 
 	// load VRF key
-	vrfPath := util.ResolvePath(conf.VrfPubkeyPath, file)
+	vrfPath := utils.ResolvePath(conf.VrfPubkeyPath, file)
 	vrfKey, err := ioutil.ReadFile(vrfPath)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot read VRF key: %v", err)

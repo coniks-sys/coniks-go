@@ -51,9 +51,6 @@ func mkConfigOrExit(path string) {
 			err.Error() + "]")
 		os.Exit(-1)
 	}
-	if err := util.CreateFile(path, confBuf); err != nil {
-		fmt.Println("Couldn't create config-file. Error was: [" +
-			err.Error() + "]")
-		os.Exit(-1)
-	}
+	// TODO here we would want to pass the error up do an os.Exit(-1) ?
+	utils.WriteFile(path, confBuf)
 }
