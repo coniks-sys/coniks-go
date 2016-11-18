@@ -51,6 +51,8 @@ func mkConfigOrExit(path string) {
 			err.Error() + "]")
 		os.Exit(-1)
 	}
-	// TODO here we would want to pass the error up do an os.Exit(-1) ?
+	// TODO here we would want to pass the error up from WriteFile
+	// and do an os.Exit(-1) to signal that sth was wrong (more important
+	// for the UI client)?
 	utils.WriteFile(path, confBuf)
 }

@@ -51,30 +51,21 @@ Example call:
 			res)
 		switch errCode {
 		case p.Success:
-			res, ok := response.(*p.DirectoryProof)
-			if !ok {
-				fmt.Println("Got unexpected response from server!")
-				os.Exit(-1)
+			cc := p.NewCC(nil, true, conf.SigningPubKey)
+			// FIXME creating a *protocol.Response out of what we got here
+			// seems strange: either modify UnmarshalResponse
+			// or modify HandleResponse accordingly:
+			resp := &p.Response{errCode, response}
+			err := cc.HandleResponse(p.RegistrationType, resp,
+				name, nil)
+			if err != p.Passed {
+				fmt.Printf("Couldn't validate response: %s", err)
+				return
 			}
-			// TODO why are the implementations for this verification
-			// method all empty? (see: protocol/message.go)
-			c := res.Verify(name, []byte(key), 0, nil,
-				conf.SigningPubKey)
-			// verify auth. path:
-			if c != p.Passed ||
-				res.AP == nil ||
-				!res.AP.Verify(res.STR.TreeHash) {
-				fmt.Println("Response message didn't pass verification (invalid auth. path).")
-			}
-			// verify signature on TB:
-			tbb := res.TB.Serialize(res.STR.Signature)
-			if !conf.SigningPubKey.Verify(tbb, res.TB.Signature) {
-				fmt.Println("Couldn't verify signature of temporary binding.")
-			}
+
 			fmt.Println("Succesfully registered name: " + name)
-			// TODO Where should the client save seen STRs and the TB?
-			// (or should it wait till the next epoch to see if the
-			// TB was actually inserted?)
+			// TODO Save the cc to verify the TB and for later
+			// usage (TOFU checks)
 		case p.ErrorNameExisted:
 			// Key-change isn't currently supported; see:
 			// https://github.com/coniks-sys/coniks-go/issues/92

@@ -35,6 +35,7 @@ var lookupCmd = &cobra.Command{
 		}
 		response, errCode := client.UnmarshalResponse(p.KeyLookupType,
 			resp)
+		// FIXME Maybe we can get rid of this check:
 		res, ok := response.(*p.DirectoryProof)
 		if !ok {
 			fmt.Println("Got unexpected response from server!")
@@ -42,36 +43,30 @@ var lookupCmd = &cobra.Command{
 		}
 		switch errCode {
 		case p.Success:
-			c := res.Verify(name, []byte(res.AP.Leaf.Value), 0, nil,
-				conf.SigningPubKey)
-			// verify auth. path:
-			if c != p.Passed || res.AP == nil ||
-				!res.AP.Verify(res.STR.TreeHash) {
-				fmt.Println("Response message didn't pass verification (invalid auth. path).")
-			}
-			if res.TB != nil {
-				tbb := res.TB.Serialize(res.STR.Signature)
-				if !conf.SigningPubKey.Verify(tbb, res.TB.Signature) {
-					fmt.Println("Got invalid TB!")
-				}
-				fmt.Println("Sucess! Got temporary binding (check again after next epoch). Key: [" +
-					string(res.TB.Value) +
-					"] will be inserted at index:\n" +
-					hex.Dump(res.TB.Index))
+			// FIXME reuse/load the cc from the registration instead:
+			cc := p.NewCC(nil, true, conf.SigningPubKey)
+			key := res.AP.Leaf.Value
+			// FIXME same comment as in register.go
+			resp := &p.Response{errCode, response}
+			err := cc.HandleResponse(p.KeyLookupType, resp, name, key)
+			if err != p.Passed {
+				fmt.Printf("Couldn't validate response: %s\n", err)
 			} else {
 				fmt.Println("Sucess! Key bound to name is: [" +
 					string(res.AP.Leaf.Value) + "]")
 				fmt.Println("Index:\n" + hex.Dump(res.AP.Leaf.Index))
 			}
-
 		case p.ErrorMalformedClientMessage:
 			fmt.Println("Server reported malformed client message.")
 		case p.ErrorNameNotFound:
-			c := res.Verify(name, []byte(res.AP.Leaf.Value), 0, nil,
-				conf.SigningPubKey)
-			// verify auth. path:
-			if c != p.Passed || !res.AP.Verify(res.STR.TreeHash) {
-				fmt.Println("Response message didn't pass verification (invalid auth. path).")
+			// TODO refactor common code (see p.Success case above):
+			cc := p.NewCC(nil, true, conf.SigningPubKey)
+			key := res.AP.Leaf.Value
+			// FIXME same comment as in register.go
+			resp := &p.Response{errCode, response}
+			err := cc.HandleResponse(p.KeyLookupType, resp, name, key)
+			if err != p.Passed {
+				fmt.Printf("Couldn't validate response: %s\n", err)
 			}
 			fmt.Println("Name isn't registered.")
 		default:
