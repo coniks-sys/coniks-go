@@ -1,4 +1,4 @@
 /*
-Package utils contains utility functions which are being used in the coniks-go library.
+Package utils contains utility functions used in the coniks-go library.
 */
 package utils

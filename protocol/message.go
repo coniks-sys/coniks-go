@@ -43,9 +43,9 @@ type RegistrationRequest struct {
 // If the client needs to look up a username's key for a prior epoch, it
 // must send a KeyLookupInEpochRequest.
 //
-// The response to a successful request is a DirectoryProof with a TB if the requested
-// username was registered during the latest epoch (i.e. the new binding hasn't been
-// committed to the directory).
+// The response to a successful request is a DirectoryProof with a TB if
+// the requested username was registered during the latest epoch (i.e.
+// the new binding hasn't been committed to the directory).
 type KeyLookupRequest struct {
 	Username string `json:"username"`
 }
@@ -78,6 +78,12 @@ type KeyLookupInEpochRequest struct {
 // end of the range with the end epoch. An end epoch with a value greater
 // than the key directory's latest
 // epoch sets the end of the epoch range at the directory's latest epoch.
+//
+// Specifically, there are two cases for doing monitoring:
+// prior history verification which can be used to verify the absence
+// of the binding before registration, and name-to-key binding monitoring
+// which can be used to verify the inclusion of the binding after
+// registration.
 type MonitoringRequest struct {
 	Username   string `json:"username"`
 	StartEpoch uint64 `json:"start_epoch"`
@@ -131,8 +137,8 @@ var _ DirectoryResponse = (*DirectoryProofs)(nil)
 // sends to a client upon a RegistrationRequest,
 // and returns a Response containing a DirectoryProof struct.
 // directory.Register() passes an authentication path ap, temporary binding
-// tb and error code e according to the result of the registration, and the signed
-// tree root for the latest epoch str.
+// tb and error code e according to the result of the registration, and
+// the signed tree root for the latest epoch str.
 //
 // See directory.Register() for details on the contents of the created
 // DirectoryProof.
@@ -152,8 +158,8 @@ func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 // sends to a client upon a KeyLookupRequest,
 // and returns a Response containing a DirectoryProof struct.
 // directory.KeyLookup() passes an authentication path ap, temporary binding
-// tb and error code e according to the result of the key lookup, and the signed
-// tree root for the latest epoch str.
+// tb and error code e according to the result of the key lookup, and the
+// signed tree root for the latest epoch str.
 //
 // See directory.KeyLookup() for details on the contents of the created
 // DirectoryProof.
@@ -172,12 +178,12 @@ func NewKeyLookupProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 // NewKeyLookupInEpochProof creates the response message a CONIKS server
 // sends to a client upon a KeyLookupRequest,
 // and returns a Response containing a DirectoryProofs struct.
-// directory.KeyLookupInEpoch() passes an authentication path ap and error code e
-// according to the result of the lookup, and a list of signed
+// directory.KeyLookupInEpoch() passes an authentication path ap and error
+// code e according to the result of the lookup, and a list of signed
 // tree roots for the requested range of epochs str.
 //
-// See directory.KeyLookupInEpoch() for details on the contents of the created
-// DirectoryProofs.
+// See directory.KeyLookupInEpoch() for details on the contents of the
+// created DirectoryProofs.
 func NewKeyLookupInEpochProof(ap *m.AuthenticationPath,
 	str []*m.SignedTreeRoot, e ErrorCode) (*Response, ErrorCode) {
 	aps := append([]*m.AuthenticationPath{}, ap)
@@ -228,15 +234,15 @@ func (msg *Response) validate() error {
 }
 
 // GetKey returns the key extracted from
-// a _verified_ CONIKS server's response.
+// a validated CONIKS server's response.
 //
 // If the response contains a single authentication path,
 // the key is obtained from that authentication path or the
-// temporary binding (which depends on the returned proof type).
+// temporary binding, depending on the returned proof type.
 //
 // If the response contains a range of authentication paths,
 // the key is obtained from the authentication path corresponding
-// with the most recent signed tree root.
+// to the most recent signed tree root.
 func (msg *Response) GetKey() ([]byte, error) {
 	if err := msg.validate(); err != nil {
 		return nil, err

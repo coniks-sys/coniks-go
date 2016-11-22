@@ -2,8 +2,8 @@
 // maintains.
 // A directory is a publicly auditable, tamper-evident, privacy-preserving
 // data structure that contains mappings from usernames to public keys.
-// It currently supports registration, latest-version key lookups, past key lookups,
-// and monitoring.
+// It currently supports registration, latest-version key lookups, past key
+// lookups, and monitoring.
 // It does not yet support key changes.
 
 package protocol
@@ -33,7 +33,7 @@ type ConiksDirectory struct {
 // NewDirectory constructs a new ConiksDirectory given the key server's PAD
 // policies (i.e. epDeadline, vrfKey).
 //
-// signKey is the private key the key server uses to sign signed tree
+// signKey is the private key the key server uses to generate signed tree
 // roots (STRs) and TBs.
 // dirSize indicates the number of PAD snapshots the server keeps in memory.
 // useTBs indicates whether the key server returns TBs upon a successful
@@ -86,15 +86,14 @@ func (d *ConiksDirectory) EpochDeadline() Timestamp {
 	return GetPolicies(d.pad.LatestSTR()).EpochDeadline
 }
 
-// LatestSTR Returns this ConiksDirectory's latest STR.
+// LatestSTR returns this ConiksDirectory's latest STR.
 func (d *ConiksDirectory) LatestSTR() *merkletree.SignedTreeRoot {
 	return d.pad.LatestSTR()
 }
 
 // NewTB creates a new temporary binding for the given name-to-key mapping.
-// NewTB computes the private index corresponding to the name, and
-// generates a digital signature of the index, the given key, and the latest STR
-// signature.
+// NewTB() computes the private index for the name, and
+// digitally signs the (index, key, latest STR signature) tuple.
 func (d *ConiksDirectory) NewTB(name string, key []byte) *TemporaryBinding {
 	index := d.pad.Index(name)
 	return &TemporaryBinding{
@@ -118,12 +117,13 @@ func (d *ConiksDirectory) NewTB(name string, key []byte) *TemporaryBinding {
 // Register() inserts the new mapping in req
 // into a pending version of the directory so it can be included in the
 // snapshot taken at the end of the latest epoch, and returns a
-// message.NewRegistrationProof(ap=proof of absence, str, tb, ReqSuccess) tuple
-// if this operation succeeds.
+// message.NewRegistrationProof(ap=proof of absence, str, tb, ReqSuccess)
+// tuple if this operation succeeds.
 // Otherwise, if the username already exists, Register() returns a
-// message.NewRegistrationProof(ap=proof of inclusion, str, null, ReqNameExisted)
-// tuple. ap will be a proof of absence with a non-null TB, if the username
-// is still pending inclusion in the next directory snapshot.
+// message.NewRegistrationProof(ap=proof of inclusion, str, nil,
+// ReqNameExisted) tuple. ap will be a proof of absence with a non-nil
+// TB, if the username is still pending inclusion in the next directory
+// snapshot.
 // In any case, str is the signed tree root for the latest epoch.
 // If Register() encounters an internal error at any point, it returns
 // a message.NewErrorRespose(ErrDirectory) tuple.
@@ -178,13 +178,14 @@ func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 // malformed, and causes KeyLookup() to return a
 // message.NewErrorResponse(ErrMalformedClientMessage) tuple.
 // If the username doesn't have an entry in the latest directory
-// snapshot and also isn't pending registration (i.e. has a corresponding TB),
-// KeyLookup() returns a message.NewKeyLookupProof(ap=proof of absence,
-// str, null ReqNameNotFound) tuple.
-// Otherwise, KeyLookup() returns a message.NewKeyLookupProof(ap=proof of absence, str, tb, ReqSuccess)
-// tuple if, if there is a corresponding TB for the username,
-// but there isn't an entry in the directory yet, and a
-// a message.NewKeyLookupProof(ap=proof of inclusion, str, null, ReqSuccess).
+// snapshot and also isn't pending registration (i.e. has a corresponding
+// TB), KeyLookup() returns a message.NewKeyLookupProof(ap=proof of absence,
+// str, nil, ReqNameNotFound) tuple.
+// Otherwise, KeyLookup() returns a message.NewKeyLookupProof(ap=proof of
+// absence, str, tb, ReqSuccess) tuple if there is a corresponding TB for
+// the username, but there isn't an entry in the directory yet, and a
+// a message.NewKeyLookupProof(ap=proof of inclusion, str, nil, ReqSuccess)
+// if there is.
 // In any case, str is the signed tree root for the latest epoch.
 // If KeyLookup() encounters an internal error at any point, it returns
 // a message.NewErrorResponse(ErrDirectory) tuple.
@@ -226,12 +227,13 @@ func (d *ConiksDirectory) KeyLookup(req *KeyLookupRequest) (
 // epoch of this directory is considered malformed, and causes
 // KeyLookupInEpoch() to return a
 // message.NewErrorResponse(ErrMalformedClientMessage) tuple.
-// If the username doesn't have an entry in the directory,
-// in the directory snapshot for the indicated epoch, KeyLookupInEpoch()
+// If the username doesn't have an entry in the directory
+// snapshot for the indicated epoch, KeyLookupInEpoch()
 // returns a message.NewKeyLookupInEpochProof(ap=proof of absence, str,
 // ReqNameNotFound) tuple.
 // Otherwise, KeyLookupInEpoch() returns a
-// message.NewKeyLookupInEpochProof(ap=proof of inclusion, str, ReqSuccess) tuple.
+// message.NewKeyLookupInEpochProof(ap=proof of inclusion, str, ReqSuccess)
+// tuple.
 // In either case, str is a list of STRs for the epoch range [ep,
 // d.LatestSTR().Epoch], where ep is the past epoch for which
 // the client has requested the user's key.
@@ -278,12 +280,12 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 // server for logging purposes.
 //
 // A request without a username, with a start epoch greater than the
-// latest epoch of this directory, or a start epoch greater than the end epoch
-// is considered malformed, and causes Monitor() to return a
+// latest epoch of this directory, or a start epoch greater than the
+// end epoch is considered malformed, and causes Monitor() to return a
 // message.NewErrorResponse(ErrMalformedClientMessage) tuple.
 // Monitor() returns a message.NewMonitoringProof(ap, str) tuple.
-// ap is a list of proofs of inclusion, and str is a list of STRs for the epoch
-// range [startEpoch, endEpoch], where startEpoch
+// ap is a list of proofs of inclusion, and str is a list of STRs for
+// the epoch range [startEpoch, endEpoch], where startEpoch
 // and endEpoch are the epoch range endpoints indicated in the client's
 // request. If req.endEpoch is greater than d.LatestSTR().Epoch,
 // the end of the range will be set to d.LatestSTR().Epoch.

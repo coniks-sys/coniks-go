@@ -5,7 +5,7 @@ package protocol
 // A TemporaryBinding consists of the private
 // Index for a username, the Value (i.e. public key etc.)
 // mapped to this index in a key directory, and a digital
-// Signature.
+// Signature of these fields.
 //
 // A TB serves as a proof of registration and as a
 // signed promise by a CONIKS server
@@ -20,8 +20,8 @@ type TemporaryBinding struct {
 	Signature []byte
 }
 
-// Serialize encodes the tb to a byte array with the following format:
-// [strSig, tb.Index, tb.Value].
+// Serialize serializes the temporary binding into
+// a specified format.
 func (tb *TemporaryBinding) Serialize(strSig []byte) []byte {
 	var tbBytes []byte
 	tbBytes = append(tbBytes, strSig...)

@@ -1,4 +1,4 @@
-# CLI CONIKS Client implementation in Golang
+# CONIKS Client implementation in Golang
 __Do not use your real public key or private key with this test client.__
 
 ## Usage
@@ -26,11 +26,20 @@ Available Commands:
 Use "coniksclient [command] --help" for more information about a command.
 ```
 
-##### Create a config file for the client
+### Configure the client
+
+- Generate the configuration file:
 ```
+⇒  mkdir coniks-client; cd coniks-client
 ⇒  coniksclient init
 ```
-You may have to modify the config file accordingly the location of the server's public keys and the server's addresses.
+- Ensure the client has the server's *test* public signing key.
+- Edit the configuration file as needed:
+    - Replace the `sign_pubkey_path` with the location of the server's public signing key.
+    - Replace the `registration_address` with the server's registration address.
+    - Replace the `address` with the server's public CONIKS address (for lookups, monitoring etc).
+
+### Run the client
 
 ##### Register a new name-to-public key mapping with the CONIKS server
 ```
@@ -47,4 +56,6 @@ Success! Key bound to name is: [alice_fake_public_key]
 ```
 
 ## Disclaimer
-Please keep in mind that this CONIKS client implementation is under active development. The repository may contain experimental features that aren't fully tested.
+Please keep in mind that this CONIKS client is under active development.
+The repository may contain experimental features that aren't fully tested.
+We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/releases).

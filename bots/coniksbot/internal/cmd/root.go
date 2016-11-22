@@ -1,5 +1,5 @@
-// Package cmd provides a reference implementation for a CONIKS
-// account verification proxy for Twitter accounts.
+// Package cmd provides the CLI commands for a CONIKS
+// account verification bot for Twitter accounts.
 package cmd
 
 import (

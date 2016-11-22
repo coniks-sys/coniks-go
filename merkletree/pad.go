@@ -10,12 +10,16 @@ import (
 )
 
 var (
-	// ErrorSTRNotFound indicates that the STR has been evicted from memory,
-	// because the maximum number of cached PAD snapshots has been exceeded.
-	ErrorSTRNotFound = errors.New("[merkletree] STR not found")
+	// ErrSTRNotFound indicates that the STR has been evicted from
+	// memory, because the maximum number of cached PAD snapshots
+	// has been exceeded.
+	ErrSTRNotFound = errors.New("[merkletree] STR not found")
 )
 
-// PAD is an acronym for persistent authenticated dictionary
+// A PAD represents a persistent authenticated dictionary,
+// and includes the underlying MerkleTree, cached snapshots,
+// the latest SignedTreeRoot, two key pairs for signing and VRF
+// computation, and additional developer-specified AssocData.
 type PAD struct {
 	signKey      sign.PrivateKey
 	vrfKey       vrf.PrivateKey
@@ -26,8 +30,9 @@ type PAD struct {
 	ad           AssocData
 }
 
-// NewPAD creates new PAD consisting of an array of hash chain
-// indexed by the epoch and its maximum length is len.
+// NewPAD creates new PAD with the given associated data ad,
+// signing key pair signKey, VRF key pair vrfKey, and the
+// maximum capacity for the snapshot cache len.
 func NewPAD(ad AssocData, signKey sign.PrivateKey, vrfKey vrf.PrivateKey, len uint64) (*PAD, error) {
 	if ad == nil {
 		panic("[merkletree] PAD must be created with non-nil associated data")
@@ -53,7 +58,8 @@ func (pad *PAD) signTreeRoot(epoch uint64) {
 		var err error
 		prevHash, err = crypto.MakeRand()
 		if err != nil {
-			// panic here since if there is an error, it will break the PAD.
+			// panic here since if there is an error, it
+			// will break the PAD.
 			panic(err)
 		}
 	} else {
@@ -65,7 +71,8 @@ func (pad *PAD) signTreeRoot(epoch uint64) {
 }
 
 func (pad *PAD) updateInternal(ad AssocData, epoch uint64) {
-	// Create STR with the `ad` that was used in the prev. Set() operation.
+	// Create STR with the `ad` that was used in the prev. Set()
+	// operation.
 	pad.signTreeRoot(epoch)
 	pad.snapshots[epoch] = pad.latestSTR
 	pad.loadedEpochs = append(pad.loadedEpochs, epoch)
@@ -75,11 +82,11 @@ func (pad *PAD) updateInternal(ad AssocData, epoch uint64) {
 }
 
 // Update generates a new snapshot of the tree.
-// It should be called in the beginning of each epoch.
+// It should be called at the beginning of each epoch.
 // Specifically, it extends the hash chain by issuing
 // a new signed tree root. It may remove some older signed tree roots from
 // memory if the cached PAD snapshots exceeded the maximum capacity.
-// `ad` could be nil if the PAD's `ad` do not change.
+// ad should be nil if the PAD's associated data ad do not change.
 func (pad *PAD) Update(ad AssocData) {
 	// delete older str(s) as needed
 	if len(pad.loadedEpochs) == cap(pad.loadedEpochs) {
@@ -92,29 +99,33 @@ func (pad *PAD) Update(ad AssocData) {
 	pad.updateInternal(ad, pad.latestSTR.Epoch+1)
 }
 
-// Set computes the private index of the given key using
-// the current VRF private key (which will be inserted in the next
-// signed tree root) to create a new index-to-key binding,
-// and then Set inserts it into the Merkle tree underlying the PAD.
+// Set computes the private index for the given key using
+// the current VRF private key to create a new index-to-value binding,
+// and inserts it into the PAD's underlying Merkle tree. This ensures
+// the index-to-value binding will be included in the next PAD snapshot.
 func (pad *PAD) Set(key string, value []byte) error {
 	return pad.tree.Set(pad.Index(key), key, value)
 }
 
-// Lookup searches the requested key in the latest snapshot of the PAD.
+// Lookup searches the requested key in the latest snapshot of the PAD,
+// and returns the corresponding AuthenticationPath proving inclusion
+// or absence of the requested key.
 func (pad *PAD) Lookup(key string) (*AuthenticationPath, error) {
 	return pad.LookupInEpoch(key, pad.latestSTR.Epoch)
 }
 
-// LookupInEpoch searches the requested key in the snapshot at the requested epoch.
+// LookupInEpoch searches the requested key in the snapshot at the
+// requested epoch.
 // It returns ErrorSTRNotFound if the signed tree root of the requested epoch
-// has been removed from memory.
+// has been removed from memory, indicating to the server that the
+// STR for the requested epoch should be retrieved from persistent storage.
 func (pad *PAD) LookupInEpoch(key string, epoch uint64) (*AuthenticationPath, error) {
 	str := pad.GetSTR(epoch)
 	if str == nil {
-		return nil, ErrorSTRNotFound
+		return nil, ErrSTRNotFound
 	}
-	// TODO: If the vrf key is rotated, we'd need to use the key corresponding
-	// to the `epoch` here.  See #120
+	// TODO: If the vrf key is rotated, we'd need to use the key
+	// corresponding to the `epoch` here.  See #120
 	lookupIndex, proof := pad.computePrivateIndex(key, pad.vrfKey)
 	ap := str.tree.Get(lookupIndex)
 	ap.VrfProof = proof
@@ -142,17 +153,16 @@ func (pad *PAD) Sign(msg ...[]byte) []byte {
 }
 
 // Index uses the _current_ VRF private key of the PAD to compute
-// the private index of the requested key.
+// the private index for the requested key.
 func (pad *PAD) Index(key string) []byte {
 	index, _ := pad.computePrivateIndex(key, pad.vrfKey)
 	return index
 }
 
-// reshuffle recomputes indices of keys and store them with their values in new
-// tree with new new position;
-// swaps pad.tree if everything worked out.
-// if there is any error on the way (lack of entropy for randomness) reshuffle
-// will panic
+// reshuffle recomputes indices of keys and store them with their values
+// in new tree with new new position; swaps pad.tree if everything worked
+// out. If there is any error on the way (lack of entropy for randomness)
+// reshuffle will panic
 func (pad *PAD) reshuffle() {
 	newTree, err := NewMerkleTree()
 	if err != nil {

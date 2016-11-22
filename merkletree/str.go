@@ -19,7 +19,7 @@ type AssocData interface {
 // at the beginning of every epoch.
 // Signed tree roots contain the current root node,
 // the current and previous epochs, the hash of the
-// previous STR, and its signature.
+// previous STR, its signature, and developer-specified associated data.
 // The epoch number is a counter from 0, and increases by 1
 // when a new signed tree root is issued by the PAD.
 type SignedTreeRoot struct {
@@ -43,7 +43,7 @@ func (r RawAd) Serialize() []byte {
 	return nil
 }
 
-// UnmarshalJSON return the STR with a json.RawMessage as AssocData for
+// UnmarshalJSON returns the STR with a json.RawMessage as AssocData for
 // further unmarshalling by the caller.
 func (str *SignedTreeRoot) UnmarshalJSON(m []byte) error {
 	type Str struct {
@@ -69,6 +69,9 @@ func (str *SignedTreeRoot) UnmarshalJSON(m []byte) error {
 	return nil
 }
 
+// NewSTR constructs a SignedTreeRoot with the given signing key pair,
+// associated data, MerkleTree, epoch, previous STR hash, and
+// digitally signs the STR using the given signing key.
 func NewSTR(key sign.PrivateKey, ad AssocData, m *MerkleTree, epoch uint64, prevHash []byte) *SignedTreeRoot {
 	prevEpoch := epoch - 1
 	if epoch == 0 {

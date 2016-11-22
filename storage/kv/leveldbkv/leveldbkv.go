@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations under
 // the License.
 
-// Package leveldbkv implements the kv interface using leveldb
+// Package leveldbkv implements the kv interface using leveldb.
 package leveldbkv
 
 import (

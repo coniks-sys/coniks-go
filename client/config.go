@@ -9,13 +9,14 @@ import (
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
-// Config contains the client's configuration needed to send request to a
-// CONIKS-server: the path to the server's signing public-key file
+// Config contains the client's configuration needed to send a request to a
+// CONIKS server: the path to the server's signing public-key file
 // and the actual public-key parsed from that file; the server's addresses
-// for sending registration requests and other types of request, respectively.
+// for sending registration requests and other types of requests,
+// respectively.
 //
-// Note that if RegAddress is empty, it will be fallback to use Address for
-// all request types.
+// Note that if RegAddress is empty, the client falls back to using Address
+// for all request types.
 type Config struct {
 	SignPubkeyPath string `toml:"sign_pubkey_path"`
 
@@ -27,7 +28,7 @@ type Config struct {
 
 // LoadConfig returns a client's configuration read from the given filename.
 // It reads the signing public-key file and parses the actual key.
-// If there is any parsing or IO-error it returns an error (and the return
+// If there is any parsing or IO-error it returns an error (and the returned
 // config will be nil).
 func LoadConfig(file string) (*Config, error) {
 	var conf Config

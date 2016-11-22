@@ -57,6 +57,8 @@ func (n *ProofNode) hash(treeNonce []byte) []byte {
 	}
 }
 
+// A ProofType indicates whether an AuthenticationPath is
+// a proof of inclusion or a proof of absence.
 type ProofType int
 
 const (
@@ -136,6 +138,10 @@ func (ap *AuthenticationPath) Verify(key, value, treeHash []byte) error {
 	return nil
 }
 
+// ProofType returns the type of ap. It does a comparison
+// between the leaf index and the lookup index to determine
+// the proof type, and sets ap's proof type the first time this
+// method called, memoizing the proof type for subsequent calls.
 func (ap *AuthenticationPath) ProofType() ProofType {
 	if ap.proofType == undeterminedProof {
 		if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {

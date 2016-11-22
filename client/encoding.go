@@ -8,7 +8,7 @@ import (
 )
 
 // UnmarshalResponse decodes the given message into a protocol.Response
-// according to the given request-type t. This request-types are integer
+// according to the given request type t. The request types are integer
 // constants defined in the protocol package.
 func UnmarshalResponse(t int, msg []byte) *p.Response {
 	type Response struct {
@@ -71,7 +71,7 @@ func UnmarshalResponse(t int, msg []byte) *p.Response {
 }
 
 // CreateRegistrationMsg returns a JSON encoding of
-// a protocol.RegistrationRequest with the given (name, key) pair.
+// a protocol.RegistrationRequest for the given (name, key) pair.
 func CreateRegistrationMsg(name string, key []byte) ([]byte, error) {
 	return json.Marshal(&p.Request{
 		Type: p.RegistrationType,
@@ -83,7 +83,7 @@ func CreateRegistrationMsg(name string, key []byte) ([]byte, error) {
 }
 
 // CreateLookupMsg returns a JSON encoding of
-// a protocol.KeyLookupRequest with the given name.
+// a protocol.KeyLookupRequest for the given name.
 func CreateLookupMsg(name string) ([]byte, error) {
 	return json.Marshal(&p.Request{
 		Type: p.KeyLookupType,

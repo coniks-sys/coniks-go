@@ -17,19 +17,22 @@ users automatically, and prevents malicious/compromised servers from
 hijacking secure communications without getting caught.
 
 ## Golang Library
-The packages in this library implement the various components of the CONIKS system and may be imported individually.
+The packages in this library implement the various components of the CONIKS
+system and may be imported individually.
 
-- ``bots``: Registration bots for user account verification
+- ``bots``: Registration proxies for user account verification
 - ``client``: A reference implementation of a CONIKS client
 - ``crypto``: Cryptographic algorithms and operations
 - ``keyserver``: A reference implementation of a CONIKS key server
 - ``merkletree``: Merkle prefix tree and related data structures
 - ``utils``: Utility functions
 - ``protocol``: CONIKS protocols implementation/library
-- ``storage``: DB hooks for storage backend (currently the library supports key-value db only)
+- ``storage``: Hooks for persistent storage backend (currently unused)
 
 ## Disclaimer
-Please keep in mind that this CONIKS library is under active development. The repository may contain experimental features that aren't fully tested. We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/releases).
+Please keep in mind that this CONIKS library is under active development.
+The repository may contain experimental features that aren't fully tested.
+We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/releases).
 
 ##Documentation
 https://godoc.org/github.com/coniks-sys/coniks-go

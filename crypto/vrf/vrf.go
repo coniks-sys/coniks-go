@@ -25,8 +25,8 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/coniks-sys/coniks-go/crypto/ed25519/edwards25519"
-	"github.com/coniks-sys/coniks-go/crypto/ed25519/extra25519"
+	"github.com/coniks-sys/coniks-go/crypto/internal/ed25519/edwards25519"
+	"github.com/coniks-sys/coniks-go/crypto/internal/ed25519/extra25519"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -39,14 +39,14 @@ const (
 )
 
 var (
-	ErrGetPubKey = errors.New("[vrf] Couldn't get correspoding public-key from private-key")
+	ErrGetPubKey = errors.New("[vrf] Couldn't get corresponding public-key from private-key")
 )
 
 type PrivateKey []byte
 type PublicKey []byte
 
-// GenerateKey creates a public/private key pair. rnd is used for randomness.
-// If it is nil, `crypto/rand` is used.
+// GenerateKey creates a public/private key pair using rnd for randomness.
+// If rnd is nil, crypto/rand is used.
 func GenerateKey(rnd io.Reader) (sk PrivateKey, err error) {
 	if rnd == nil {
 		rnd = rand.Reader
@@ -67,6 +67,8 @@ func GenerateKey(rnd io.Reader) (sk PrivateKey, err error) {
 	return
 }
 
+// Public extracts the public VRF key from the underlying private-key
+// and returns a boolean indicating if the operation was successful.
 func (sk PrivateKey) Public() (PublicKey, bool) {
 	pk, ok := ed25519.PrivateKey(sk).Public().(ed25519.PublicKey)
 	return PublicKey(pk), ok
@@ -84,6 +86,8 @@ func (sk PrivateKey) expandSecret() (x, skhr *[32]byte) {
 	return
 }
 
+// Compute generates the vrf value for the byte slice m using the
+// underlying private key sk.
 func (sk PrivateKey) Compute(m []byte) []byte {
 	x, _ := sk.expandSecret()
 	var ii edwards25519.ExtendedGroupElement
@@ -111,8 +115,9 @@ func hashToCurve(m []byte) *edwards25519.ExtendedGroupElement {
 	return &hm
 }
 
-// Prove returns the vrf value and a proof such that Verify(pk, m, vrf, proof)
-// == true. The vrf value is the same as returned by Compute(m, sk).
+// Prove returns the vrf value and a proof such that
+// Verify(m, vrf, proof) == true. The vrf value is the
+// same as returned by Compute(m).
 func (sk PrivateKey) Prove(m []byte) (vrf, proof []byte) {
 	x, skhr := sk.expandSecret()
 	var cH, rH [64]byte
@@ -158,7 +163,8 @@ func (sk PrivateKey) Prove(m []byte) (vrf, proof []byte) {
 	return
 }
 
-// Verify returns true iff vrf=Compute(m, sk) for the sk that corresponds to pk.
+// Verify returns true iff vrf=Compute(m) for the sk that
+// corresponds to pk.
 func (pkBytes PublicKey) Verify(m, vrfBytes, proof []byte) bool {
 	if len(proof) != ProofSize || len(vrfBytes) != Size || len(pkBytes) != PublicKeySize {
 		return false
