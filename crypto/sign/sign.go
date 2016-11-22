@@ -1,3 +1,5 @@
+// Package sign implements a digital signature scheme using the Edwards
+// form of Curve25519.
 package sign
 
 import (
