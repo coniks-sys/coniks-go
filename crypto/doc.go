@@ -1,4 +1,8 @@
-// Package crypto contains some cryptographic routines, to:
+// Package crypto contains the cryptographic routines for CONIKS:
+// hashing, cryptographic commitments, digital signatures, VRF,
+// and random number generation.
+//
+// These cryptographic routines are used to:
 //
 // - hash arbitrary data (`Digest`) using SHA3 (SHAKE128),
 //
