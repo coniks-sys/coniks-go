@@ -26,7 +26,7 @@ The packages in this library implement the various components of the CONIKS syst
 - ``merkletree``: Merkle prefix tree and related data structures
 - ``utils``: Utility functions
 - ``protocol``: CONIKS protocols implementation/library
-- ``storage``: DB hooks for storage backend (currently the library supports key-value db only)
+- ``storage``: Hooks for persistent storage backend (currently unused)
 
 ## Disclaimer
 Please keep in mind that this CONIKS library is under active development. The repository may contain experimental features that aren't fully tested. We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/releases).
