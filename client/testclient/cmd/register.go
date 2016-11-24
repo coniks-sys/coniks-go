@@ -10,7 +10,6 @@ import (
 	"github.com/coniks-sys/coniks-go/keyserver/testutil"
 	p "github.com/coniks-sys/coniks-go/protocol"
 	"github.com/spf13/cobra"
-	//"encoding/hex"
 )
 
 var registerCmd = &cobra.Command{
@@ -34,18 +33,12 @@ Example call:
 			os.Exit(-1)
 		}
 
-		// FIXME allow to use another address than the one defined in testutil package
-		//addr, err := net.ResolveUnixAddr("unix", cmd.Flag("socket").Value.String())
-		//if err != nil {
-		//	fmt.Println("Invalid socket address: " + err.Error())
-		//	os.Exit(1)
-		//}
-		res, err := testutil.NewUnixClient(msg)
+		addr := cmd.Flag("address").Value.String()
+		res, err := testutil.NewUnixClient(msg, addr)
 		if err != nil {
 			fmt.Println("Error while receiving response: " + err.Error())
 		}
 
-		// fmt.Println(hex.Dump(res))
 		response, errCode := client.UnmarshalResponse(p.RegistrationType,
 			res)
 		switch errCode {
@@ -89,7 +82,7 @@ func init() {
 	// strings are more convenient, though.
 	registerCmd.Flags().StringP("key", "k", "",
 		"Key-material you want to bind to the user name.")
-	registerCmd.Flags().StringP("socket", "s", "/tmp/coniks.sock",
+	registerCmd.Flags().StringP("address", "a", "unix:///tmp/conikstest.sock",
 		"The socket on which the client can directly connect to the key-server.")
 	registerCmd.Flags().StringP("config", "c", "config.toml",
 		"Config file for the client (contains the server's initial public key etc.)")

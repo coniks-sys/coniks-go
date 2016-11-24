@@ -161,8 +161,8 @@ func NewTCPClient(msg []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func NewUnixClient(msg []byte) ([]byte, error) {
-	u, _ := url.Parse(LocalConnection)
+func NewUnixClient(msg []byte, address string) ([]byte, error) {
+	u, _ := url.Parse(address)
 	unixaddr := &net.UnixAddr{Name: u.Path, Net: u.Scheme}
 	conn, err := net.DialUnix(u.Scheme, nil, unixaddr)
 	if err != nil {
@@ -182,4 +182,8 @@ func NewUnixClient(msg []byte) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+func NewUnixClientDefault(msg []byte) ([]byte, error) {
+	return NewUnixClient(msg, LocalConnection)
 }
