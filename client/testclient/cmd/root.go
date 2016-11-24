@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// RootCmd represents the base "testclient" command when called without any
+// subcommands (register, lookup, ...).
 var RootCmd = &cobra.Command{
 	Use:   "coniksclient",
 	Short: "CONIKS client reference implementation in Go",

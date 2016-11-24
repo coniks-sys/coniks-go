@@ -9,6 +9,10 @@ import (
 	"io/ioutil"
 )
 
+// Config contains the client's configuration needed to send request to a
+// CONIKS-server:
+//  - the path to the server's VRF and signing public-key file, respectively;
+//  - the actual public-keys parsed from these files.
 type Config struct {
 	configPath string
 
@@ -19,6 +23,10 @@ type Config struct {
 	VrfPubKey     vrf.PublicKey
 }
 
+// LoadConfig returns a client's configuration read from the given filename.
+// It reads the (VRF and signing) public-key files and parses the actual keys.
+// If there is any parsing or IO-error it returns and error (and the return
+// config will be nil).
 func LoadConfig(file string) (*Config, error) {
 	var conf Config
 	if _, err := toml.DecodeFile(file, &conf); err != nil {

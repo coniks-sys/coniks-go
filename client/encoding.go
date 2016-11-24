@@ -8,6 +8,9 @@ import (
 	"github.com/coniks-sys/coniks-go/merkletree"
 )
 
+// UnmarshalResponse decodes the given message into a protocol.DirectoryResponse
+// according to the given request-type t. This request-types are integer
+// constants defined in the protocol package.
 func UnmarshalResponse(t int, msg []byte) (
 	p.DirectoryResponse, p.ErrorCode) {
 	type Response struct {
@@ -24,9 +27,8 @@ func UnmarshalResponse(t int, msg []byte) (
 	if res.DirectoryResponse == nil {
 		if !p.Errors[res.Error] {
 			return nil, p.ErrMalformedDirectoryMessage
-		} else {
-			return nil, res.Error
 		}
+		return nil, res.Error
 	}
 
 	switch t {
