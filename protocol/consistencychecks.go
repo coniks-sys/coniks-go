@@ -59,8 +59,10 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 // the directory has successfully handled the request.
 // The verifier will then check the consistency (i.e. binding validity
 // and non-equivocation) of the response.
+//
 // HandleResponse() will panic if it is called with an int
 // which isn't a valid/known request-type.
+//
 // Note that the consistency state will be updated regardless of
 // whether the checks pass / fail, since a response message contains
 // cryptographic proof of having been issued nonetheless.
