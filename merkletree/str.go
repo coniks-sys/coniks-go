@@ -3,8 +3,10 @@ package merkletree
 import (
 	"bytes"
 
+	"encoding/json"
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
+	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
@@ -29,6 +31,51 @@ type SignedTreeRoot struct {
 	Signature       []byte
 	Ad              AssocData
 }
+
+// FIXME this shouldn't really be here; find a more elegant way to deal with
+// the AssocData interface or (at least) move to a another file:
+type FIXMEPolicies struct { // can't use protocol.Policies: otherwise import cycle!
+	Version       string
+	HashID        string
+	VrfPublicKey  vrf.PublicKey
+	EpochDeadline uint64
+}
+
+func (p *FIXMEPolicies) Serialize() []byte {
+	return nil
+}
+func (str *SignedTreeRoot) UnmarshalJSON(m []byte) error {
+	type Str struct {
+		tree            *MerkleTree
+		TreeHash        []byte
+		Epoch           uint64
+		PreviousEpoch   uint64
+		PreviousSTRHash []byte
+		Signature       []byte
+		Ad              json.RawMessage
+	}
+	hStr := &Str{}
+	if err := json.Unmarshal(m, hStr); err != nil {
+		return err
+	}
+	// AssocData
+	p := &FIXMEPolicies{}
+	if err := json.Unmarshal([]byte(hStr.Ad), p); err != nil {
+		return err
+	}
+	str.Ad = p
+
+	str.tree = hStr.tree
+	str.TreeHash = hStr.TreeHash
+	str.Epoch = hStr.Epoch
+	str.PreviousEpoch = hStr.PreviousEpoch
+	str.PreviousSTRHash = hStr.PreviousSTRHash
+	str.Signature = hStr.Signature
+
+	return nil
+}
+
+// END of FIXME
 
 func NewSTR(key sign.PrivateKey, ad AssocData, m *MerkleTree, epoch uint64, prevHash []byte) *SignedTreeRoot {
 	prevEpoch := epoch - 1
