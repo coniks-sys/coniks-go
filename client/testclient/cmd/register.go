@@ -10,6 +10,7 @@ import (
 	"github.com/coniks-sys/coniks-go/keyserver/testutil"
 	p "github.com/coniks-sys/coniks-go/protocol"
 	"github.com/spf13/cobra"
+	//"encoding/hex"
 )
 
 var registerCmd = &cobra.Command{
@@ -44,6 +45,7 @@ Example call:
 			fmt.Println("Error while receiving response: " + err.Error())
 		}
 
+		// fmt.Println(hex.Dump(res))
 		response, errCode := client.UnmarshalResponse(p.RegistrationType,
 			res)
 		switch errCode {

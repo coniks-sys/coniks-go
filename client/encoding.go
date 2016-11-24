@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	p "github.com/coniks-sys/coniks-go/protocol"
+	//"fmt"
 )
 
 func UnmarshalResponse(t int, msg []byte) (
@@ -14,8 +15,6 @@ func UnmarshalResponse(t int, msg []byte) (
 	}
 	var res Response
 	if err := json.Unmarshal(msg, &res); err != nil {
-		// FIXME: fmt.Println(err) yields:
-		// json: cannot unmarshal object into Go value of type merkletree.AssocData
 		return nil, p.ErrMalformedDirectoryMessage
 	}
 
@@ -33,12 +32,18 @@ func UnmarshalResponse(t int, msg []byte) (
 	case p.RegistrationType, p.KeyLookupType:
 		response := new(p.DirectoryProof)
 		if err := json.Unmarshal(res.DirectoryResponse, &response); err != nil {
+			// FIXME: fmt.Println(err) yields:
+			// json: cannot unmarshal object into Go value of type merkletree.AssocData
+			// fmt.Println(err)
 			return nil, p.ErrMalformedDirectoryMessage
 		}
 		return response, res.Error
 	case p.KeyLookupInEpochType, p.MonitoringType:
 		response := new(p.DirectoryProofs)
 		if err := json.Unmarshal(res.DirectoryResponse, &response); err != nil {
+			// FIXME: fmt.Println(err) yields:
+			// json: cannot unmarshal object into Go value of type merkletree.AssocData
+			// fmt.Println(err)
 			return nil, p.ErrMalformedDirectoryMessage
 		}
 		return response, res.Error
