@@ -25,8 +25,8 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
-	"github.com/coniks-sys/coniks-go/crypto/ed25519/edwards25519"
-	"github.com/coniks-sys/coniks-go/crypto/ed25519/extra25519"
+	"github.com/coniks-sys/coniks-go/crypto/internal/ed25519/edwards25519"
+	"github.com/coniks-sys/coniks-go/crypto/internal/ed25519/extra25519"
 	"golang.org/x/crypto/ed25519"
 )
 
