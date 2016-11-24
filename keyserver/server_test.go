@@ -170,7 +170,7 @@ func TestBotSendsRegistration(t *testing.T) {
 		_, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 
-		rev, err := testutil.NewUnixClientDefault([]byte(registrationMsg))
+		rev, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -304,12 +304,12 @@ func TestBotSendsLookup(t *testing.T) {
 		_, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 
-		rev, err := testutil.NewUnixClientDefault([]byte(registrationMsg))
+		rev, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		rev, err = testutil.NewUnixClientDefault([]byte(keylookupMsg))
+		rev, err = testutil.NewUnixClient([]byte(keylookupMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -329,7 +329,7 @@ func TestRegisterAndLookupInTheSameEpoch(t *testing.T) {
 		_, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 
-		_, err := testutil.NewUnixClientDefault([]byte(registrationMsg))
+		_, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -373,7 +373,7 @@ func TestRegisterAndLookup(t *testing.T) {
 		server, teardown := startServer(t, db, 1, true, "")
 		defer teardown()
 
-		_, err := testutil.NewUnixClientDefault([]byte(registrationMsg))
+		_, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -418,7 +418,7 @@ func TestKeyLookup(t *testing.T) {
 		server, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 
-		_, err := testutil.NewUnixClientDefault([]byte(registrationMsg))
+		_, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -466,7 +466,7 @@ func TestKeyLookupInEpoch(t *testing.T) {
 		for i := 0; i < 3; i++ {
 			server.dir.Update()
 		}
-		_, err := testutil.NewUnixClientDefault([]byte(registrationMsg))
+		_, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -506,7 +506,7 @@ func TestMonitoring(t *testing.T) {
 		server, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 
-		res, err := testutil.NewUnixClientDefault([]byte(registrationMsg))
+		res, err := testutil.NewUnixClient([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}

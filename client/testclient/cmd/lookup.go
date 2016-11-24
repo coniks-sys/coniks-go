@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,6 +9,8 @@ import (
 	"github.com/coniks-sys/coniks-go/keyserver/testutil"
 	p "github.com/coniks-sys/coniks-go/protocol"
 	"github.com/spf13/cobra"
+	//"encoding/hex"
+	//"github.com/davecgh/go-spew/spew"
 )
 
 var lookupCmd = &cobra.Command{
@@ -25,7 +26,7 @@ var lookupCmd = &cobra.Command{
 		}
 		req, err := createLookupRequest(name)
 		if err != nil {
-			fmt.Println("Couldn'r create request!")
+			fmt.Println("Couldn't create request!")
 			os.Exit(-1)
 		}
 		resp, err := testutil.NewTCPClient(req)
@@ -33,35 +34,32 @@ var lookupCmd = &cobra.Command{
 			fmt.Println("Error while retrieving repsonse: " + err.Error())
 			os.Exit(-1)
 		}
+		// FIXME remove comment:
+		// fmt.Println(hex.Dump(resp))
 		response, errCode := client.UnmarshalResponse(p.KeyLookupType,
 			resp)
-		// FIXME Maybe we can get rid of this check:
-		res, ok := response.(*p.DirectoryProof)
-		if !ok {
-			fmt.Println("Got unexpected response from server!")
-			os.Exit(-1)
-		}
+		//spew.Dump(response)
 		switch errCode {
 		case p.ReqSuccess:
 			// FIXME reuse/load the cc from the registration instead:
 			cc := p.NewCC(nil, true, conf.SigningPubKey)
-			key := res.AP.Leaf.Value
+			//ap := response.(*p.DirectoryProof).AP
 			// FIXME same comment as in register.go
 			resp := &p.Response{errCode, response}
-			err := cc.HandleResponse(p.KeyLookupType, resp, name, key)
+			err := cc.HandleResponse(p.KeyLookupType, resp, name, nil)
 			if err != p.CheckPassed {
 				fmt.Printf("Couldn't validate response: %s\n", err)
 			} else {
-				fmt.Println("Sucess! Key bound to name is: [" +
-					string(res.AP.Leaf.Value) + "]")
-				fmt.Println("Index:\n" + hex.Dump(res.AP.Leaf.Index))
+				fmt.Println("Sucess! Key bound to name is: [" /*+ string(ap.Leaf.Value) + "]"*/)
+				//fmt.Println("Index:\n" + hex.Dump(ap.Leaf.Index))
 			}
 		case p.ErrMalformedClientMessage:
 			fmt.Println("Server reported malformed client message.")
 		case p.ReqNameNotFound:
 			// TODO refactor common code (see p.Success case above):
 			cc := p.NewCC(nil, true, conf.SigningPubKey)
-			key := res.AP.Leaf.Value
+			ap := response.(*p.DirectoryProof).AP
+			key := ap.Leaf.Value
 			// FIXME same comment as in register.go
 			resp := &p.Response{errCode, response}
 			err := cc.HandleResponse(p.KeyLookupType, resp, name, key)

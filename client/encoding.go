@@ -14,6 +14,8 @@ func UnmarshalResponse(t int, msg []byte) (
 	}
 	var res Response
 	if err := json.Unmarshal(msg, &res); err != nil {
+		// FIXME: fmt.Println(err) yields:
+		// json: cannot unmarshal object into Go value of type merkletree.AssocData
 		return nil, p.ErrMalformedDirectoryMessage
 	}
 

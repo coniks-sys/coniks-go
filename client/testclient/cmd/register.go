@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"net"
 	"os"
 
 	"encoding/json"
@@ -17,9 +16,6 @@ var registerCmd = &cobra.Command{
 	Use:   "register",
 	Short: "Register a name-to-key binding.",
 	Long: `Register a new name-to-key binding on the CONIKS-server.
-Note that, for the registration to work, the test-client needs to be running on the same machine as the key-server.
-A real client would first register an app here: https://apps.twitter.com (the UI should make this possible without actually leaving the client application). Then, the client would use the oauth1 API (find the tokens on the [Keys and Access Tokens] tab of the aforementioned page) and contact the (twitter-)bot for a registration request. The twitter bot is also accessible from outside.
-For more information consult: https://godoc.org/github.com/coniks-sys/coniks-go/bots
 
 Example call:
   coniksclient register --name Alice@twitter --key fake_test_key`,
@@ -37,12 +33,13 @@ Example call:
 			os.Exit(-1)
 		}
 
-		addr, err := net.ResolveUnixAddr("unix", cmd.Flag("socket").Value.String())
-		if err != nil {
-			fmt.Println("Invalid socket address: " + err.Error())
-			os.Exit(1)
-		}
-		res, err := testutil.NewUnixClient(msg, addr)
+		// FIXME allow to use another address than the one defined in testutil package
+		//addr, err := net.ResolveUnixAddr("unix", cmd.Flag("socket").Value.String())
+		//if err != nil {
+		//	fmt.Println("Invalid socket address: " + err.Error())
+		//	os.Exit(1)
+		//}
+		res, err := testutil.NewUnixClient(msg)
 		if err != nil {
 			fmt.Println("Error while receiving response: " + err.Error())
 		}
