@@ -27,7 +27,7 @@ Use "coniksbot [command] --help" for more information about a command.
 ```
 - Create a Twitter account for your bot.
 - Obtain OAuth tokens to authorize the bot for the new Twitter account:
-    - visit https://apps.twitter.com
+    - Visit https://apps.twitter.com
     - Click "Create New App" and enter the required information.
     - In the "Permissions" tab, change the app permissions to allow direct messages.
     - In the "Keys and Access Tokens" tab, create access tokens by clicking "Create my access token".
