@@ -50,9 +50,6 @@ func UnmarshalResponse(t int, msg []byte) (
 	case p.KeyLookupInEpochType, p.MonitoringType:
 		response := new(p.DirectoryProofs)
 		if err := json.Unmarshal(res.DirectoryResponse, &response); err != nil {
-			// FIXME: fmt.Println(err) yields:
-			// json: cannot unmarshal object into Go value of type merkletree.AssocData
-			//fmt.Println("json.Unmarshal(res.DirectoryResponse, &response)", err)
 			return nil, p.ErrMalformedDirectoryMessage
 		}
 		return response, res.Error

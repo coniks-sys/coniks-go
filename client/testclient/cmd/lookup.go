@@ -9,8 +9,6 @@ import (
 	"github.com/coniks-sys/coniks-go/keyserver/testutil"
 	p "github.com/coniks-sys/coniks-go/protocol"
 	"github.com/spf13/cobra"
-	//"encoding/hex"
-	//"github.com/davecgh/go-spew/spew"
 )
 
 var lookupCmd = &cobra.Command{
@@ -34,24 +32,20 @@ var lookupCmd = &cobra.Command{
 			fmt.Println("Error while retrieving repsonse: " + err.Error())
 			os.Exit(-1)
 		}
-		// FIXME remove comment:
-		// fmt.Println(hex.Dump(resp))
 		response, errCode := client.UnmarshalResponse(p.KeyLookupType,
 			resp)
-		//spew.Dump(response)
 		switch errCode {
 		case p.ReqSuccess:
 			// FIXME reuse/load the cc from the registration instead:
 			cc := p.NewCC(nil, true, conf.SigningPubKey)
-			//ap := response.(*p.DirectoryProof).AP
+			ap := response.(*p.DirectoryProof).AP
 			// FIXME same comment as in register.go
 			resp := &p.Response{errCode, response}
 			err := cc.HandleResponse(p.KeyLookupType, resp, name, nil)
 			if err != p.CheckPassed {
 				fmt.Printf("Couldn't validate response: %s\n", err)
 			} else {
-				fmt.Println("Sucess! Key bound to name is: [" /*+ string(ap.Leaf.Value) + "]"*/)
-				//fmt.Println("Index:\n" + hex.Dump(ap.Leaf.Index))
+				fmt.Println("Sucess! Key bound to name is: [" + string(ap.Leaf.Value) + "]")
 			}
 		case p.ErrMalformedClientMessage:
 			fmt.Println("Server reported malformed client message.")
