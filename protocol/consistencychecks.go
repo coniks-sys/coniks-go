@@ -24,13 +24,13 @@ import (
 // subsequent responses from the ConiksDirectory to any
 // client request.
 type ConsistencyChecks struct {
+	// SavedSTR stores the latest verified signed tree root.
 	SavedSTR *m.SignedTreeRoot
 
 	// extensions settings
 	useTBs bool
 	TBs    map[string]*TemporaryBinding
 
-	// signing key
 	signKey sign.PublicKey
 }
 
