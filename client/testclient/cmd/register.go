@@ -56,7 +56,7 @@ Example call:
 			// or modify HandleResponse accordingly:
 			resp := &p.Response{errCode, response}
 			err := cc.HandleResponse(p.RegistrationType, resp,
-				name, nil)
+				name, []byte(key))
 			if err != p.CheckPassed {
 				fmt.Printf("Couldn't validate response: %s", err)
 				return
