@@ -50,7 +50,7 @@ func (str *SignedTreeRoot) UnmarshalJSON(m []byte) error {
 		PreviousEpoch   uint64
 		PreviousSTRHash []byte
 		Signature       []byte
-		Ad              RawAd
+		Ad              json.RawMessage
 	}
 	hStr := &Str{}
 	if err := json.Unmarshal(m, hStr); err != nil {
@@ -62,7 +62,7 @@ func (str *SignedTreeRoot) UnmarshalJSON(m []byte) error {
 	str.PreviousEpoch = hStr.PreviousEpoch
 	str.PreviousSTRHash = hStr.PreviousSTRHash
 	str.Signature = hStr.Signature
-	str.Ad = hStr.Ad
+	str.Ad = RawAd(hStr.Ad)
 	return nil
 }
 
