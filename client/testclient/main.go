@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/coniks-sys/coniks-go/client/testclient/cmd"
+	"github.com/coniks-sys/coniks-go/client/testclient/internal/cmd"
 )
 
 func main() {

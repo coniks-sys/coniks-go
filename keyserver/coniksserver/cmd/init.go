@@ -2,9 +2,7 @@ package cmd
 
 import (
 	"bytes"
-	"io/ioutil"
 	"log"
-	"os"
 	"path"
 	"strconv"
 
@@ -73,7 +71,7 @@ func mkConfig(dir string) {
 		log.Println(err)
 		return
 	}
-	utils.WriteFile(file, confBuf)
+	utils.WriteFile(file, confBuf.Bytes(), 0644)
 }
 
 func mkSigningKey(dir string) {
@@ -82,26 +80,13 @@ func mkSigningKey(dir string) {
 		log.Print(err)
 		return
 	}
-	// TODO the code below should be refactored to a single function
-	// (vrf and sign are almost identical here)
-	file := path.Join(dir, "sign.priv")
-	if _, err := os.Stat(file); err == nil {
-		log.Printf("%s already exists\n", file)
+	pk, _ := sk.Public()
+	if err := utils.WriteFile(path.Join(dir, "sign.priv"), sk, 0600); err != nil {
+		log.Println(err)
 		return
 	}
-	if err := ioutil.WriteFile(file, sk[:], 0600); err != nil {
-		log.Print(err)
-		return
-	}
-	// public-key needed for test client:
-	file = path.Join(dir, "sign.pub")
-	if _, err := os.Stat(file); err == nil {
-		log.Printf("%s already exists\n", file)
-		return
-	}
-	signKeyPub, _ := sk.Public()
-	if err := ioutil.WriteFile(file, signKeyPub, 0600); err != nil {
-		log.Print(err)
+	if err := utils.WriteFile(path.Join(dir, "sign.pub"), pk, 0600); err != nil {
+		log.Println(err)
 		return
 	}
 }
@@ -112,24 +97,13 @@ func mkVrfKey(dir string) {
 		log.Print(err)
 		return
 	}
-	file := path.Join(dir, "vrf.priv")
-	if _, err := os.Stat(file); err == nil {
-		log.Printf("%s already exists\n", file)
+	pk, _ := sk.Public()
+	if err := utils.WriteFile(path.Join(dir, "vrf.priv"), sk, 0600); err != nil {
+		log.Println(err)
 		return
 	}
-	if err := ioutil.WriteFile(file, sk[:], 0600); err != nil {
-		log.Print(err)
-		return
-	}
-	// public-key needed for test client:
-	file = path.Join(dir, "vrf.pub")
-	if _, err := os.Stat(file); err == nil {
-		log.Printf("%s already exists\n", file)
-		return
-	}
-	vrfKeyPub, _ := sk.Public()
-	if err := ioutil.WriteFile(file, vrfKeyPub, 0600); err != nil {
-		log.Print(err)
+	if err := utils.WriteFile(path.Join(dir, "vrf.pub"), pk, 0600); err != nil {
+		log.Println(err)
 		return
 	}
 }

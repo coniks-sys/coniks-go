@@ -4,10 +4,11 @@ import (
 	"fmt"
 
 	"bytes"
+	"os"
+
 	"github.com/BurntSushi/toml"
 	"github.com/coniks-sys/coniks-go/client"
 	"github.com/spf13/cobra"
-	"os"
 
 	"github.com/coniks-sys/coniks-go/utils"
 )
@@ -45,14 +46,14 @@ func mkConfigOrExit(path string) {
 
 	var confBuf bytes.Buffer
 	enc := toml.NewEncoder(&confBuf)
-	err := enc.Encode(conf)
-	if err != nil {
+	if err := enc.Encode(conf); err != nil {
 		fmt.Println("Coulnd't encode config. Error message: [" +
 			err.Error() + "]")
 		os.Exit(-1)
 	}
-	// TODO here we would want to pass the error up from WriteFile
-	// and do an os.Exit(-1) to signal that sth was wrong (more important
-	// for the UI client)?
-	utils.WriteFile(path, confBuf)
+	if err := utils.WriteFile(path, confBuf.Bytes(), 0644); err != nil {
+		fmt.Println("Coulnd't write config. Error message: [" +
+			err.Error() + "]")
+		os.Exit(-1)
+	}
 }
