@@ -39,34 +39,24 @@ Example call:
 			fmt.Println("Error while receiving response: " + err.Error())
 		}
 
-		response, errCode := client.UnmarshalResponse(p.RegistrationType,
-			res)
-		switch errCode {
-		case p.ReqSuccess:
-			cc := p.NewCC(nil, true, conf.SigningPubKey)
-			// FIXME creating a *protocol.Response out of what we got here
-			// seems strange: either modify UnmarshalResponse
-			// or modify HandleResponse accordingly:
-			err := cc.HandleResponse(p.RegistrationType, response,
-				name, []byte(key))
-			if err != p.CheckPassed {
-				fmt.Printf("Couldn't validate response: %s", err)
-				return
+		response := client.UnmarshalResponse(p.RegistrationType, res)
+		// FIXME: SavedSTR should be read from a persistent storage. Lazy me :(
+		cc := p.NewCC(nil, true, conf.SigningPubKey)
+		err = cc.HandleResponse(p.RegistrationType, response, name, []byte(key))
+		switch err {
+		case p.CheckPassed:
+			switch response.Error {
+			case p.ReqSuccess:
+				fmt.Println("Succesfully registered name: " + name)
+				// TODO: Save the cc to verify the TB and for later
+				// usage (TOFU checks)
+			case p.ReqNameExisted:
+				// Key-change isn't currently supported; see:
+				// https://github.com/coniks-sys/coniks-go/issues/92
+				fmt.Println("Name is already registered.")
 			}
-
-			fmt.Println("Succesfully registered name: " + name)
-			// TODO Save the cc to verify the TB and for later
-			// usage (TOFU checks)
-		case p.ReqNameExisted:
-			// Key-change isn't currently supported; see:
-			// https://github.com/coniks-sys/coniks-go/issues/92
-			fmt.Println("Name is already registered.")
-		case p.ErrDirectory:
-			// From a usability perspective: how would a real
-			// client deal with such an error? Retry?
-			fmt.Println("Internal server error.")
-		case p.ErrMalformedClientMessage:
-			fmt.Println("Server reported an invalid client request!")
+		default:
+			fmt.Println("Error: " + err.Error())
 		}
 	},
 }

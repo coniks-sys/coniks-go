@@ -32,38 +32,23 @@ var lookupCmd = &cobra.Command{
 			fmt.Println("Error while retrieving repsonse: " + err.Error())
 			os.Exit(-1)
 		}
-		response, errCode := client.UnmarshalResponse(p.KeyLookupType,
-			resp)
-		switch errCode {
-		case p.ReqSuccess:
-			// FIXME reuse/load the cc from the registration instead:
-			cc := p.NewCC(nil, true, conf.SigningPubKey)
-			ap := response.DirectoryResponse.(*p.DirectoryProof).AP
-			// FIXME same comment as in register.go
-			err := cc.HandleResponse(p.KeyLookupType, response, name, nil)
-			if err != p.CheckPassed {
-				fmt.Printf("Couldn't validate response: %s\n", err)
-			} else {
-				fmt.Println("Sucess! Key bound to name is: [" + string(ap.Leaf.Value) + "]")
+		response := client.UnmarshalResponse(p.KeyLookupType, resp)
+		// FIXME reuse/load the cc from the registration instead
+		// FIXME same comment as in register.go
+		cc := p.NewCC(nil, true, conf.SigningPubKey)
+		err = cc.HandleResponse(p.KeyLookupType, response, name, nil)
+		switch err {
+		case p.CheckPassed:
+			switch response.Error {
+			case p.ReqSuccess:
+				// TODO: implement response.GetKey()
+				fmt.Println("Sucess! Key bound to name is: [" + "" + "]")
+			case p.ReqNameNotFound:
+				fmt.Println("Name isn't registered.")
 			}
-		case p.ErrMalformedClientMessage:
-			fmt.Println("Server reported malformed client message.")
-		case p.ReqNameNotFound:
-			// TODO refactor common code (see p.Success case above):
-			cc := p.NewCC(nil, true, conf.SigningPubKey)
-			ap := response.DirectoryResponse.(*p.DirectoryProof).AP
-			key := ap.Leaf.Value
-			// FIXME same comment as in register.go
-			err := cc.HandleResponse(p.KeyLookupType, response, name, key)
-			if err != p.CheckPassed {
-				fmt.Printf("Couldn't validate response: %s\n", err)
-			}
-			fmt.Println("Name isn't registered.")
 		default:
-			fmt.Println(errCode)
-			os.Exit(-1)
+			fmt.Println("Error: " + err.Error())
 		}
-
 	},
 }
 
