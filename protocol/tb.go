@@ -20,8 +20,8 @@ type TemporaryBinding struct {
 	Signature []byte
 }
 
-// Serialize encodes the tb to a byte array with the following format:
-// [strSig, tb.Index, tb.Value].
+// Serialize encodes the temporary binding into
+// a specified format.
 func (tb *TemporaryBinding) Serialize(strSig []byte) []byte {
 	var tbBytes []byte
 	tbBytes = append(tbBytes, strSig...)
