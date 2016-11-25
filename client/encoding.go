@@ -3,9 +3,8 @@ package client
 import (
 	"encoding/json"
 
-	p "github.com/coniks-sys/coniks-go/protocol"
-	//"fmt"
 	"github.com/coniks-sys/coniks-go/merkletree"
+	p "github.com/coniks-sys/coniks-go/protocol"
 )
 
 // UnmarshalResponse decodes the given message into a protocol.DirectoryResponse
@@ -35,19 +34,13 @@ func UnmarshalResponse(t int, msg []byte) (
 	case p.RegistrationType, p.KeyLookupType:
 		response := new(p.DirectoryProof)
 		if err := json.Unmarshal(res.DirectoryResponse, &response); err != nil {
-			// FIXME: Without the ugly hack in str.go fmt.Println(err) yields:
-			// json: cannot unmarshal object into Go value of type merkletree.AssocData
-			// fmt.Println("json.Unmarshal(res.DirectoryResponse, &response)", err)
 			return nil, p.ErrMalformedDirectoryMessage
 		}
-		// FIXME totally ugly hack:
-		ad := response.STR.Ad.(*merkletree.FIXMEPolicies)
-		response.STR.Ad = &p.Policies{
-			Version:       ad.Version,
-			HashID:        ad.HashID,
-			VrfPublicKey:  ad.VrfPublicKey,
-			EpochDeadline: p.Timestamp(ad.EpochDeadline),
+		policies := &p.Policies{}
+		if err := json.Unmarshal([]byte(response.STR.Ad.(merkletree.RawAd)), policies); err != nil {
+			return nil, p.ErrMalformedDirectoryMessage
 		}
+		response.STR.Ad = policies
 		return response, res.Error
 	case p.KeyLookupInEpochType, p.MonitoringType:
 		response := new(p.DirectoryProofs)

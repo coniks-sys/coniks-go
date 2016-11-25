@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
-	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
@@ -32,18 +31,17 @@ type SignedTreeRoot struct {
 	Ad              AssocData
 }
 
-// FIXME this shouldn't really be here; find a more elegant way to deal with
-// the AssocData interface or (at least) move to a another file:
-type FIXMEPolicies struct { // can't use protocol.Policies: otherwise import cycle!
-	Version       string
-	HashID        string
-	VrfPublicKey  vrf.PublicKey
-	EpochDeadline uint64
-}
+// RawAd makes json.RawMessage implement the AssocData interface.
+type RawAd json.RawMessage
 
-func (p *FIXMEPolicies) Serialize() []byte {
+// Serialize should never be called.
+func (r RawAd) Serialize() []byte {
+	panic("[str] Should never be called")
 	return nil
 }
+
+// UnmarshalJSON return the STR with a json.RawMessage as AssocData for
+// further unmarshalling by the caller.
 func (str *SignedTreeRoot) UnmarshalJSON(m []byte) error {
 	type Str struct {
 		tree            *MerkleTree
@@ -52,30 +50,21 @@ func (str *SignedTreeRoot) UnmarshalJSON(m []byte) error {
 		PreviousEpoch   uint64
 		PreviousSTRHash []byte
 		Signature       []byte
-		Ad              json.RawMessage
+		Ad              RawAd
 	}
 	hStr := &Str{}
 	if err := json.Unmarshal(m, hStr); err != nil {
 		return err
 	}
-	// AssocData
-	p := &FIXMEPolicies{}
-	if err := json.Unmarshal([]byte(hStr.Ad), p); err != nil {
-		return err
-	}
-	str.Ad = p
-
 	str.tree = hStr.tree
 	str.TreeHash = hStr.TreeHash
 	str.Epoch = hStr.Epoch
 	str.PreviousEpoch = hStr.PreviousEpoch
 	str.PreviousSTRHash = hStr.PreviousSTRHash
 	str.Signature = hStr.Signature
-
+	str.Ad = hStr.Ad
 	return nil
 }
-
-// END of FIXME
 
 func NewSTR(key sign.PrivateKey, ad AssocData, m *MerkleTree, epoch uint64, prevHash []byte) *SignedTreeRoot {
 	prevEpoch := epoch - 1
