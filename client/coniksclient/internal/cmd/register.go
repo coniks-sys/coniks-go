@@ -82,9 +82,6 @@ func init() {
 	registerCmd.Flags().StringP("name", "n", "",
 		"Username you want to register with the CONIKS server.")
 
-	// TODO if this test-client should be able to handle real key-material,
-	// the client should generate a new key instead. For testing purposes
-	// strings are more convenient, though.
 	registerCmd.Flags().StringP("key", "k", "",
 		"Key-material you want to bind to the user name.")
 	registerCmd.Flags().StringP("config", "c", "config.toml",
@@ -96,7 +93,7 @@ func createRegistrationMsg(name, key string) ([]byte, error) {
 		Type: p.RegistrationType,
 		Request: &p.RegistrationRequest{
 			Username: name,
-			Key:      []byte(key), // TODO maybe generate a new key here
+			Key:      []byte(key),
 		},
 	})
 }
