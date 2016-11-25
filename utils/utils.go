@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -44,7 +45,8 @@ func UInt32ToBytes(num uint32) []byte {
 // WriteFile writes buf to a file whose path is indicated by filename.
 func WriteFile(filename string, buf []byte, perm os.FileMode) error {
 	if _, err := os.Stat(filename); err == nil {
-		return err
+		return fmt.Errorf("Can't write file. File '%s' already exists\n",
+			filename)
 	}
 
 	if err := ioutil.WriteFile(filename, buf, perm); err != nil {
