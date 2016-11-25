@@ -39,5 +39,5 @@ func (tb *TemporaryBinding) Serialize(strSig []byte) []byte {
 // of tb.
 func (tb *TemporaryBinding) Verify(index, value []byte) bool {
 	return bytes.Equal(tb.Index, index) &&
-		(value != nil && bytes.Equal(tb.Value, value))
+		(value == nil || (value != nil && bytes.Equal(tb.Value, value)))
 }
