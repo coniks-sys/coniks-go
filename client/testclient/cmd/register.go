@@ -47,8 +47,7 @@ Example call:
 			// FIXME creating a *protocol.Response out of what we got here
 			// seems strange: either modify UnmarshalResponse
 			// or modify HandleResponse accordingly:
-			resp := &p.Response{errCode, response}
-			err := cc.HandleResponse(p.RegistrationType, resp,
+			err := cc.HandleResponse(p.RegistrationType, response,
 				name, []byte(key))
 			if err != p.CheckPassed {
 				fmt.Printf("Couldn't validate response: %s", err)

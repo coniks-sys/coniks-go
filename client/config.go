@@ -2,11 +2,12 @@ package client
 
 import (
 	"fmt"
+	"io/ioutil"
+
 	"github.com/BurntSushi/toml"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/utils"
-	"io/ioutil"
 )
 
 // Config contains the client's configuration needed to send request to a
@@ -14,8 +15,6 @@ import (
 //  - the path to the server's VRF and signing public-key file, respectively;
 //  - the actual public-keys parsed from these files.
 type Config struct {
-	configPath string
-
 	SignPubkeyPath string `toml:"sign_pubkey_path"`
 	VrfPubkeyPath  string `toml:"vrf_pubkey_path"`
 
@@ -52,7 +51,6 @@ func LoadConfig(file string) (*Config, error) {
 	if len(vrfKey) != vrf.PublicKeySize {
 		return nil, fmt.Errorf("VRF public-key must be 32 bytes (got %d)", len(vrfKey))
 	}
-	conf.configPath = file
 	conf.VrfPubKey = vrfKey
 	conf.SigningPubKey = signPubKey
 

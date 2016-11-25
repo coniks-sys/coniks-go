@@ -38,10 +38,9 @@ var lookupCmd = &cobra.Command{
 		case p.ReqSuccess:
 			// FIXME reuse/load the cc from the registration instead:
 			cc := p.NewCC(nil, true, conf.SigningPubKey)
-			ap := response.(*p.DirectoryProof).AP
+			ap := response.DirectoryResponse.(*p.DirectoryProof).AP
 			// FIXME same comment as in register.go
-			resp := &p.Response{errCode, response}
-			err := cc.HandleResponse(p.KeyLookupType, resp, name, nil)
+			err := cc.HandleResponse(p.KeyLookupType, response, name, nil)
 			if err != p.CheckPassed {
 				fmt.Printf("Couldn't validate response: %s\n", err)
 			} else {
@@ -52,11 +51,10 @@ var lookupCmd = &cobra.Command{
 		case p.ReqNameNotFound:
 			// TODO refactor common code (see p.Success case above):
 			cc := p.NewCC(nil, true, conf.SigningPubKey)
-			ap := response.(*p.DirectoryProof).AP
+			ap := response.DirectoryResponse.(*p.DirectoryProof).AP
 			key := ap.Leaf.Value
 			// FIXME same comment as in register.go
-			resp := &p.Response{errCode, response}
-			err := cc.HandleResponse(p.KeyLookupType, resp, name, key)
+			err := cc.HandleResponse(p.KeyLookupType, response, name, key)
 			if err != p.CheckPassed {
 				fmt.Printf("Couldn't validate response: %s\n", err)
 			}

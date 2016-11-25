@@ -7,11 +7,10 @@ import (
 	p "github.com/coniks-sys/coniks-go/protocol"
 )
 
-// UnmarshalResponse decodes the given message into a protocol.DirectoryResponse
+// UnmarshalResponse decodes the given message into a protocol.Response
 // according to the given request-type t. This request-types are integer
 // constants defined in the protocol package.
-func UnmarshalResponse(t int, msg []byte) (
-	p.DirectoryResponse, p.ErrorCode) {
+func UnmarshalResponse(t int, msg []byte) (*p.Response, error) {
 	type Response struct {
 		Error             p.ErrorCode
 		DirectoryResponse json.RawMessage
@@ -41,13 +40,20 @@ func UnmarshalResponse(t int, msg []byte) (
 			return nil, p.ErrMalformedDirectoryMessage
 		}
 		response.STR.Ad = policies
-		return response, res.Error
+		return &p.Response{
+			Error:             res.Error,
+			DirectoryResponse: response,
+		}, res.Error
 	case p.KeyLookupInEpochType, p.MonitoringType:
 		response := new(p.DirectoryProofs)
 		if err := json.Unmarshal(res.DirectoryResponse, &response); err != nil {
 			return nil, p.ErrMalformedDirectoryMessage
 		}
-		return response, res.Error
+		return &p.Response{
+			Error:             res.Error,
+			DirectoryResponse: response,
+		}, res.Error
+	default:
+		panic("Unknown request type")
 	}
-	return nil, p.ErrMalformedDirectoryMessage
 }
