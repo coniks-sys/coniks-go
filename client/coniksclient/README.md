@@ -30,4 +30,6 @@ Use "coniksclient [command] --help" for more information about a command.
 
 
 ## Disclaimer
+__Do not use your real public key or private key with this test client.__
+
 Please keep in mind that this CONIKS client implementation is under active development. The repository may contain experimental features that aren't fully tested.

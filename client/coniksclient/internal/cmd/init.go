@@ -21,6 +21,8 @@ the following content:
 
 sign_pubkey_path = "../../keyserver/coniksserver/sign.pub"
 vrf_pubkey_path = "../../keyserver/coniksserver/vrf.pub"
+registration_address = "tcp://127.0.0.1:3000"
+address = "tcp://127.0.0.1:3000"
 
 If the keyserver's public keys are somewhere else, you will have to modify the
 config file accordingly.
@@ -42,6 +44,8 @@ func mkConfigOrExit(path string) {
 	var conf = client.Config{
 		SignPubkeyPath: "../../keyserver/coniksserver/sign.pub",
 		VrfPubkeyPath:  "../../keyserver/coniksserver/vrf.pub",
+		RegAddress:     "tcp://127.0.0.1:3000",
+		Address:        "tcp://127.0.0.1:3000",
 	}
 
 	var confBuf bytes.Buffer

@@ -20,6 +20,9 @@ type Config struct {
 
 	SigningPubKey sign.PublicKey
 	VrfPubKey     vrf.PublicKey
+
+	RegAddress string `toml:"registration_address,omitempty"`
+	Address    string `toml:"address"`
 }
 
 // LoadConfig returns a client's configuration read from the given filename.

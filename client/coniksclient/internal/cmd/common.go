@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/coniks-sys/coniks-go/client"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 const configMissingUsage = `

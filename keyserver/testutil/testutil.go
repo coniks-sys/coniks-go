@@ -131,9 +131,9 @@ func CreateTLSCertForTest(t *testing.T) (string, func()) {
 	}
 }
 
-func NewTCPClient(msg []byte) ([]byte, error) {
+func NewTCPClient(msg []byte, address string) ([]byte, error) {
 	conf := &tls.Config{InsecureSkipVerify: true}
-	u, _ := url.Parse(PublicConnection)
+	u, _ := url.Parse(address)
 	conn, err := net.Dial(u.Scheme, u.Host)
 	if err != nil {
 		return nil, err
@@ -159,6 +159,10 @@ func NewTCPClient(msg []byte) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+func NewTCPClientDefault(msg []byte) ([]byte, error) {
+	return NewTCPClient(msg, PublicConnection)
 }
 
 func NewUnixClient(msg []byte, address string) ([]byte, error) {

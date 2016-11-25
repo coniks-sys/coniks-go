@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 
 	"github.com/coniks-sys/coniks-go/client"
@@ -27,12 +28,27 @@ var lookupCmd = &cobra.Command{
 			fmt.Println("Couldn't create request!")
 			os.Exit(-1)
 		}
-		resp, err := testutil.NewTCPClient(req)
-		if err != nil {
-			fmt.Println("Error while retrieving repsonse: " + err.Error())
-			os.Exit(-1)
+
+		var res []byte
+		u, _ := url.Parse(conf.Address)
+		switch u.Scheme {
+		case "tcp":
+			res, err = testutil.NewTCPClient(req, conf.Address)
+			if err != nil {
+				fmt.Println("Error while receiving response: " + err.Error())
+				return
+			}
+		case "unix":
+			res, err = testutil.NewUnixClient(req, conf.Address)
+			if err != nil {
+				fmt.Println("Error while receiving response: " + err.Error())
+				return
+			}
+		default:
+			fmt.Println("Invalid config!")
+			return
 		}
-		response := client.UnmarshalResponse(p.KeyLookupType, resp)
+		response := client.UnmarshalResponse(p.KeyLookupType, res)
 		// FIXME reuse/load the cc from the registration instead
 		// FIXME same comment as in register.go
 		cc := p.NewCC(nil, true, conf.SigningPubKey)

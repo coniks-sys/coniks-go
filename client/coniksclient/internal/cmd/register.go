@@ -6,6 +6,8 @@ import (
 
 	"encoding/json"
 
+	"net/url"
+
 	"github.com/coniks-sys/coniks-go/client"
 	"github.com/coniks-sys/coniks-go/keyserver/testutil"
 	p "github.com/coniks-sys/coniks-go/protocol"
@@ -27,16 +29,30 @@ Example call:
 			cmd.Usage()
 			return
 		}
-		msg, err := createRegistrationMsg(name, key)
+		req, err := createRegistrationMsg(name, key)
 		if err != nil {
 			fmt.Println("Couldn't marshal registration request!")
 			os.Exit(-1)
 		}
 
-		addr := cmd.Flag("address").Value.String()
-		res, err := testutil.NewUnixClient(msg, addr)
-		if err != nil {
-			fmt.Println("Error while receiving response: " + err.Error())
+		var res []byte
+		u, _ := url.Parse(conf.RegAddress)
+		switch u.Scheme {
+		case "tcp":
+			res, err = testutil.NewTCPClient(req, conf.RegAddress)
+			if err != nil {
+				fmt.Println("Error while receiving response: " + err.Error())
+				return
+			}
+		case "unix":
+			res, err = testutil.NewUnixClient(req, conf.RegAddress)
+			if err != nil {
+				fmt.Println("Error while receiving response: " + err.Error())
+				return
+			}
+		default:
+			fmt.Println("Invalid config!")
+			return
 		}
 
 		response := client.UnmarshalResponse(p.RegistrationType, res)
@@ -71,8 +87,6 @@ func init() {
 	// strings are more convenient, though.
 	registerCmd.Flags().StringP("key", "k", "",
 		"Key-material you want to bind to the user name.")
-	registerCmd.Flags().StringP("address", "a", "unix:///tmp/conikstest.sock",
-		"The socket on which the client can directly connect to the key-server.")
 	registerCmd.Flags().StringP("config", "c", "config.toml",
 		"Config file for the client (contains the server's initial public key etc.)")
 }

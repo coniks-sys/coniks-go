@@ -149,7 +149,7 @@ func TestAcceptOutsideRegistrationRequests(t *testing.T) {
 	utils.WithDB(func(db kv.DB) {
 		_, teardown := startServer(t, db, 60, false, "")
 		defer teardown()
-		rev, err := testutil.NewTCPClient([]byte(registrationMsg))
+		rev, err := testutil.NewTCPClientDefault([]byte(registrationMsg))
 		if err != nil {
 			t.Error(err)
 		}
@@ -192,7 +192,7 @@ func TestSendsRegistrationFromOutside(t *testing.T) {
 		_, teardown := startServer(t, db, 60, true, "")
 		defer teardown()
 
-		rev, err := testutil.NewTCPClient([]byte(registrationMsg))
+		rev, err := testutil.NewTCPClientDefault([]byte(registrationMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -334,7 +334,7 @@ func TestRegisterAndLookupInTheSameEpoch(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		rev, err := testutil.NewTCPClient([]byte(keylookupMsg))
+		rev, err := testutil.NewTCPClientDefault([]byte(keylookupMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -379,7 +379,7 @@ func TestRegisterAndLookup(t *testing.T) {
 		}
 
 		server.dir.Update()
-		rev, err := testutil.NewTCPClient([]byte(keylookupMsg))
+		rev, err := testutil.NewTCPClientDefault([]byte(keylookupMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -424,7 +424,7 @@ func TestKeyLookup(t *testing.T) {
 		}
 
 		server.dir.Update()
-		rev, err := testutil.NewTCPClient([]byte(keylookupMsg))
+		rev, err := testutil.NewTCPClientDefault([]byte(keylookupMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -481,7 +481,7 @@ func TestKeyLookupInEpoch(t *testing.T) {
     }
 }
 `
-		rev, err := testutil.NewTCPClient([]byte(keylookupinepochMsg))
+		rev, err := testutil.NewTCPClientDefault([]byte(keylookupinepochMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -530,7 +530,7 @@ func TestMonitoring(t *testing.T) {
     }
 }
 `
-		rev, err := testutil.NewTCPClient([]byte(consistencyCheckMsg))
+		rev, err := testutil.NewTCPClientDefault([]byte(consistencyCheckMsg))
 		if err != nil {
 			t.Fatal(err)
 		}
