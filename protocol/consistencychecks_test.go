@@ -1,31 +1,33 @@
 package protocol
 
-import "testing"
-
-var (
-	key = []byte("key")
+import (
+	"bytes"
+	"testing"
 )
 
-func doRequestAndVerify(d *ConiksDirectory, cc *ConsistencyChecks,
-	requestType int, name string) error {
-	switch requestType {
-	case RegistrationType:
-		request := &RegistrationRequest{
-			Username: name,
-			Key:      key,
-		}
-		res, _ := d.Register(request)
-		return cc.HandleResponse(requestType, res, name, key)
-	case KeyLookupType:
-		request := &KeyLookupRequest{
-			Username: name,
-		}
-		res, _ := d.KeyLookup(request)
-		return cc.HandleResponse(requestType, res, name, key)
-	case MonitoringType:
-	case KeyLookupInEpochType:
+var (
+	alice = "alice"
+	bob   = "bob"
+	key   = []byte("key")
+)
+
+func registerAndVerify(d *ConiksDirectory, cc *ConsistencyChecks,
+	name string, key []byte) (error, error) {
+	request := &RegistrationRequest{
+		Username: name,
+		Key:      key,
 	}
-	panic("Unknown request type")
+	res, err := d.Register(request)
+	return err, cc.HandleResponse(RegistrationType, res, name, key)
+}
+
+func lookupAndVerify(d *ConiksDirectory, cc *ConsistencyChecks,
+	name string, key []byte) (error, error) {
+	request := &KeyLookupRequest{
+		Username: name,
+	}
+	res, err := d.KeyLookup(request)
+	return err, cc.HandleResponse(KeyLookupType, res, name, key)
 }
 
 func TestVerifyWithError(t *testing.T) {
@@ -38,8 +40,8 @@ func TestVerifyWithError(t *testing.T) {
 
 	cc := NewCC(&str, true, pk)
 
-	if err := doRequestAndVerify(d, cc, RegistrationType, "alice"); err != CheckBadSTR {
-		t.Fatal("Expect", CheckBadSTR, "got", err)
+	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != ReqSuccess || e2 != CheckBadSTR {
+		t.Fatal("Expect", CheckBadSTR, "got", e2)
 	}
 }
 
@@ -64,8 +66,9 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 
 	cc := NewCC(d.LatestSTR(), true, pk)
 
-	if doRequestAndVerify(d, cc, RegistrationType, "alice") != CheckPassed {
-		t.Fatal("Unexpected verification result")
+	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != ReqSuccess || e2 != CheckPassed {
+		t.Error(e1)
+		t.Error(e2)
 	}
 
 	if len(cc.TBs) != 1 {
@@ -73,22 +76,9 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	}
 
 	// test error name existed
-	// FIXME: Check that we got an ReqNameExisted
-	if doRequestAndVerify(d, cc, RegistrationType, "alice") != CheckPassed {
-		t.Fatal("Unexpected verification result")
-	}
-
-	// test error name existed with different key
-	res, err := d.Register(&RegistrationRequest{
-		Username: "alice",
-		Key:      []byte{1, 2, 3},
-	})
-	if err != ReqNameExisted {
-		t.Fatal("Expect error code", ReqNameExisted, "got", err)
-	}
-	// expect a proof of absence since this binding wasn't included in this epoch
-	if err := cc.HandleResponse(RegistrationType, res, "alice", key); err != CheckPassed {
-		t.Fatal("Unexpected verification result")
+	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != ReqNameExisted || e2 != CheckPassed {
+		t.Error(e1)
+		t.Error(e2)
 	}
 
 	if len(cc.TBs) != 1 {
@@ -100,9 +90,9 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	// when the client is monitoring, we do _not_ expect a TB's verification here.
 	d.Update()
 
-	// FIXME: Check that we got an ReqNameExisted
-	if doRequestAndVerify(d, cc, RegistrationType, "alice") != CheckPassed {
-		t.Fatal("Unexpected verification result")
+	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != ReqNameExisted || e2 != CheckPassed {
+		t.Error(e1)
+		t.Error(e2)
 	}
 }
 
@@ -111,11 +101,13 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 
 	cc := NewCC(d.LatestSTR(), true, pk)
 
-	if doRequestAndVerify(d, cc, RegistrationType, "alice") != CheckPassed {
-		t.Fatal("Unexpected verification result")
+	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != ReqSuccess || e2 != CheckPassed {
+		t.Error(e1)
+		t.Error(e2)
 	}
-	if doRequestAndVerify(d, cc, RegistrationType, "bob") != CheckPassed {
-		t.Fatal("Unexpected verification result")
+	if e1, e2 := registerAndVerify(d, cc, bob, key); e1 != ReqSuccess || e2 != CheckPassed {
+		t.Error(e1)
+		t.Error(e2)
 	}
 
 	if len(cc.TBs) != 2 {
@@ -125,18 +117,20 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 	d.Update()
 
 	for i := 0; i < 2; i++ {
-		if doRequestAndVerify(d, cc, KeyLookupType, "alice") != CheckPassed {
-			t.Error("Unexpected verification result")
+		if e1, e2 := lookupAndVerify(d, cc, alice, key); e1 != ReqSuccess || e2 != CheckPassed {
+			t.Error(e1)
+			t.Error(e2)
 		}
 	}
 
-	// should contain the TBs of "bob"
-	if len(cc.TBs) != 1 || cc.TBs["bob"] == nil {
+	// should contain the TBs of bob
+	if len(cc.TBs) != 1 || cc.TBs[bob] == nil {
 		t.Error("Expect the directory to insert the binding as promised")
 	}
 
-	if doRequestAndVerify(d, cc, KeyLookupType, "bob") != CheckPassed {
-		t.Fatal("Unexpected verification result")
+	if e1, e2 := lookupAndVerify(d, cc, bob, key); e1 != ReqSuccess || e2 != CheckPassed {
+		t.Error(e1)
+		t.Error(e2)
 	}
 	if len(cc.TBs) != 0 {
 		t.Error("Expect the directory to insert the binding as promised")
@@ -149,28 +143,51 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	cc := NewCC(d.LatestSTR(), true, pk)
 
 	// do lookup first
-	if doRequestAndVerify(d, cc, KeyLookupType, "alice") != CheckPassed {
-		t.Fatal("Unexpected verification result")
+	if e1, e2 := lookupAndVerify(d, cc, alice, key); e1 != ReqNameNotFound || e2 != CheckPassed {
+		t.Error(e1)
+		t.Error(e2)
 	}
 
 	// register
-	if doRequestAndVerify(d, cc, RegistrationType, "alice") != CheckPassed {
-		t.Fatal("Unexpected verification result")
+	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != ReqSuccess || e2 != CheckPassed {
+		t.Error(e1)
+		t.Error(e2)
 	}
-	// do lookup in the same epoch
-	if doRequestAndVerify(d, cc, KeyLookupType, "alice") != CheckPassed {
-		t.Fatal("Unexpected verification result")
+	// do lookup in the same epoch - TB TOFU
+	if e1, e2 := lookupAndVerify(d, cc, alice, nil); e1 != ReqSuccess || e2 != CheckPassed {
+		t.Error(e1)
+		t.Error(e2)
+	}
+	// re-do the request and get the key from the response
+	// the key would be extracted from the TB
+	request := &KeyLookupRequest{
+		Username: alice,
+	}
+	res, _ := d.KeyLookup(request)
+	if !bytes.Equal(res.GetKey(), key) {
+		t.Error("The directory has returned a wrong key.")
 	}
 
 	// do lookup in the different epoch
 	d.Update()
 
-	if doRequestAndVerify(d, cc, KeyLookupType, "alice") != CheckPassed {
-		t.Fatal("Unexpected verification result")
+	if e1, e2 := lookupAndVerify(d, cc, alice, key); e1 != ReqSuccess || e2 != CheckPassed {
+		t.Error(e1)
+		t.Error(e2)
+	}
+	// re-do the request and get the key from the response
+	// this time, the key would be extracted from the AP.
+	request = &KeyLookupRequest{
+		Username: alice,
+	}
+	res, _ = d.KeyLookup(request)
+	if !bytes.Equal(res.GetKey(), key) {
+		t.Error("The directory has returned a wrong key.")
 	}
 
 	// test error name not found
-	if doRequestAndVerify(d, cc, KeyLookupType, "bob") != CheckPassed {
-		t.Fatal("Unexpected verification result")
+	if e1, e2 := lookupAndVerify(d, cc, bob, key); e1 != ReqNameNotFound || e2 != CheckPassed {
+		t.Error(e1)
+		t.Error(e2)
 	}
 }

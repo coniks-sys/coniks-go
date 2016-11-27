@@ -317,6 +317,12 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(df *DirectoryProof,
 		return CheckBadSignature
 	}
 
+	// key could be nil if we have no information about
+	// the existed binding (TOFU).
+	if key == nil {
+		key = tb.Value
+	}
+
 	if tb.Verify(ap.LookupIndex, key) {
 		return nil
 	}
