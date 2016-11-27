@@ -69,3 +69,26 @@ func UnmarshalResponse(t int, msg []byte) *p.Response {
 		panic("Unknown request type")
 	}
 }
+
+// CreateRegistrationMsg returns a JSON encoding of
+// a protocol.RegistrationRequest with the given (name, key) pair.
+func CreateRegistrationMsg(name string, key []byte) ([]byte, error) {
+	return json.Marshal(&p.Request{
+		Type: p.RegistrationType,
+		Request: &p.RegistrationRequest{
+			Username: name,
+			Key:      key,
+		},
+	})
+}
+
+// CreateLookupMsg returns a JSON encoding of
+// a protocol.KeyLookupRequest with the given name.
+func CreateLookupMsg(name string) ([]byte, error) {
+	return json.Marshal(&p.Request{
+		Type: p.KeyLookupType,
+		Request: &p.KeyLookupRequest{
+			Username: name,
+		},
+	})
+}

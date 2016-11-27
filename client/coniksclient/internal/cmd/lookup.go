@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -23,7 +22,7 @@ var lookupCmd = &cobra.Command{
 			cmd.Usage()
 			return
 		}
-		req, err := createLookupRequest(name)
+		req, err := client.CreateLookupMsg(name)
 		if err != nil {
 			fmt.Println("Couldn't create request!")
 			os.Exit(-1)
@@ -59,7 +58,7 @@ var lookupCmd = &cobra.Command{
 			case p.ReqSuccess:
 				key, err := response.GetKey()
 				if err != nil {
-					fmt.Println("Cannot the key from the response, error: " + err.Error())
+					fmt.Println("Cannot get the key from the response, error: " + err.Error())
 				} else {
 					fmt.Println("Success! Key bound to name is: [" + string(key) + "]")
 				}
@@ -78,13 +77,4 @@ func init() {
 		"User-name of the contact you want to do the look-up for.")
 	lookupCmd.Flags().StringP("config", "c", "config.toml",
 		"Config file for the client (contains the server's initial public key etc.)")
-}
-
-func createLookupRequest(name string) ([]byte, error) {
-	return json.Marshal(&p.Request{
-		Type: p.KeyLookupType,
-		Request: &p.KeyLookupRequest{
-			Username: name,
-		},
-	})
 }

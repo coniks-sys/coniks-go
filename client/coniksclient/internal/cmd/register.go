@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"encoding/json"
-
 	"net/url"
 
 	"github.com/coniks-sys/coniks-go/client"
@@ -29,27 +27,28 @@ Example call:
 			cmd.Usage()
 			return
 		}
-		req, err := createRegistrationMsg(name, key)
+		req, err := client.CreateRegistrationMsg(name, []byte(key))
 		if err != nil {
 			fmt.Println("Couldn't marshal registration request!")
 			os.Exit(-1)
 		}
 
 		var res []byte
-		if conf.RegAddress == "" {
+		regAddress := conf.RegAddress
+		if regAddress == "" {
 			// fallback to conf.Address if empty
-			conf.RegAddress = conf.Address
+			regAddress = conf.Address
 		}
-		u, _ := url.Parse(conf.RegAddress)
+		u, _ := url.Parse(regAddress)
 		switch u.Scheme {
 		case "tcp":
-			res, err = testutil.NewTCPClient(req, conf.RegAddress)
+			res, err = testutil.NewTCPClient(req, regAddress)
 			if err != nil {
 				fmt.Println("Error while receiving response: " + err.Error())
 				return
 			}
 		case "unix":
-			res, err = testutil.NewUnixClient(req, conf.RegAddress)
+			res, err = testutil.NewUnixClient(req, regAddress)
 			if err != nil {
 				fmt.Println("Error while receiving response: " + err.Error())
 				return
@@ -90,14 +89,4 @@ func init() {
 		"Key-material you want to bind to the user name.")
 	registerCmd.Flags().StringP("config", "c", "config.toml",
 		"Config file for the client (contains the server's initial public key etc.)")
-}
-
-func createRegistrationMsg(name, key string) ([]byte, error) {
-	return json.Marshal(&p.Request{
-		Type: p.RegistrationType,
-		Request: &p.RegistrationRequest{
-			Username: name,
-			Key:      []byte(key),
-		},
-	})
 }
