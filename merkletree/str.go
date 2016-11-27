@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"encoding/json"
+
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/utils"
@@ -30,6 +31,8 @@ type SignedTreeRoot struct {
 	Signature       []byte
 	Ad              AssocData
 }
+
+// TODO(arlolra): Look into using a DirSTR instead, to avoid this mess.
 
 // RawAd makes json.RawMessage implement the AssocData interface.
 type RawAd json.RawMessage
