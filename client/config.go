@@ -6,7 +6,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
-	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
@@ -16,10 +15,8 @@ import (
 //  - the actual public-keys parsed from these files.
 type Config struct {
 	SignPubkeyPath string `toml:"sign_pubkey_path"`
-	VrfPubkeyPath  string `toml:"vrf_pubkey_path"`
 
 	SigningPubKey sign.PublicKey
-	VrfPubKey     vrf.PublicKey
 
 	RegAddress string `toml:"registration_address,omitempty"`
 	Address    string `toml:"address"`
@@ -27,7 +24,7 @@ type Config struct {
 
 // LoadConfig returns a client's configuration read from the given filename.
 // It reads the (VRF and signing) public-key files and parses the actual keys.
-// If there is any parsing or IO-error it returns and error (and the return
+// If there is any parsing or IO-error it returns an error (and the return
 // config will be nil).
 func LoadConfig(file string) (*Config, error) {
 	var conf Config
@@ -45,16 +42,6 @@ func LoadConfig(file string) (*Config, error) {
 		return nil, fmt.Errorf("Signing public-key must be 32 bytes (got %d)", len(signPubKey))
 	}
 
-	// load VRF key
-	vrfPath := utils.ResolvePath(conf.VrfPubkeyPath, file)
-	vrfKey, err := ioutil.ReadFile(vrfPath)
-	if err != nil {
-		return nil, fmt.Errorf("Cannot read VRF key: %v", err)
-	}
-	if len(vrfKey) != vrf.PublicKeySize {
-		return nil, fmt.Errorf("VRF public-key must be 32 bytes (got %d)", len(vrfKey))
-	}
-	conf.VrfPubKey = vrfKey
 	conf.SigningPubKey = signPubKey
 
 	return &conf, nil

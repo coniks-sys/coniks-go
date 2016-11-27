@@ -36,6 +36,10 @@ Example call:
 		}
 
 		var res []byte
+		if conf.RegAddress == "" {
+			// fallback to conf.Address if empty
+			conf.RegAddress = conf.Address
+		}
 		u, _ := url.Parse(conf.RegAddress)
 		switch u.Scheme {
 		case "tcp":
