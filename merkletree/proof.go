@@ -80,38 +80,51 @@ func (ap *AuthenticationPath) authPathHash() []byte {
 	return hash
 }
 
-func (ap *AuthenticationPath) verifyBinding(key, value []byte) bool {
+// VerifyBinding verifies both the value and the commitment
+// of the proof node of the authentication path.
+//
+// This should be called only when ap is a proof of inclusion.
+func (ap *AuthenticationPath) VerifyBinding(key, value []byte) bool {
 	return bytes.Equal(ap.Leaf.Value, value) &&
 		ap.Leaf.Commitment.Verify(key, value)
 }
 
-// Verify recomputes the tree's root node from the authentication path,
-// and compares it to treeHash, which is taken from a STR.
-// Specifically, treeHash has to come from the STR whose tree returns
-// the authentication path.
-// This should be called after the VRF index is verified successfully.
-func (ap *AuthenticationPath) Verify(key, value, treeHash []byte) bool {
-	if ap.ProofType() == ProofOfAbsence { // proof of absence
-		// Check if i and j match in the first l bits
-		indexBits := utils.ToBits(ap.Leaf.Index)
-		lookupIndexBits := utils.ToBits(ap.LookupIndex)
-		for i := 0; i < int(ap.Leaf.Level); i++ {
-			if indexBits[i] != lookupIndexBits[i] {
-				return false
-			}
-		}
-	} else { // proof of inclusion
-		// Verify the key-value binding returned in the ProofNode
-		if !ap.verifyBinding(key, value) {
+// VerifyIndex checks if the private index of the proof node and
+// the lookup index match in the first l bits with l is the Level
+// of the proof node.
+//
+// This should be called only when ap is a proof of absence.
+func (ap *AuthenticationPath) VerifyIndex() bool {
+	// Check if i and j match in the first l bits
+	indexBits := utils.ToBits(ap.Leaf.Index)
+	lookupIndexBits := utils.ToBits(ap.LookupIndex)
+	for i := 0; i < int(ap.Leaf.Level); i++ {
+		if indexBits[i] != lookupIndexBits[i] {
 			return false
 		}
 	}
+	return true
+}
 
-	// step 2. Verify the auth path of the returned leaf
-	if !bytes.Equal(treeHash, ap.authPathHash()) {
+// VerifySTR recomputes the tree's root node from the authentication path,
+// and compares it to treeHash, which is taken from a STR.
+// Specifically, treeHash has to come from the STR whose tree returns
+// the authentication path.
+func (ap *AuthenticationPath) VerifySTR(treeHash []byte) bool {
+	return bytes.Equal(treeHash, ap.authPathHash())
+}
+
+// Verify combines VerifyBinding(), VerifyIndex(), and VerifySTR(),
+// and abstracts away the detail of the failure.
+// This should be called after the VRF index is verified successfully.
+func (ap *AuthenticationPath) Verify(key, value, treeHash []byte) bool {
+	switch {
+	case ap.ProofType() == ProofOfAbsence && ap.VerifyIndex(),
+		ap.ProofType() == ProofOfInclusion && ap.VerifyBinding(key, value):
+		return ap.VerifySTR(treeHash)
+	default:
 		return false
 	}
-	return true
 }
 
 func (ap *AuthenticationPath) ProofType() ProofType {

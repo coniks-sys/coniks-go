@@ -224,12 +224,19 @@ func verifyAuthPath(uname string, key []byte,
 		key = ap.Leaf.Value
 	}
 
-	// verify auth path
-	if !ap.Verify([]byte(uname), key, str.TreeHash) {
-		return CheckBadAuthPath
+	if ap.ProofType() == m.ProofOfAbsence {
+		if !ap.VerifyIndex() {
+			return CheckBadLookupIndex
+		}
+	} else {
+		if !ap.VerifyBinding([]byte(uname), key) {
+			return CheckBindingsDiffer
+		}
 	}
-
-	return nil
+	if ap.VerifySTR(str.TreeHash) {
+		return nil
+	}
+	return CheckBadAuthPath
 }
 
 func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
@@ -313,14 +320,14 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(df *DirectoryProof,
 		return CheckBadSignature
 	}
 
-	// key could be nil if we have no information about
-	// the existed binding (TOFU).
-	if key == nil {
-		key = tb.Value
+	if !bytes.Equal(tb.Index, ap.LookupIndex) {
+		return CheckBadPromise
 	}
 
-	if tb.Verify(ap.LookupIndex, key) {
-		return nil
+	// key could be nil if we have no information about
+	// the existed binding (TOFU).
+	if key != nil && !bytes.Equal(tb.Value, key) {
+		return CheckBindingsDiffer
 	}
-	return CheckBadPromise
+	return nil
 }

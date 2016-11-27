@@ -29,6 +29,8 @@ const (
 	CheckPassed ErrorCode = iota + 200
 	CheckBadSignature
 	CheckBadVRFProof
+	CheckBindingsDiffer
+	CheckBadLookupIndex
 	CheckBadAuthPath
 	CheckBadSTR
 	CheckBadPromise
@@ -56,13 +58,15 @@ var (
 		ErrDirectory:                 "[coniks] Directory error",
 		ErrMalformedDirectoryMessage: "[coniks] Malformed directory message",
 
-		CheckPassed:        "[coniks] Consistency checks passed",
-		CheckBadSignature:  "[coniks] Directory's signature on STR or TB is invalid",
-		CheckBadVRFProof:   "[coniks] Returned index is not valid for the given name",
-		CheckBadAuthPath:   "[coniks] Returned binding is inconsistent with the tree root hash",
-		CheckBadSTR:        "[coniks] The hash chain is inconsistent",
-		CheckBadPromise:    "[coniks] The directory returned an invalid registration promise",
-		CheckBrokenPromise: "[coniks] The directory broke the registration promise",
+		CheckPassed:         "[coniks] Consistency checks passed",
+		CheckBadSignature:   "[coniks] Directory's signature on STR or TB is invalid",
+		CheckBadVRFProof:    "[coniks] Returned index is not valid for the given name",
+		CheckBindingsDiffer: "[coniks] The key in the binding is inconsistent with our expectation",
+		CheckBadLookupIndex: "[coniks] The lookup index is inconsistent with the index of the proof node",
+		CheckBadAuthPath:    "[coniks] Returned binding is inconsistent with the tree root hash",
+		CheckBadSTR:         "[coniks] The hash chain is inconsistent",
+		CheckBadPromise:     "[coniks] The directory returned an invalid registration promise",
+		CheckBrokenPromise:  "[coniks] The directory broke the registration promise",
 	}
 )
 
