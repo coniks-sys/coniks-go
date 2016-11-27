@@ -66,10 +66,19 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 // cryptographic proof of having been issued nonetheless.
 func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	uname string, key []byte) ErrorCode {
-	if Errors[msg.Error] {
-		return msg.Error
+	switch requestType {
+	case RegistrationType, KeyLookupType:
+		if _, ok := msg.DirectoryResponse.(*DirectoryProof); !ok {
+			return ErrMalformedDirectoryMessage
+		}
+	case MonitoringType, KeyLookupInEpochType:
+		if _, ok := msg.DirectoryResponse.(*DirectoryProofs); !ok {
+			return ErrMalformedDirectoryMessage
+		}
+	default:
+		panic("[coniks] Unknown request type")
 	}
-	if err := validateResponse(requestType, msg); err != nil {
+	if err := msg.validate(); err != nil {
 		return err.(ErrorCode)
 	}
 	if err := cc.updateSTR(requestType, msg); err != nil {
@@ -82,19 +91,6 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 		return err.(ErrorCode)
 	}
 	return CheckPassed
-}
-
-func validateResponse(requestType int, msg *Response) error {
-	switch requestType {
-	case RegistrationType, KeyLookupType:
-		if df, ok := msg.DirectoryResponse.(*DirectoryProof); !ok ||
-			(df.AP == nil || df.STR == nil) {
-			return ErrMalformedDirectoryMessage
-		}
-	default:
-		panic("[coniks] Unknown request type")
-	}
-	return nil
 }
 
 func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
