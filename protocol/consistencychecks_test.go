@@ -41,7 +41,8 @@ func TestVerifyWithError(t *testing.T) {
 	cc := NewCC(&str, true, pk)
 
 	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != ReqSuccess || e2 != CheckBadSTR {
-		t.Fatal("Expect", CheckBadSTR, "got", e2)
+		t.Error("Expect", ReqSuccess, "got", e1)
+		t.Error("Expect", CheckBadSTR, "got", e2)
 	}
 }
 
@@ -81,6 +82,12 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 		t.Error(e2)
 	}
 
+	// test error name existed with different key
+	// FIXME: see #133. It should return something like CheckBadBinding.
+	if e1, e2 := registerAndVerify(d, cc, alice, []byte{1, 2, 3}); e1 != ReqNameExisted || e2 != CheckBadPromise {
+		t.Error(e1)
+		t.Error(e2)
+	}
 	if len(cc.TBs) != 1 {
 		t.Fatal("Expect the directory to return a signed promise")
 	}
@@ -153,34 +160,37 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 		t.Error(e1)
 		t.Error(e2)
 	}
+
 	// do lookup in the same epoch - TB TOFU
-	if e1, e2 := lookupAndVerify(d, cc, alice, nil); e1 != ReqSuccess || e2 != CheckPassed {
-		t.Error(e1)
-		t.Error(e2)
-	}
-	// re-do the request and get the key from the response
-	// the key would be extracted from the TB
+	// and get the key from the response. The key would be extracted from the TB
 	request := &KeyLookupRequest{
 		Username: alice,
 	}
-	res, _ := d.KeyLookup(request)
+	res, err := d.KeyLookup(request)
+	if err != ReqSuccess {
+		t.Error("Expect", ReqSuccess, "got", err)
+	}
+	if err := cc.HandleResponse(KeyLookupType, res, alice, nil); err != CheckPassed {
+		t.Error("Expect", ReqSuccess, "got", err)
+	}
 	if !bytes.Equal(res.GetKey(), key) {
 		t.Error("The directory has returned a wrong key.")
 	}
 
-	// do lookup in the different epoch
 	d.Update()
 
-	if e1, e2 := lookupAndVerify(d, cc, alice, key); e1 != ReqSuccess || e2 != CheckPassed {
-		t.Error(e1)
-		t.Error(e2)
-	}
-	// re-do the request and get the key from the response
+	// do lookup in the different epoch
 	// this time, the key would be extracted from the AP.
 	request = &KeyLookupRequest{
 		Username: alice,
 	}
-	res, _ = d.KeyLookup(request)
+	res, err = d.KeyLookup(request)
+	if err != ReqSuccess {
+		t.Error("Expect", ReqSuccess, "got", err)
+	}
+	if err := cc.HandleResponse(KeyLookupType, res, alice, nil); err != CheckPassed {
+		t.Error("Expect", ReqSuccess, "got", err)
+	}
 	if !bytes.Equal(res.GetKey(), key) {
 		t.Error("The directory has returned a wrong key.")
 	}
