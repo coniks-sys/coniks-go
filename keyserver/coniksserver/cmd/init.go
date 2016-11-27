@@ -2,9 +2,7 @@ package cmd
 
 import (
 	"bytes"
-	"io/ioutil"
 	"log"
-	"os"
 	"path"
 	"strconv"
 
@@ -73,39 +71,39 @@ func mkConfig(dir string) {
 		log.Println(err)
 		return
 	}
-	utils.WriteFile(file, confBuf)
+	utils.WriteFile(file, confBuf.Bytes(), 0644)
 }
 
 func mkSigningKey(dir string) {
-	file := path.Join(dir, "sign.priv")
-	if _, err := os.Stat(file); err == nil {
-		log.Printf("%s already exists\n", file)
-		return
-	}
 	sk, err := sign.GenerateKey(nil)
 	if err != nil {
 		log.Print(err)
 		return
 	}
-	if err := ioutil.WriteFile(file, sk[:], 0600); err != nil {
-		log.Print(err)
+	pk, _ := sk.Public()
+	if err := utils.WriteFile(path.Join(dir, "sign.priv"), sk, 0600); err != nil {
+		log.Println(err)
+		return
+	}
+	if err := utils.WriteFile(path.Join(dir, "sign.pub"), pk, 0600); err != nil {
+		log.Println(err)
 		return
 	}
 }
 
 func mkVrfKey(dir string) {
-	file := path.Join(dir, "vrf.priv")
-	if _, err := os.Stat(file); err == nil {
-		log.Printf("%s already exists\n", file)
-		return
-	}
 	sk, err := vrf.GenerateKey(nil)
 	if err != nil {
 		log.Print(err)
 		return
 	}
-	if err := ioutil.WriteFile(file, sk[:], 0600); err != nil {
-		log.Print(err)
+	pk, _ := sk.Public()
+	if err := utils.WriteFile(path.Join(dir, "vrf.priv"), sk, 0600); err != nil {
+		log.Println(err)
+		return
+	}
+	if err := utils.WriteFile(path.Join(dir, "vrf.pub"), pk, 0600); err != nil {
+		log.Println(err)
 		return
 	}
 }
