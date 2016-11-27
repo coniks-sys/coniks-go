@@ -57,8 +57,12 @@ var lookupCmd = &cobra.Command{
 		case p.CheckPassed:
 			switch response.Error {
 			case p.ReqSuccess:
-				// TODO: implement response.GetKey()
-				fmt.Println("Success! Key bound to name is: [" + "" + "]")
+				key, err := response.GetKey()
+				if err != nil {
+					fmt.Println("Cannot the key from the response, error: " + err.Error())
+				} else {
+					fmt.Println("Success! Key bound to name is: [" + string(key) + "]")
+				}
 			case p.ReqNameNotFound:
 				fmt.Println("Name isn't registered.")
 			}
