@@ -23,12 +23,6 @@ Available Commands:
 Use "coniksclient [command] --help" for more information about a command.
 ```
 
-## TODO
-- Update me
-- Clean up some more TODOs
-- Write doc (summary, etc)
-
-
 ## Disclaimer
 __Do not use your real public key or private key with this test client.__
 
