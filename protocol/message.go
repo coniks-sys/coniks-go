@@ -208,3 +208,51 @@ func NewMonitoringProof(ap []*m.AuthenticationPath,
 		},
 	}, ReqSuccess
 }
+
+func (msg *Response) validate() error {
+	if Errors[msg.Error] {
+		return msg.Error
+	}
+	switch df := msg.DirectoryResponse.(type) {
+	case *DirectoryProof:
+		if df.AP == nil || df.STR == nil {
+			return ErrMalformedDirectoryMessage
+		}
+		return nil
+	case *DirectoryProofs:
+		// TODO: also do above assertions here
+		return nil
+	default:
+		panic("[coniks] Malformed response")
+	}
+}
+
+// GetKey returns the key extracted from
+// a _verified_ CONIKS server's response.
+//
+// If the response contains a single authentication path,
+// the key is obtained from that authentication path or the
+// temporary binding (which depends on the returned proof type).
+//
+// If the response contains a range of authentication paths,
+// the key is obtained from the authentication path corresponding
+// with the most recent signed tree root.
+func (msg *Response) GetKey() ([]byte, error) {
+	if err := msg.validate(); err != nil {
+		return nil, err
+	}
+	switch df := msg.DirectoryResponse.(type) {
+	case *DirectoryProof:
+		if df.AP.ProofType() == m.ProofOfAbsence {
+			if df.TB != nil { // FIXME: this check could be eliminated when we force to use TB?
+				return df.TB.Value, nil
+			}
+			return nil, nil
+		}
+		return df.AP.Leaf.Value, nil
+	case *DirectoryProofs:
+		return df.AP[len(df.AP)-1].Leaf.Value, nil
+	default:
+		panic("[coniks] Malformed response")
+	}
+}

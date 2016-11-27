@@ -36,8 +36,7 @@ func (tb *TemporaryBinding) Serialize(strSig []byte) []byte {
 
 // Verify validates the received tb by comparing
 // index, value against the Index and Value
-// of tb. value could be nil if we have no information about
-// the existed binding (TOFU).
+// of tb.
 func (tb *TemporaryBinding) Verify(index, value []byte) bool {
 	return bytes.Equal(tb.Index, index) &&
 		(value != nil && bytes.Equal(tb.Value, value))
