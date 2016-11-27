@@ -171,7 +171,7 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 		t.Error("Expect", ReqSuccess, "got", err)
 	}
 	if err := cc.HandleResponse(KeyLookupType, res, alice, nil); err != CheckPassed {
-		t.Error("Expect", ReqSuccess, "got", err)
+		t.Error("Expect", CheckPassed, "got", err)
 	}
 	recvKey, e := res.GetKey()
 	if e != nil && !bytes.Equal(recvKey, key) {
@@ -190,7 +190,7 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 		t.Error("Expect", ReqSuccess, "got", err)
 	}
 	if err := cc.HandleResponse(KeyLookupType, res, alice, nil); err != CheckPassed {
-		t.Error("Expect", ReqSuccess, "got", err)
+		t.Error("Expect", CheckPassed, "got", err)
 	}
 	recvKey, e = res.GetKey()
 	if e != nil && !bytes.Equal(recvKey, key) {
