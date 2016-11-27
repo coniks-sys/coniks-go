@@ -10,9 +10,12 @@ import (
 )
 
 // Config contains the client's configuration needed to send request to a
-// CONIKS-server:
-//  - the path to the server's VRF and signing public-key file, respectively;
-//  - the actual public-keys parsed from these files.
+// CONIKS-server: the path to the server's signing public-key file
+// and the actual public-key parsed from that file; the server's addresses
+// for sending registration requests and other types of request, respectively.
+//
+// Note that if RegAddress is empty, it will be fallback to use Address for
+// all request types.
 type Config struct {
 	SignPubkeyPath string `toml:"sign_pubkey_path"`
 
@@ -23,7 +26,7 @@ type Config struct {
 }
 
 // LoadConfig returns a client's configuration read from the given filename.
-// It reads the (VRF and signing) public-key files and parses the actual keys.
+// It reads the signing public-key file and parses the actual key.
 // If there is any parsing or IO-error it returns an error (and the return
 // config will be nil).
 func LoadConfig(file string) (*Config, error) {

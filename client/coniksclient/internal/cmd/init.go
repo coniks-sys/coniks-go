@@ -8,9 +8,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/coniks-sys/coniks-go/client"
-	"github.com/spf13/cobra"
-
 	"github.com/coniks-sys/coniks-go/utils"
+	"github.com/spf13/cobra"
 )
 
 var initCmd = &cobra.Command{
@@ -20,7 +19,6 @@ var initCmd = &cobra.Command{
 the following content:
 
 sign_pubkey_path = "../../keyserver/coniksserver/sign.pub"
-vrf_pubkey_path = "../../keyserver/coniksserver/vrf.pub"
 registration_address = "tcp://127.0.0.1:3000"
 address = "tcp://127.0.0.1:3000"
 
