@@ -70,8 +70,19 @@ Example call:
 				// TODO: Save the cc to verify the TB and for later
 				// usage (TOFU checks)
 			case p.ReqNameExisted:
-				// TODO: See #133
 				fmt.Println("Name is already registered.")
+			}
+		case p.CheckBindingsDiffer:
+			switch response.Error {
+			case p.ReqNameExisted:
+				fmt.Println(`Are you trying to update your binding? Unfortunately, KeyChange isn't supported yet.`)
+			case p.ReqSuccess:
+				fmt.Println("Oops! The server snuck in some other key.")
+				recvKey, err := response.GetKey()
+				if err != nil {
+					fmt.Println("Cannot get the key from the response, error: " + err.Error())
+				}
+				fmt.Println("[" + string(recvKey) + "] was registered instead of [" + string(key) + "]")
 			}
 		default:
 			fmt.Println("Error: " + err.Error())

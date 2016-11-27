@@ -2,9 +2,24 @@ package merkletree
 
 import (
 	"bytes"
+	"errors"
 
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/utils"
+)
+
+var (
+	// ErrBindingsDiffer indicates that the value included in the proof
+	// is different from the expected value.
+	ErrBindingsDiffer = errors.New("[merkletree] The values included in the bindings are different")
+	// ErrUnverifiableCommitment indicates that the leaf node's commitment is unverifiable.
+	ErrUnverifiableCommitment = errors.New("[merkletree] Could not verify the commitment")
+	// ErrIndicesMismatch indicates that there is a mismatch
+	// between the lookup index and the leaf index.
+	ErrIndicesMismatch = errors.New("[merkletree] The lookup index is inconsistent with the index of the proof node")
+	// ErrUnequalTreeHashes indicates that the hash computed from the authentication path
+	// and the hash taken from the signed tree root are different.
+	ErrUnequalTreeHashes = errors.New("[merkletree] The hashes computed from the authentication path and the STR are unequal")
 )
 
 // ProofNode can be a user node or an empty node,
@@ -80,38 +95,45 @@ func (ap *AuthenticationPath) authPathHash() []byte {
 	return hash
 }
 
-func (ap *AuthenticationPath) verifyBinding(key, value []byte) bool {
-	return bytes.Equal(ap.Leaf.Value, value) &&
-		ap.Leaf.Commitment.Verify(key, value)
-}
-
-// Verify recomputes the tree's root node from the authentication path,
+// Verify first compares the lookup index with the leaf index.
+// It expects the lookup index and the leaf index match in the
+// first l bits with l is the Level of the proof node if ap is
+// a proof of absence. It also verifies the value and
+// the commitment (in case of the proof of inclusion).
+// Finally, it recomputes the tree's root node from ap,
 // and compares it to treeHash, which is taken from a STR.
-// Specifically, treeHash has to come from the STR whose tree returns
-// the authentication path.
+// Specifically, treeHash has to come from the STR whose tree returns ap.
+//
 // This should be called after the VRF index is verified successfully.
-func (ap *AuthenticationPath) Verify(key, value, treeHash []byte) bool {
-	if ap.ProofType() == ProofOfAbsence { // proof of absence
+func (ap *AuthenticationPath) Verify(key, value, treeHash []byte) error {
+	if ap.ProofType() == ProofOfAbsence {
 		// Check if i and j match in the first l bits
 		indexBits := utils.ToBits(ap.Leaf.Index)
 		lookupIndexBits := utils.ToBits(ap.LookupIndex)
 		for i := 0; i < int(ap.Leaf.Level); i++ {
 			if indexBits[i] != lookupIndexBits[i] {
-				return false
+				return ErrIndicesMismatch
 			}
 		}
-	} else { // proof of inclusion
+		// expect the value is nil since we suppressed
+		// the salt & value (see Get())
+		if ap.Leaf.Value != nil {
+			return ErrBindingsDiffer
+		}
+	} else {
 		// Verify the key-value binding returned in the ProofNode
-		if !ap.verifyBinding(key, value) {
-			return false
+		if !bytes.Equal(ap.Leaf.Value, value) {
+			return ErrBindingsDiffer
+		}
+		if !ap.Leaf.Commitment.Verify(key, value) {
+			return ErrUnverifiableCommitment
 		}
 	}
 
-	// step 2. Verify the auth path of the returned leaf
 	if !bytes.Equal(treeHash, ap.authPathHash()) {
-		return false
+		return ErrUnequalTreeHashes
 	}
-	return true
+	return nil
 }
 
 func (ap *AuthenticationPath) ProofType() ProofType {

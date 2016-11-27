@@ -224,12 +224,20 @@ func verifyAuthPath(uname string, key []byte,
 		key = ap.Leaf.Value
 	}
 
-	// verify auth path
-	if !ap.Verify([]byte(uname), key, str.TreeHash) {
+	switch err := ap.Verify([]byte(uname), key, str.TreeHash); err {
+	case m.ErrBindingsDiffer:
+		return CheckBindingsDiffer
+	case m.ErrUnverifiableCommitment:
+		return CheckBadCommitment
+	case m.ErrIndicesMismatch:
+		return CheckBadLookupIndex
+	case m.ErrUnequalTreeHashes:
 		return CheckBadAuthPath
+	case nil:
+		return nil
+	default:
+		panic("[coniks] Unknown error: " + err.Error())
 	}
-
-	return nil
 }
 
 func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
@@ -313,14 +321,14 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(df *DirectoryProof,
 		return CheckBadSignature
 	}
 
-	// key could be nil if we have no information about
-	// the existed binding (TOFU).
-	if key == nil {
-		key = tb.Value
+	if !bytes.Equal(tb.Index, ap.LookupIndex) {
+		return CheckBadPromise
 	}
 
-	if tb.Verify(ap.LookupIndex, key) {
-		return nil
+	// key could be nil if we have no information about
+	// the existed binding (TOFU).
+	if key != nil && !bytes.Equal(tb.Value, key) {
+		return CheckBindingsDiffer
 	}
-	return CheckBadPromise
+	return nil
 }

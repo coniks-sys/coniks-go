@@ -2,10 +2,6 @@
 
 package protocol
 
-import (
-	"bytes"
-)
-
 // A TemporaryBinding consists of the private
 // Index for a username, the Value (i.e. public key etc.)
 // mapped to this index in a key directory, and a digital
@@ -32,12 +28,4 @@ func (tb *TemporaryBinding) Serialize(strSig []byte) []byte {
 	tbBytes = append(tbBytes, tb.Index...)
 	tbBytes = append(tbBytes, tb.Value...)
 	return tbBytes
-}
-
-// Verify validates the received tb by comparing
-// index, value against the Index and Value
-// of tb.
-func (tb *TemporaryBinding) Verify(index, value []byte) bool {
-	return bytes.Equal(tb.Index, index) &&
-		(value != nil && bytes.Equal(tb.Value, value))
 }
