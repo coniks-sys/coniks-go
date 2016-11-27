@@ -219,19 +219,28 @@ func NewMonitoringProof(ap []*m.AuthenticationPath,
 // If the response contains a range of authentication paths,
 // the key is obtained from the authentication path corresponding
 // with the most recent signed tree root.
-func (msg *Response) GetKey() []byte {
+func (msg *Response) GetKey() ([]byte, error) {
+	// repeat some assertions from consistencychecks.go
+	if Errors[msg.Error] {
+		return nil, msg.Error
+	}
+
 	switch df := msg.DirectoryResponse.(type) {
 	case *DirectoryProof:
+		if df.AP == nil || df.STR == nil {
+			return nil, ErrMalformedDirectoryMessage
+		}
 		if df.AP.ProofType() == m.ProofOfAbsence {
 			if df.TB != nil { // FIXME: this check could be eliminated when we force to use TB?
-				return df.TB.Value
+				return df.TB.Value, nil
 			}
-			return nil
+			return nil, nil
 		}
-		return df.AP.Leaf.Value
+		return df.AP.Leaf.Value, nil
 	case *DirectoryProofs:
-		return df.AP[len(df.AP)-1].Leaf.Value
+		// TODO: do the same checks as in consistencychecks.go
+		return df.AP[len(df.AP)-1].Leaf.Value, nil
 	default:
-		return nil
+		panic("[coniks] Malformed response")
 	}
 }

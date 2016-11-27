@@ -173,7 +173,8 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	if err := cc.HandleResponse(KeyLookupType, res, alice, nil); err != CheckPassed {
 		t.Error("Expect", ReqSuccess, "got", err)
 	}
-	if !bytes.Equal(res.GetKey(), key) {
+	recvKey, e := res.GetKey()
+	if e != nil && !bytes.Equal(recvKey, key) {
 		t.Error("The directory has returned a wrong key.")
 	}
 
@@ -191,7 +192,8 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	if err := cc.HandleResponse(KeyLookupType, res, alice, nil); err != CheckPassed {
 		t.Error("Expect", ReqSuccess, "got", err)
 	}
-	if !bytes.Equal(res.GetKey(), key) {
+	recvKey, e = res.GetKey()
+	if e != nil && !bytes.Equal(recvKey, key) {
 		t.Error("The directory has returned a wrong key.")
 	}
 
