@@ -47,4 +47,4 @@ Success! Key bound to name is: [alice_fake_public_key]
 ```
 
 ## Disclaimer
-Please keep in mind that this CONIKS client implementation is under active development. The repository may contain experimental features that aren't fully tested.
+Please keep in mind that this CONIKS client is under active development. The repository may contain experimental features that aren't fully tested. We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/releases).
