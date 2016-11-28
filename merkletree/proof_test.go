@@ -7,6 +7,16 @@ import (
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
+func verifyAuthPath(ap *AuthenticationPath, key, value []byte, treehash []byte) bool {
+	if !ap.VerifyIndex() {
+		return false
+	}
+	if !ap.VerifyBinding(key, value) {
+		return false
+	}
+	return ap.VerifySTR(treehash)
+}
+
 func TestVerifyProof(t *testing.T) {
 	m, err := NewMerkleTree()
 	if err != nil {
@@ -63,7 +73,7 @@ func TestVerifyProof(t *testing.T) {
 		t.Fatal("Expect a proof of inclusion")
 	}
 	// verify auth path
-	if !proof.Verify([]byte(key3), val3, m.hash) {
+	if !verifyAuthPath(proof, []byte(key3), val3, m.hash) {
 		t.Error("Proof of inclusion verification failed.")
 	}
 
@@ -78,7 +88,7 @@ func TestVerifyProof(t *testing.T) {
 		!bytes.Equal(vrfPrivKey1.Compute([]byte("123")), proof.LookupIndex) {
 		t.Fatal("Expect a proof of absence")
 	}
-	if !proof.Verify([]byte("123"), nil, m.hash) {
+	if !verifyAuthPath(proof, []byte("123"), nil, m.hash) {
 		t.Error("Proof of absence verification failed.")
 	}
 }
@@ -111,7 +121,7 @@ func TestVerifyProofSamePrefix(t *testing.T) {
 		utils.ToBytes(utils.ToBits(absentIndex)[:proof.Leaf.Level])) {
 		t.Fatal("Expect these indices share the same prefix in the first bit")
 	}
-	if !proof.Verify([]byte("a"), nil, m.hash) {
+	if !verifyAuthPath(proof, []byte("a"), nil, m.hash) {
 		t.Error("Proof of absence verification failed.")
 	}
 
@@ -128,7 +138,7 @@ func TestVerifyProofSamePrefix(t *testing.T) {
 		t.Fatal("Expect a proof of inclusion")
 	}
 	// step 2. verify auth path
-	if !proof.Verify([]byte(key1), val1, m.hash) {
+	if !verifyAuthPath(proof, []byte(key1), val1, m.hash) {
 		t.Error("Proof of inclusion verification failed.")
 	}
 }

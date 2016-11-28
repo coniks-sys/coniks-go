@@ -80,21 +80,25 @@ func (ap *AuthenticationPath) authPathHash() []byte {
 	return hash
 }
 
-// VerifyBinding verifies both the value and the commitment
-// of the proof node of the authentication path.
-//
-// This should be called only when ap is a proof of inclusion.
+// VerifyBinding verifies the value of the proof node
+// of the authentication path. It also verifies the commitment
+// of the proof node if ap is a proof of inclusion.
 func (ap *AuthenticationPath) VerifyBinding(key, value []byte) bool {
-	return bytes.Equal(ap.Leaf.Value, value) &&
-		ap.Leaf.Commitment.Verify(key, value)
+	return (ap.ProofType() == ProofOfAbsence && ap.Leaf.Value == nil) ||
+		(bytes.Equal(ap.Leaf.Value, value) && ap.Leaf.Commitment.Verify(key, value))
 }
 
-// VerifyIndex checks if the private index of the proof node and
-// the lookup index match in the first l bits with l is the Level
-// of the proof node.
+// VerifyIndex verifies the private index of the proof node.
 //
-// This should be called only when ap is a proof of absence.
+// If the proof is a proof of absence, it checks if the index
+// of the proof node and the lookup index match in the first
+// l bits with l is the Level of the proof node.
+//
+// If the proof is a proof of inclusion, it returns true immediately.
 func (ap *AuthenticationPath) VerifyIndex() bool {
+	if ap.ProofType() == ProofOfInclusion {
+		return true
+	}
 	// Check if i and j match in the first l bits
 	indexBits := utils.ToBits(ap.Leaf.Index)
 	lookupIndexBits := utils.ToBits(ap.LookupIndex)
@@ -112,19 +116,6 @@ func (ap *AuthenticationPath) VerifyIndex() bool {
 // the authentication path.
 func (ap *AuthenticationPath) VerifySTR(treeHash []byte) bool {
 	return bytes.Equal(treeHash, ap.authPathHash())
-}
-
-// Verify combines VerifyBinding(), VerifyIndex(), and VerifySTR(),
-// and abstracts away the detail of the failure.
-// This should be called after the VRF index is verified successfully.
-func (ap *AuthenticationPath) Verify(key, value, treeHash []byte) bool {
-	switch {
-	case ap.ProofType() == ProofOfAbsence && ap.VerifyIndex(),
-		ap.ProofType() == ProofOfInclusion && ap.VerifyBinding(key, value):
-		return ap.VerifySTR(treeHash)
-	default:
-		return false
-	}
 }
 
 func (ap *AuthenticationPath) ProofType() ProofType {
