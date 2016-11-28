@@ -113,6 +113,8 @@ func (ap *AuthenticationPath) Verify(key, value, treeHash []byte) error {
 				return ErrIndicesMismatch
 			}
 		}
+		// expect the value is nil since we suppressed
+		// the salt & value (see Get())
 		if ap.Leaf.Value != nil {
 			return ErrBindingsDiffer
 		}
