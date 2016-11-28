@@ -20,6 +20,7 @@ import (
 // A TwitterBot is an account verification proxy for
 // CONIKS clients registering Twitter usernames
 // with a CONIKS key server.
+//
 // A TwitterBot maintains information about a
 // twitter client and stream, the address of its
 // corresponding CONIKS server, and its reserved
@@ -55,8 +56,9 @@ type TwitterOAuth struct {
 	AccessSecret   string
 }
 
-// NewTwitterBot creates a new TwitterBot that implements the Bot
-// interface.
+// NewTwitterBot constructs a new account verification proxy for Twitter
+// accounts that implements the Bot interface.
+//
 // NewTwitterBot loads the TwitterConfig for this bot from the
 // corresponding config file, checks that the CONIKS key server
 // is live, and authenticates the bot's Twitter client via OAuth.
@@ -101,7 +103,7 @@ func NewTwitterBot(path string) (Bot, error) {
 	return bot, nil
 }
 
-// Run implements the main functionality of the TwitterBot bot.
+// Run implements the main functionality of a Twitter registration bot.
 // It listens for a Twitter direct message (DM) sent to the bot's
 // reserved handle and calls HandleRegistration() upon receiving a valid
 // DM sent by a CONIKS client connected to a Twitter account.
@@ -147,7 +149,7 @@ func (bot *TwitterBot) Stop() {
 
 // HandleRegistration verifies the authenticity of a CONIKS registration
 // request msg for a Twitter user, and forwards this request to the bot's
-// corresponding CONIKS key server the Twitter account for username is valid.
+// corresponding CONIKS key server if the Twitter account for username is valid.
 //
 // HandleRegistration() validates a registration request sent by a CONIKS client
 // on behalf of the Twitter user via Twitter DM.
@@ -196,7 +198,7 @@ func (bot *TwitterBot) HandleRegistration(username string, msg []byte) string {
 }
 
 // SendDM sends a Twitter direct message msg to the given Twitter screenname.
-// The sender screenname is set to the bot's reserved Twitter handle.
+// The sender screenname should be set to the bot's reserved Twitter handle.
 func (bot *TwitterBot) SendDM(screenname, msg string) error {
 	params := &twitter.DirectMessageNewParams{ScreenName: screenname, Text: msg}
 	_, _, err := bot.client.DirectMessages.New(params)
