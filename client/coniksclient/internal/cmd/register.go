@@ -59,16 +59,16 @@ Example call:
 		}
 
 		response := client.UnmarshalResponse(p.RegistrationType, res)
-		// FIXME: SavedSTR should be read from a persistent storage. Lazy me :(
-		cc := p.NewCC(nil, true, conf.SigningPubKey)
+		cc := loadState(conf.KeyStoragePath, conf.SigningPubKey)
 		err = cc.HandleResponse(p.RegistrationType, response, name, []byte(key))
 		switch err {
 		case p.CheckPassed:
 			switch response.Error {
 			case p.ReqSuccess:
 				fmt.Println("Succesfully registered name: " + name)
-				// TODO: Save the cc to verify the TB and for later
-				// usage (TOFU checks)
+				if err := storeState(cc, conf.KeyStoragePath); err != nil {
+					fmt.Println("Cannot save the key to the file. Error: " + err.Error())
+				}
 			case p.ReqNameExisted:
 				fmt.Println("Name is already registered.")
 			}

@@ -48,10 +48,12 @@ var lookupCmd = &cobra.Command{
 			return
 		}
 		response := client.UnmarshalResponse(p.KeyLookupType, res)
-		// FIXME reuse/load the cc from the registration instead
-		// FIXME same comment as in register.go
-		cc := p.NewCC(nil, true, conf.SigningPubKey)
-		err = cc.HandleResponse(p.KeyLookupType, response, name, nil)
+		cc := loadState(conf.KeyStoragePath, conf.SigningPubKey)
+		if key, ok := cc.Bindings[name]; ok {
+			err = cc.HandleResponse(p.KeyLookupType, response, name, []byte(key))
+		} else {
+			err = cc.HandleResponse(p.KeyLookupType, response, name, nil)
+		}
 		switch err {
 		case p.CheckPassed:
 			switch response.Error {
@@ -61,6 +63,9 @@ var lookupCmd = &cobra.Command{
 					fmt.Println("Cannot get the key from the response, error: " + err.Error())
 				} else {
 					fmt.Println("Success! Key bound to name is: [" + string(key) + "]")
+					if err := storeState(cc, conf.KeyStoragePath); err != nil {
+						fmt.Println("Cannot save the key to the file. Error: " + err.Error())
+					}
 				}
 			case p.ReqNameNotFound:
 				fmt.Println("Name isn't registered.")

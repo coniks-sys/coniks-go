@@ -41,6 +41,7 @@ func init() {
 func mkConfigOrExit(path string) {
 	var conf = client.Config{
 		SignPubkeyPath: "../../keyserver/coniksserver/sign.pub",
+		KeyStoragePath: "keys.coniks",
 		RegAddress:     "tcp://127.0.0.1:3000",
 		Address:        "tcp://127.0.0.1:3000",
 	}
