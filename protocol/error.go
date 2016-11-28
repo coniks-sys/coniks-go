@@ -30,6 +30,7 @@ const (
 	CheckBadSignature
 	CheckBadVRFProof
 	CheckBindingsDiffer
+	CheckBadCommitment
 	CheckBadLookupIndex
 	CheckBadAuthPath
 	CheckBadSTR
@@ -62,6 +63,7 @@ var (
 		CheckBadSignature:   "[coniks] Directory's signature on STR or TB is invalid",
 		CheckBadVRFProof:    "[coniks] Returned index is not valid for the given name",
 		CheckBindingsDiffer: "[coniks] The key in the binding is inconsistent with our expectation",
+		CheckBadCommitment:  "[coniks] The name-to-key binding commitment is not verifiable",
 		CheckBadLookupIndex: "[coniks] The lookup index is inconsistent with the index of the proof node",
 		CheckBadAuthPath:    "[coniks] Returned binding is inconsistent with the tree root hash",
 		CheckBadSTR:         "[coniks] The hash chain is inconsistent",

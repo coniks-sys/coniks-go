@@ -12,6 +12,8 @@ var (
 	// ErrBindingsDiffer indicates that the value included in the proof
 	// is different from the expected value.
 	ErrBindingsDiffer = errors.New("[merkletree] The values included in the bindings are different")
+	// ErrUnverifiableCommitment indicates that the leaf node's commitment is unverifiable.
+	ErrUnverifiableCommitment = errors.New("[merkletree] Could not verify the commitment")
 	// ErrIndicesMismatch indicates that there is a mismatch
 	// between the lookup index and the leaf index.
 	ErrIndicesMismatch = errors.New("[merkletree] The lookup index is inconsistent with the index of the proof node")
@@ -120,9 +122,11 @@ func (ap *AuthenticationPath) Verify(key, value, treeHash []byte) error {
 		}
 	} else {
 		// Verify the key-value binding returned in the ProofNode
-		if !bytes.Equal(ap.Leaf.Value, value) ||
-			!ap.Leaf.Commitment.Verify(key, value) {
+		if !bytes.Equal(ap.Leaf.Value, value) {
 			return ErrBindingsDiffer
+		}
+		if !ap.Leaf.Commitment.Verify(key, value) {
+			return ErrUnverifiableCommitment
 		}
 	}
 

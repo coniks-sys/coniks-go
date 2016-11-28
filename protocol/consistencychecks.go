@@ -224,15 +224,19 @@ func verifyAuthPath(uname string, key []byte,
 		key = ap.Leaf.Value
 	}
 
-	switch ap.Verify([]byte(uname), key, str.TreeHash) {
+	switch err := ap.Verify([]byte(uname), key, str.TreeHash); err {
 	case m.ErrBindingsDiffer:
 		return CheckBindingsDiffer
+	case m.ErrUnverifiableCommitment:
+		return CheckBadCommitment
 	case m.ErrIndicesMismatch:
 		return CheckBadLookupIndex
 	case m.ErrUnequalTreeHashes:
 		return CheckBadAuthPath
-	default:
+	case nil:
 		return nil
+	default:
+		panic("[coniks] Unknown error: " + err.Error())
 	}
 }
 
