@@ -13,7 +13,7 @@ Consistency Checks
 This module implements all consistency checks performed by a CONIKS client
 on directory proofs received from a CONIKS server. These operations
 include the verification of username-to-key bindings (authentication paths),
-and non-equivocation checks (signed tree root).
+and non-equivocation checks (signed tree roots).
 
 Directory
 
