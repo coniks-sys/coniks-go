@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	// ErrorSTRNotFound indicates that the STR has been evicted from memory,
+	// ErrSTRNotFound indicates that the STR has been evicted from memory,
 	// because the maximum number of cached PAD snapshots has been exceeded.
-	ErrorSTRNotFound = errors.New("[merkletree] STR not found")
+	ErrSTRNotFound = errors.New("[merkletree] STR not found")
 )
 
 // PAD is an acronym for persistent authenticated dictionary
@@ -111,7 +111,7 @@ func (pad *PAD) Lookup(key string) (*AuthenticationPath, error) {
 func (pad *PAD) LookupInEpoch(key string, epoch uint64) (*AuthenticationPath, error) {
 	str := pad.GetSTR(epoch)
 	if str == nil {
-		return nil, ErrorSTRNotFound
+		return nil, ErrSTRNotFound
 	}
 	// TODO: If the vrf key is rotated, we'd need to use the key corresponding
 	// to the `epoch` here.  See #120
