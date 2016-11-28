@@ -218,16 +218,22 @@ func verifyAuthPath(uname string, key []byte,
 		return CheckBadVRFProof
 	}
 
-	if !ap.VerifyIndex() {
-		return CheckBadLookupIndex
+	if key == nil {
+		// key is nil when the user does lookup for the first time.
+		// Accept the received key as TOFU
+		key = ap.Leaf.Value
 	}
-	if key != nil && !ap.VerifyBinding([]byte(uname), key) {
+
+	switch ap.Verify([]byte(uname), key, str.TreeHash) {
+	case m.ErrBindingsDiffer:
 		return CheckBindingsDiffer
-	}
-	if !ap.VerifySTR(str.TreeHash) {
+	case m.ErrIndicesMismatch:
+		return CheckBadLookupIndex
+	case m.ErrUnequalTreeHashes:
 		return CheckBadAuthPath
+	default:
+		return nil
 	}
-	return nil
 }
 
 func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
