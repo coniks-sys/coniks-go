@@ -136,6 +136,11 @@ func (ap *AuthenticationPath) Verify(key, value, treeHash []byte) error {
 	return nil
 }
 
+// ProofType returns the type of ap. It does a comparison
+// between the leaf index and the lookup index to determine
+// the proof type in the first time when this is called.
+// After that, it can be called many times without
+// rerunning the comparison.
 func (ap *AuthenticationPath) ProofType() ProofType {
 	if ap.proofType == undeterminedProof {
 		if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
