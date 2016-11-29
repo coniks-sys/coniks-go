@@ -9,20 +9,24 @@ import (
 )
 
 var (
-	// ErrInvalidTree is used to panic if there occurs
+	// ErrInvalidTree indicates a panic due to
 	// a malformed operation on the tree.
 	ErrInvalidTree = errors.New("[merkletree] Invalid tree")
 )
 
 const (
-	// EmptyBranchIdentifier is the domain separation prefix for empty node hashes.
+	// EmptyBranchIdentifier is the domain separation prefix for
+	// empty node hashes.
 	EmptyBranchIdentifier = 'E'
 
-	// LeafIdentifier is the domain separation prefix for user leaf node hashes.
+	// LeafIdentifier is the domain separation prefix for user
+	// leaf node hashes.
 	LeafIdentifier = 'L'
 )
 
-// MerkleTree represents the Merkle prefix tree data structure.
+// MerkleTree represents the Merkle prefix tree data structure,
+// which includes the root node, its hash, and a random tree-specific
+// nonce.
 type MerkleTree struct {
 	nonce []byte
 	root  *interiorNode
@@ -45,8 +49,8 @@ func NewMerkleTree() (*MerkleTree, error) {
 	return m, nil
 }
 
-// Get returns an AuthenticationPath corresponding to the proof
-// of inclusion/absence of the requested index.
+// Get returns an AuthenticationPath used as a proof
+// of inclusion/absence for the requested lookupIndex.
 func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 	lookupIndexBits := utils.ToBits(lookupIndex)
 	depth := 0
@@ -117,8 +121,9 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 
 // Set inserts or updates the value of the given index
 // calculated from the key to the tree. It will generate a new commitment
-// for the leaf node. In case of an update, the leaf node's value and commitment
-// will be replaced with the new value and newly generated commitment.
+// for the leaf node. In the case of an update, the leaf node's value and
+// commitment are replaced with the new value and newly generated
+// commitment.
 func (m *MerkleTree) Set(index []byte, key string, value []byte) error {
 	commitment, err := crypto.NewCommit([]byte(key), value)
 	if err != nil {
@@ -235,8 +240,8 @@ func (m *MerkleTree) recomputeHash() {
 	m.hash = m.root.hash(m)
 }
 
-// Clone makes a copy of the current tree.
-// Any change later on the original tree does not affect the cloned tree,
+// Clone returns a copy of the tree m.
+// Any later change to the original tree m does not affect the cloned tree,
 // and vice versa.
 func (m *MerkleTree) Clone() *MerkleTree {
 	return &MerkleTree{
