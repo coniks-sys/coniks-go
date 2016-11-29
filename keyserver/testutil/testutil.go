@@ -34,11 +34,11 @@ import (
 
 const (
 	// TestDir is the default directory for server tests
-	TestDir          = "coniksServerTest"
+	TestDir = "coniksServerTest"
 	// PublicConnection is the default address for TCP connections
 	PublicConnection = "tcp://127.0.0.1:3000"
 	// LocalConnection is the default address for Unix socket connections
-	LocalConnection  = "unix:///tmp/conikstest.sock"
+	LocalConnection = "unix:///tmp/conikstest.sock"
 )
 
 type ExpectingDirProofResponse struct {
