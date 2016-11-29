@@ -132,3 +132,62 @@ func TestVerifyProofSamePrefix(t *testing.T) {
 		t.Error("Proof of inclusion verification failed.")
 	}
 }
+
+func TestProofVerificationErrors(t *testing.T) {
+	m, err := NewMerkleTree()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	key1 := "key1"
+	index1 := vrfPrivKey1.Compute([]byte(key1))
+	val1 := []byte("value1")
+	if err := m.Set(index1, key1, val1); err != nil {
+		t.Fatal(err)
+	}
+	m.recomputeHash()
+	absentIndex := vrfPrivKey1.Compute([]byte("a"))
+
+	// ProofOfInclusion
+	// assert proof of inclusion
+	proof1 := m.Get(index1)
+	if proof1.ProofType() != ProofOfInclusion {
+		t.Fatal("Expect a proof of inclusion")
+	}
+	// - ErrBindingsDiffer
+	proof1.Leaf.Value[0] += 1
+	if err := proof1.Verify([]byte(key1), val1, m.hash); err != ErrBindingsDiffer {
+		t.Error("Expect", ErrBindingsDiffer, "got", err)
+	}
+	// - ErrUnverifiableCommitment
+	proof1.Leaf.Value[0] -= 1
+	proof1.Leaf.Commitment.Salt[0] += 1
+	if err := proof1.Verify([]byte(key1), val1, m.hash); err != ErrUnverifiableCommitment {
+		t.Error("Expect", ErrUnverifiableCommitment, "got", err)
+	}
+	// ErrUnequalTreeHashes
+	hash := append([]byte{}, m.hash...)
+	hash[0] += 1
+	proof1.Leaf.Commitment.Salt[0] -= 1
+	if err := proof1.Verify([]byte(key1), val1, hash); err != ErrUnequalTreeHashes {
+		t.Error("Expect", ErrUnequalTreeHashes, "got", err)
+	}
+
+	// ProofOfAbsence
+	proof2 := m.Get(absentIndex) // shares the same prefix with leaf node key1
+	// assert proof of absence
+	if proof2.ProofType() != ProofOfAbsence {
+		t.Fatal("Expect a proof of absence")
+	}
+	// - ErrBindingsDiffer
+	proof2.Leaf.Value = make([]byte, 1)
+	if err := proof2.Verify([]byte("a"), nil, m.hash); err != ErrBindingsDiffer {
+		t.Error("Expect", ErrBindingsDiffer, "got", err)
+	}
+	// - ErrIndicesMismatch
+	proof2.Leaf.Value = nil
+	proof2.Leaf.Index[0] &= 0x01
+	if err := proof2.Verify([]byte("a"), nil, m.hash); err != ErrIndicesMismatch {
+		t.Error("Expect", ErrIndicesMismatch, "got", err)
+	}
+}
