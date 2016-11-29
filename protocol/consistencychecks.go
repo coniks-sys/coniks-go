@@ -26,6 +26,8 @@ import (
 type ConsistencyChecks struct {
 	SavedSTR *m.SignedTreeRoot
 
+	Bindings map[string][]byte
+
 	// extensions settings
 	useTBs bool
 	TBs    map[string]*TemporaryBinding
@@ -44,6 +46,7 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 	}
 	cc := &ConsistencyChecks{
 		SavedSTR: savedSTR,
+		Bindings: make(map[string][]byte),
 		useTBs:   useTBs,
 		signKey:  signKey,
 	}
@@ -51,6 +54,14 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 		cc.TBs = make(map[string]*TemporaryBinding)
 	}
 	return cc
+}
+
+func (cc *ConsistencyChecks) RestoreState(bindings map[string][]byte,
+	tbs map[string]*TemporaryBinding) {
+	cc.Bindings = bindings
+	if cc.useTBs {
+		cc.TBs = tbs
+	}
 }
 
 // HandleResponse verifies the directory's response for a request.
@@ -90,6 +101,8 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	if err := cc.updateTBs(requestType, msg, uname, key); err != nil {
 		return err.(ErrorCode)
 	}
+	recvKey, _ := msg.GetKey()
+	cc.Bindings[uname] = recvKey
 	return CheckPassed
 }
 

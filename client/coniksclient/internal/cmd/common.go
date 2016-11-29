@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/coniks-sys/coniks-go/client"
+	"github.com/coniks-sys/coniks-go/crypto/sign"
+	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/spf13/cobra"
 )
 
@@ -34,4 +38,26 @@ func loadConfigOrExit(cmd *cobra.Command) *client.Config {
 		os.Exit(-1)
 	}
 	return conf
+}
+
+func storeState(cc *protocol.ConsistencyChecks, filename string) error {
+	buff, err := json.Marshal(cc)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filename, buff, 0644)
+}
+
+func loadState(filename string, signKey sign.PublicKey) *protocol.ConsistencyChecks {
+	var cc protocol.ConsistencyChecks
+	buff, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return protocol.NewCC(nil, true, signKey)
+	}
+	if err := json.Unmarshal(buff, &cc); err != nil {
+		return protocol.NewCC(nil, true, signKey)
+	}
+	restoredCC := protocol.NewCC(nil, true, signKey)
+	restoredCC.RestoreState(cc.Bindings, cc.TBs)
+	return restoredCC
 }
