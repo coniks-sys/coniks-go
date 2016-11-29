@@ -1,7 +1,8 @@
 /*
-Package client implements an executable reference implementation of
-a simple test client for the CONIKS key management system.
+Package client provides an executable reference implementation of
+a simple CONIKS client for the CONIKS key management system.
 
-It is designed to communicate with the basic implementation of a CONIKS server.
+This test client is designed to communicate with the basic implementation
+of a CONIKS server.
 */
 package client
