@@ -4,7 +4,7 @@
 //
 // These cryptographic routines are used to:
 //
-// - hash arbitrary data (`Digest`) using SHA3 (SHAKE128),
+// - hash arbitrary data (Digest) using SHA3 (SHAKE128),
 //
 // - create a cryptographic commit to arbitrary data,
 //
