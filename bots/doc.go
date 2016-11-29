@@ -11,11 +11,12 @@ to connect their first-party account.
 
 bots provides such third-party secure communication services
 that use CONIKS for key management with a mechanism for
-verifying that the first-party usernames registered with the
-CONIKS key directory are registered by the authorized user.
-More specifically, the account verification protocol involves
-a registration proxy that checks all registration requests
-before registering the new username with the server.
+ensuring that the first-party usernames registered with the
+CONIKS key directory belong to a legitimate first-party account.
+More specifically, bots provides registration proxies which
+verify that each first-party username belongs to a
+corresponding first-party account before forwarding the new
+registration to the third-party CONIKS server.
 
 Bots
 

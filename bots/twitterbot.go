@@ -1,5 +1,5 @@
-// An account verification proxy for Twitter accounts that implements the CONIKS
-// registration Bot interface.
+// A registration proxy for Twitter accounts that implements the
+// CONIKS account verification Bot interface.
 
 package bots
 
@@ -17,7 +17,7 @@ import (
 	"github.com/dghubble/oauth1"
 )
 
-// A TwitterBot is an account verification proxy for
+// A TwitterBot is an account verification bot for
 // CONIKS clients registering Twitter usernames
 // with a CONIKS key server.
 //
@@ -56,7 +56,7 @@ type TwitterOAuth struct {
 	AccessSecret   string
 }
 
-// NewTwitterBot constructs a new account verification proxy for Twitter
+// NewTwitterBot constructs a new account verification bot for Twitter
 // accounts that implements the Bot interface.
 //
 // NewTwitterBot loads the TwitterConfig for this bot from the
@@ -103,7 +103,7 @@ func NewTwitterBot(path string) (Bot, error) {
 	return bot, nil
 }
 
-// Run implements the main functionality of a Twitter registration bot.
+// Run implements the main functionality of a Twitter registration proxy.
 // It listens for a Twitter direct message (DM) sent to the bot's
 // reserved handle and calls HandleRegistration() upon receiving a valid
 // DM sent by a CONIKS client connected to a Twitter account.
