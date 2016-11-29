@@ -26,9 +26,11 @@ import (
 // which are read at initialization time from
 // a TOML format configuration file.
 type ServerConfig struct {
-	// DatabasePath is a path to the database for storing the server's directory.
+	// DatabasePath is a path to the database for storing the
+	// server's directory.
 	DatabasePath string `toml:"database"`
-	// LoadedHistoryLength is the maximum length of current snapshots stored in memory.
+	// LoadedHistoryLength is the maximum number of
+	// snapshots kept in memory.
 	LoadedHistoryLength uint64 `toml:"loaded_history_length"`
 	// Policies contains the server's CONIKS policies configuration.
 	Policies *ServerPolicies `toml:"policies"`
@@ -37,31 +39,38 @@ type ServerConfig struct {
 	configFilePath string
 }
 
-// An Address declares a server's connection.
+// An Address describes a server's connection.
 // It makes the server connections configurable
 // so that a key server implementation can easily
-// be used by a first-party identity provider or
+// be run by a first-party identity provider or
 // a third-party communication service.
 // It supports two types of connections: a TCP connection ("tcp")
 // and a Unix socket connection ("unix").
 //
-// Allowing registration has to be explicitly defined for each connection.
+// Allowing registration has to be specified explicitly for each connection.
 // Other types of requests are allowed by default.
-// One can think of a registration is considered as a "write",
-// while the other requests are of the "read" type.
+// One can think of a registration as a "write" to a key directory,
+// while the other request types are "reads".
 // So, by default, addresses are "read-only".
+//
+// Additionally, TCP connections must use TLS for added security,
+// and each is required to specify a TLS certificate and corresponding
+// private key.
 type Address struct {
-	// Address is formated as a url: scheme://address.
+	// Address is formatted as a url: scheme://address.
 	Address           string `toml:"address"`
 	AllowRegistration bool   `toml:"allow_registration,omitempty"`
-	// TLSCertPath is a path to the server's TLS Certificate, which has to be set if the connection is TCP.
+	// TLSCertPath is a path to the server's TLS Certificate,
+	// which has to be set if the connection is TCP.
 	TLSCertPath string `toml:"cert,omitempty"`
-	// TLSKeyPath is a path to the server's TLS private key, which has to be set if the connection is TCP.
+	// TLSKeyPath is a path to the server's TLS private key,
+	// which has to be set if the connection is TCP.
 	TLSKeyPath string `toml:"key,omitempty"`
 }
 
-// ServerPolicies contains server's policies including paths to
-// the VRF private key, the signing private key and the epoch deadline value.
+// ServerPolicies contains a server's CONIKS policies configuration
+// including paths to the VRF private key, the signing private
+// key and the epoch deadline value.
 type ServerPolicies struct {
 	EpochDeadline protocol.Timestamp `toml:"epoch_deadline"`
 	VRFKeyPath    string             `toml:"vrf_key_path"`
@@ -72,9 +81,10 @@ type ServerPolicies struct {
 
 // A ConiksServer represents a CONIKS key server.
 // It wraps a ConiksDirectory with a network layer which
-// handles requests/responses encoding/decoding. It also
-// supports handling concurrent requests and a mechanism
-// to automatically update the underlying ConiksDirectory.
+// handles requests/responses and their encoding/decoding.
+// A ConiksServer also supports concurrent handling of requests and
+// a mechanism to update the underlying ConiksDirectory automatically
+// at regular time intervals.
 type ConiksServer struct {
 	sync.RWMutex
 	dir *protocol.ConiksDirectory
@@ -91,8 +101,8 @@ type ConiksServer struct {
 }
 
 // LoadServerConfig loads the ServerConfig for the server from the
-// corresponding config file. It reads the siging key, the VRF key
-// into the ServerConfig instance and updates the path of
+// corresponding config file. It reads the siging key pair and the VRF key
+// pair into the ServerConfig instance and updates the path of
 // TLS certificate files of each Address to absolute path.
 func LoadServerConfig(file string) (*ServerConfig, error) {
 	var conf ServerConfig
@@ -159,7 +169,7 @@ func NewConiksServer(conf *ServerConfig) *ConiksServer {
 // Run implements the main functionality of the key server.
 // It listens for all declared connections with corresponding
 // permissions.
-// It also supports hot-reloading configuration by listening for
+// It also supports hot-reloading the configuration by listening for
 // SIGUSR2 signal.
 func (server *ConiksServer) Run(addrs []*Address) {
 	server.waitStop.Add(1)

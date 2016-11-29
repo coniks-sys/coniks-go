@@ -1,6 +1,6 @@
-// Defines methods/functions to encode/decode messages between client and server.
-// Currently this module supports JSON marshal/unmarshal only.
-// Protobuf would be supported in the feature.
+// Defines methods/functions to encode/decode messages between client
+// and server. Currently this module supports JSON marshal/unmarshal only.
+// Protobuf will be supported in the future.
 
 package keyserver
 
@@ -15,8 +15,9 @@ func MarshalResponse(response *Response) ([]byte, error) {
 	return json.Marshal(response)
 }
 
-// UnmarshalRequest parses a JSON-encoded request and
-// creates the corresponding request which will be handled by the server.
+// UnmarshalRequest parses a JSON-encoded request msg and
+// creates the corresponding protocol.Request, which will be handled
+// by the server.
 func UnmarshalRequest(msg []byte) (*Request, error) {
 	var content json.RawMessage
 	req := Request{

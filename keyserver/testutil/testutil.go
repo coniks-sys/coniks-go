@@ -1,11 +1,11 @@
 /*
 Package testutil provides utility functions for
-writing server's tests or generating a test server configuration.
+writing server tests and generating a test server configuration.
 
-Package testutil provides functions to create a self-signed TLS
+testutil provides functions to create a self-signed TLS
 certificate which can be used for a test server. It also provides
 functions to create a basic test client which can send requests
-to the server via a TLS socket connection or a Unix socket connection.
+to a test server via a TLS socket connection or a Unix socket connection.
 */
 package testutil
 
@@ -33,8 +33,11 @@ import (
 )
 
 const (
+	// TestDir is the default directory for server tests
 	TestDir          = "coniksServerTest"
+	// PublicConnection is the default address for TCP connections
 	PublicConnection = "tcp://127.0.0.1:3000"
+	// LocalConnection is the default address for Unix socket connections
 	LocalConnection  = "unix:///tmp/conikstest.sock"
 )
 
@@ -59,6 +62,8 @@ type ExpectingSTR struct {
 	Epoch uint64
 }
 
+// CreateTLSCert generates a new self-signed TLS certificate
+// and stores it in the path given by dir.
 func CreateTLSCert(dir string) error {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -117,6 +122,8 @@ func CreateTLSCert(dir string) error {
 	return nil
 }
 
+// CreateTLSCertForTest generates a temporary self-signed TLS certificate
+// that only lasts for the duration of the test t.
 func CreateTLSCertForTest(t *testing.T) (string, func()) {
 	dir, err := ioutil.TempDir("", TestDir)
 	if err != nil {
@@ -131,6 +138,9 @@ func CreateTLSCertForTest(t *testing.T) (string, func()) {
 	}
 }
 
+// NewTCPClient creates a basic test client that sends a given
+// request msg to the server listening at the given address
+// via a TCP connection.
 func NewTCPClient(msg []byte, address string) ([]byte, error) {
 	conf := &tls.Config{InsecureSkipVerify: true}
 	u, _ := url.Parse(address)
@@ -161,10 +171,16 @@ func NewTCPClient(msg []byte, address string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// NewTCPClientDefault creates a basic test client that sends a given
+// request msg to a server listening at the default PublicConnection
+// address.
 func NewTCPClientDefault(msg []byte) ([]byte, error) {
 	return NewTCPClient(msg, PublicConnection)
 }
 
+// NewUnixClient creates a basic test client that sends a given
+// request msg to the server listening at the given address
+// via a Unix socket connection.
 func NewUnixClient(msg []byte, address string) ([]byte, error) {
 	u, _ := url.Parse(address)
 	unixaddr := &net.UnixAddr{Name: u.Path, Net: u.Scheme}
@@ -188,6 +204,9 @@ func NewUnixClient(msg []byte, address string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// NewUnixClientDefault creates a basic test client that sends a given
+// request msg to a server listening at the default LocalConnection
+// address.
 func NewUnixClientDefault(msg []byte) ([]byte, error) {
 	return NewUnixClient(msg, LocalConnection)
 }
