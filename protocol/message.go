@@ -79,10 +79,11 @@ type KeyLookupInEpochRequest struct {
 // than the key directory's latest
 // epoch sets the end of the epoch range at the directory's latest epoch.
 //
-// Explicitly, there are two ways to do monitor:
+// Specifically, there are two cases for doing monitoring:
 // prior history verification which can be used to verify the absence
 // of the binding before registration, and name-to-key binding monitoring
-// which can be used to verify the inclusion of the binding after registration.
+// which can be used to verify the inclusion of the binding after
+// registration.
 type MonitoringRequest struct {
 	Username   string `json:"username"`
 	StartEpoch uint64 `json:"start_epoch"`

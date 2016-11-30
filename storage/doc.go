@@ -1,5 +1,6 @@
 /*
-Package storage implements hooks for persistent storage backend.
+Package storage implements hooks for different kinds of persistent storage
+backends.
 
 Note: This package is experimental and currently unused.
 */
