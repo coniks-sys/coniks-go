@@ -36,7 +36,10 @@ Use "coniksserver [command] --help" for more information about a command.
 is for the registration proxy, the second is the server's public address
 for "read-only" requests (lookups, monitoring etc).
 - Edit the configuration file as needed:
-    - If using a CONIKS registration proxy, replace the registration proxy `address`. Otherwise, remove the registration proxy `addresses` entry, and add `allow_registration = true` field to the public `addresses` entry:
+    - Replace the `epoch_deadline` with the desired duration in seconds.
+    - If using a CONIKS registration proxy, replace the registration proxy `address`. Otherwise, remove the registration proxy `addresses` entry, and add `allow_registration = true` field to the public `addresses` entry.
+    - In either case, replace the public `address` with the server's public CONIKS address.
+- Test setup (no registration proxy) config file example:
 ```
 [policies]
 ...
@@ -46,7 +49,6 @@ for "read-only" requests (lookups, monitoring etc).
     cert = "server.pem"
     key = "server.key"
 ```
-    - In either case, replace the public `address` with the server's public CONIKS address.
 
 ### Run the server
 ```
