@@ -25,10 +25,31 @@ Flags:
 Use "coniksserver [command] --help" for more information about a command.
 ```
 
-Run the server
+### Configure the server
+
+- Generate the configuration file:
 ```
 ⇒  mkdir coniks; cd coniks
-⇒  coniksserver init -c # create all files including a self-signed tls cert
+⇒  coniksserver init -c # create all files including a self-signed tls keys/cert
+```
+- By default, the configuration file has two `addresses` entries: the first
+is for the registration proxy, the second is the server's public address
+for "read-only" requests (lookups, monitoring etc).
+- Edit the configuration file as needed:
+    - If using a CONIKS registration proxy, replace the registration proxy `address`. Otherwise, remove the registration proxy `addresses` entry, and add `allow_registration = true` field to the public `addresses` entry:
+```
+[policies]
+...
+[[addresses]]
+    address = "tcp://public.server.address:port"
+    allow_registration = true
+    cert = "server.pem"
+    key = "server.key"
+```
+    - In either case, replace the public `address` with the server's public CONIKS address.
+
+### Run the server
+```
 ⇒  coniksserver run -p  # run & write down the process ID into coniks.pid
 ```
 

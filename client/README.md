@@ -26,12 +26,20 @@ Available Commands:
 Use "coniksclient [command] --help" for more information about a command.
 ```
 
-##### Create a config file for the client
+### Configure the client
+
+- Generate the configuration file:
 ```
+⇒  mkdir coniks-client; cd coniks-client
 ⇒  coniksclient init
 ```
-You may have to modify the config file according to the location of the
-server's public keys and the server's addresses.
+- Ensure the client has the server's *test* public signing key.
+- Edit the configuration file as needed:
+    - Replace the `sign_pubkey_path` with the location of the server's public signing key.
+    - Replace the `registration_address` with the server's registration address.
+    - Replace the `address` with the server's public CONIKS address (for lookups, monitoring etc).
+
+### Run the client
 
 ##### Register a new name-to-public key mapping with the CONIKS server
 ```
