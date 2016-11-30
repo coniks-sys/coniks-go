@@ -1,4 +1,4 @@
-# CONIKS Registration Bot for Twitter account verification in Golang
+# CONIKS Registration Proxy for Twitter account verification in Golang
 
 ## Usage
 ```
@@ -23,7 +23,7 @@ Use "coniksbot [command] --help" for more information about a command.
 - Generate the configuration file:
 ```
 ⇒  mkdir coniksbot; cd coniksbot
-⇒  coniksbot init # creates the configuration file in the current directory
+⇒  coniksbot init # create the configuration file in the current directory
 ```
 - Create a Twitter account for your bot.
 - Obtain OAuth tokens to authorize the bot for the new Twitter account:

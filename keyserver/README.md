@@ -28,7 +28,7 @@ Use "coniksserver [command] --help" for more information about a command.
 Run the server
 ```
 ⇒  mkdir coniks; cd coniks
-⇒  coniksserver init -c # creates all files including a self-signed ssl keys/cert
+⇒  coniksserver init -c # create all files including a self-signed tls cert
 ⇒  coniksserver run -p  # run & write down the process ID into coniks.pid
 ```
 
@@ -39,4 +39,6 @@ and possibly replace `vrf.priv` with a new key, then run
 ```
 
 ## Disclaimer
-Please keep in mind that this CONIKS server implementation is under active development. The repository may contain experimental features that aren't fully tested.
+Please keep in mind that this CONIKS server implementation is under active
+development. The repository may contain experimental features that aren't
+fully tested. We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/releases).

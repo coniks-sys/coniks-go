@@ -1,4 +1,4 @@
-# CLI CONIKS Client implementation in Golang
+# CONIKS Client implementation in Golang
 __Do not use your real public key or private key with this test client.__
 
 ## Usage
@@ -30,7 +30,8 @@ Use "coniksclient [command] --help" for more information about a command.
 ```
 ⇒  coniksclient init
 ```
-You may have to modify the config file accordingly the location of the server's public keys and the server's addresses.
+You may have to modify the config file according to the location of the
+server's public keys and the server's addresses.
 
 ##### Register a new name-to-public key mapping with the CONIKS server
 ```
@@ -47,4 +48,6 @@ Success! Key bound to name is: [alice_fake_public_key]
 ```
 
 ## Disclaimer
-Please keep in mind that this CONIKS client is under active development. The repository may contain experimental features that aren't fully tested. We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/releases).
+Please keep in mind that this CONIKS client is under active development.
+The repository may contain experimental features that aren't fully tested.
+We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/releases).
