@@ -8,10 +8,10 @@ package protocol
 // An ErrorCode implements the built-in error interface type.
 type ErrorCode int
 
-// Server-client status codes: These codes are being used
-// to exchange between the server and the client.
-// Codes prefixed by "Req" indicate different request results.
-// Codes prefixed by "Error" indicate a request fails or a malformed response.
+// These codes indicate the status of a client-server message exchange.
+// Codes prefixed by "Req" indicate different client request results.
+// Codes prefixed by "Err" indicate an internal server error or a malformed
+// message.
 const (
 	ReqSuccess ErrorCode = iota + 100
 	ReqNameExisted
@@ -39,7 +39,7 @@ const (
 )
 
 // Errors contains codes indicating the client
-// should omit the consistency checks. These errors indicate
+// should skip the consistency checks. These errors indicate
 // that either a client request could not be processed due to
 // a malformed client request, an internal server error or
 // due to a malformed server response.
@@ -72,7 +72,7 @@ var (
 	}
 )
 
-// Returns the error message corresponding to the error code e.
+// Error returns the error message corresponding to the error code e.
 func (e ErrorCode) Error() string {
 	return errorMessages[e]
 }

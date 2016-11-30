@@ -19,7 +19,7 @@ import (
 // TemporaryBinding extension is being used).
 //
 // The client should create a new ConsistencyChecks instance only once,
-// when she registers her binding with a ConiksDirectory.
+// when it registers its user's binding with a ConiksDirectory.
 // This ConsistencyChecks instance will then be used to verify
 // subsequent responses from the ConiksDirectory to any
 // client request.
@@ -61,7 +61,7 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 // and non-equivocation) of the response.
 //
 // HandleResponse() will panic if it is called with an int
-// which isn't a valid/known request-type.
+// that isn't a valid/known request type.
 //
 // Note that the consistency state will be updated regardless of
 // whether the checks pass / fail, since a response message contains

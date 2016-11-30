@@ -7,10 +7,11 @@ import (
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
+// Timestamp is used for defining a CONIKS server's epoch deadline.
 type Timestamp uint64
 
 // Policies is a summary of the directory's
-// current security policies. This includes the public part
+// current CONIKS security/privacy policies. This includes the public part
 // of the VRF key used to generate private indices,
 // the cryptographic algorithms in use, as well as
 // the protocol version number.
@@ -23,6 +24,8 @@ type Policies struct {
 
 var _ merkletree.AssocData = (*Policies)(nil)
 
+// NewPolicies returns a new Policies with the given epoch deadline
+// and public VRF key.
 func NewPolicies(epDeadline Timestamp, vrfPublicKey vrf.PublicKey) *Policies {
 	return &Policies{
 		Version:       Version,
@@ -33,7 +36,8 @@ func NewPolicies(epDeadline Timestamp, vrfPublicKey vrf.PublicKey) *Policies {
 }
 
 // Serialize serializes the policies for signing the tree root.
-// Default policies serialization includes the library version (see version.go),
+// Default policies serialization includes the library version
+// (see version.go),
 // the cryptographic algorithms in use (i.e., the hashing algorithm),
 // the epoch deadline and the public part of the VRF key.
 func (p *Policies) Serialize() []byte {
@@ -45,7 +49,7 @@ func (p *Policies) Serialize() []byte {
 	return bs
 }
 
-// GetPolicies returns the set of policies hashed in the STR.
+// GetPolicies returns the set of policies included in the STR.
 func GetPolicies(str *merkletree.SignedTreeRoot) *Policies {
 	return str.Ad.(*Policies)
 }
