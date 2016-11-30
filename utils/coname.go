@@ -49,7 +49,7 @@ func ToBits(bs []byte) []bool {
 
 // WithDB is used to run tests with a database backend.
 // It creates a temporary directory named "merkletree"
-// in system's tmp directory and then creates an empty
+// in the system's tmp directory and then creates an empty
 // key-value database. This temporary directory will
 // be removed after this function returns.
 func WithDB(f func(kv.DB)) {
