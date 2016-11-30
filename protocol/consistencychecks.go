@@ -15,6 +15,7 @@ import (
 
 // ConsistencyChecks stores the latest consistency check
 // state of a CONIKS client. This includes the latest SignedTreeRoot,
+// all the verified name-to-key bindings of the client,
 // as well as a directory's policies (e.g., whether the
 // TemporaryBinding extension is being used).
 //
@@ -26,6 +27,7 @@ import (
 type ConsistencyChecks struct {
 	// SavedSTR stores the latest verified signed tree root.
 	SavedSTR *m.SignedTreeRoot
+	Bindings map[string][]byte
 
 	// extensions settings
 	useTBs bool
@@ -44,6 +46,7 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 	}
 	cc := &ConsistencyChecks{
 		SavedSTR: savedSTR,
+		Bindings: make(map[string][]byte),
 		useTBs:   useTBs,
 		signKey:  signKey,
 	}
@@ -68,6 +71,9 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 // cryptographic proof of having been issued nonetheless.
 func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	uname string, key []byte) ErrorCode {
+	if err := msg.validate(); err != nil {
+		return err.(ErrorCode)
+	}
 	switch requestType {
 	case RegistrationType, KeyLookupType:
 		if _, ok := msg.DirectoryResponse.(*DirectoryProof); !ok {
@@ -80,9 +86,6 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	default:
 		panic("[coniks] Unknown request type")
 	}
-	if err := msg.validate(); err != nil {
-		return err.(ErrorCode)
-	}
 	if err := cc.updateSTR(requestType, msg); err != nil {
 		return err.(ErrorCode)
 	}
@@ -92,6 +95,8 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	if err := cc.updateTBs(requestType, msg, uname, key); err != nil {
 		return err.(ErrorCode)
 	}
+	recvKey, _ := msg.GetKey()
+	cc.Bindings[uname] = recvKey
 	return CheckPassed
 }
 
