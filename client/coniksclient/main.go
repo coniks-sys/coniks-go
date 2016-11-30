@@ -1,3 +1,5 @@
+// Executable CONIKS test client. See README for
+// usage instructions.
 package main
 
 import (
