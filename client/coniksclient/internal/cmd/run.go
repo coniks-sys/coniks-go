@@ -75,7 +75,7 @@ func run(cmd *cobra.Command) {
 				writeLineInRawMode(term, "Cannot read your name.")
 				continue
 			}
-			msg := lookupKey(cc, conf, name)
+			msg := keyLookup(cc, conf, name)
 			writeLineInRawMode(term, msg)
 		}
 	}
@@ -136,8 +136,8 @@ func register(cc *p.ConsistencyChecks, conf *client.Config, name string, key str
 	return ""
 }
 
-func lookupKey(cc *p.ConsistencyChecks, conf *client.Config, name string) string {
-	req, err := client.CreateLookupMsg(name)
+func keyLookup(cc *p.ConsistencyChecks, conf *client.Config, name string) string {
+	req, err := client.CreateKeyLookupMsg(name)
 	if err != nil {
 		return ("Couldn't marshal key lookup request!")
 	}

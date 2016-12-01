@@ -82,9 +82,9 @@ func CreateRegistrationMsg(name string, key []byte) ([]byte, error) {
 	})
 }
 
-// CreateLookupMsg returns a JSON encoding of
+// CreateKeyLookupMsg returns a JSON encoding of
 // a protocol.KeyLookupRequest for the given name.
-func CreateLookupMsg(name string) ([]byte, error) {
+func CreateKeyLookupMsg(name string) ([]byte, error) {
 	return json.Marshal(&p.Request{
 		Type: p.KeyLookupType,
 		Request: &p.KeyLookupRequest{
