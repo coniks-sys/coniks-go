@@ -15,6 +15,7 @@ import (
 
 // ConsistencyChecks stores the latest consistency check
 // state of a CONIKS client. This includes the latest SignedTreeRoot,
+// all the verified name-to-key bindings of the client,
 // as well as a directory's policies (e.g., whether the
 // TemporaryBinding extension is being used).
 //
@@ -53,14 +54,6 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 		cc.TBs = make(map[string]*TemporaryBinding)
 	}
 	return cc
-}
-
-func (cc *ConsistencyChecks) RestoreState(bindings map[string][]byte,
-	tbs map[string]*TemporaryBinding) {
-	cc.Bindings = bindings
-	if cc.useTBs {
-		cc.TBs = tbs
-	}
 }
 
 // HandleResponse verifies the directory's response for a request.

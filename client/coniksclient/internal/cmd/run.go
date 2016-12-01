@@ -45,38 +45,40 @@ func run(cmd *cobra.Command) {
 	defer terminal.Restore(int(os.Stdin.Fd()), state)
 	term := terminal.NewTerminal(os.Stdin, "> ")
 	for {
+		term.SetPrompt("> ")
 		cmd, err := term.ReadLine()
 		if err != nil {
-			writeLineInRawMode(term, "Unknown command.")
+			writeLineInRawMode(term, "[!] Unknown command.")
 			continue
 		}
+		term.SetPrompt(">> ")
 		switch cmd {
 		case "exit":
-			writeLineInRawMode(term, "See ya.")
+			writeLineInRawMode(term, "[+] See ya.")
 			return
 		case "register":
-			writeLineInRawMode(term, "Enter your name & public key:")
+			writeLineInRawMode(term, ">> Enter your name & public key:")
 			name, err := term.ReadLine()
-			if err != nil {
-				writeLineInRawMode(term, "Cannot read your name.")
+			if err != nil || name == "" {
+				writeLineInRawMode(term, "[!] Cannot read your name.")
 				continue
 			}
 			key, err := term.ReadLine()
-			if err != nil {
-				writeLineInRawMode(term, "Cannot read your key.")
+			if err != nil || key == "" {
+				writeLineInRawMode(term, "[!] Cannot read your key.")
 				continue
 			}
 			msg := register(cc, conf, name, key)
-			writeLineInRawMode(term, msg)
+			writeLineInRawMode(term, "[+] "+msg)
 		case "lookup":
-			writeLineInRawMode(term, "Enter the lookup name:")
+			writeLineInRawMode(term, ">> Enter the lookup name:")
 			name, err := term.ReadLine()
 			if err != nil {
-				writeLineInRawMode(term, "Cannot read your name.")
+				writeLineInRawMode(term, "[!] Cannot read your name.")
 				continue
 			}
 			msg := keyLookup(cc, conf, name)
-			writeLineInRawMode(term, msg)
+			writeLineInRawMode(term, "[+] "+msg)
 		}
 	}
 }
