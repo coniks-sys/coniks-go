@@ -15,7 +15,14 @@ import (
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run the test client.",
-	Long:  `Run the test client.`,
+	Long: `run gives you a REPL, so that you can invoke commands to perform CONIKS operations including registration and key lookup. Currently, run supports:
+	- register:
+		Register a new name-to-key binding on the CONIKS-server. You will be asked to input a username and a public key for the binding.
+		The username and the key are separated by new line character (ENTER key).
+	- lookup:
+		Lookup the key of some known contact or your own bindings.
+	- exit:
+		Close the REPL and exit the client.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		run(cmd)
 	},
@@ -24,7 +31,7 @@ var runCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(runCmd)
 	runCmd.Flags().StringP("config", "c", "config.toml",
-		"Create the config file in the given absolute path (including the file's name).")
+		"Config file for the client (contains the server's initial public key etc).")
 }
 
 func run(cmd *cobra.Command) {
@@ -40,36 +47,36 @@ func run(cmd *cobra.Command) {
 	for {
 		cmd, err := term.ReadLine()
 		if err != nil {
-			term.Write([]byte("Unknown command."))
+			writeLineInRawMode(term, "Unknown command.")
 			continue
 		}
 		switch cmd {
 		case "exit":
-			term.Write([]byte("See ya."))
+			writeLineInRawMode(term, "See ya.")
 			return
 		case "register":
-			term.Write([]byte("Enter your name & public key:"))
+			writeLineInRawMode(term, "Enter your name & public key:")
 			name, err := term.ReadLine()
 			if err != nil {
-				term.Write([]byte("Cannot read your name."))
+				writeLineInRawMode(term, "Cannot read your name.")
 				continue
 			}
 			key, err := term.ReadLine()
 			if err != nil {
-				term.Write([]byte("Cannot read your key."))
+				writeLineInRawMode(term, "Cannot read your key.")
 				continue
 			}
 			msg := register(cc, conf, name, key)
-			term.Write([]byte(msg))
+			writeLineInRawMode(term, msg)
 		case "lookup":
-			term.Write([]byte("Enter the lookup name:"))
+			writeLineInRawMode(term, "Enter the lookup name:")
 			name, err := term.ReadLine()
 			if err != nil {
-				term.Write([]byte("Cannot read your name."))
+				writeLineInRawMode(term, "Cannot read your name.")
 				continue
 			}
 			msg := lookupKey(cc, conf, name)
-			term.Write([]byte(msg))
+			writeLineInRawMode(term, msg)
 		}
 	}
 }

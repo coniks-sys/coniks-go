@@ -6,6 +6,7 @@ import (
 
 	"github.com/coniks-sys/coniks-go/client"
 	"github.com/spf13/cobra"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 const configMissingUsage = `
@@ -34,4 +35,10 @@ func loadConfigOrExit(cmd *cobra.Command) *client.Config {
 		os.Exit(-1)
 	}
 	return conf
+}
+
+// append "\n\r" to msg and then write to terminal in raw mode.
+func writeLineInRawMode(term *terminal.Terminal, msg string) {
+	msg += "\n\r"
+	term.Write([]byte(msg))
 }
