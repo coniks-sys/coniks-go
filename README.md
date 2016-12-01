@@ -1,4 +1,4 @@
-# CONIKS Go Library
+# CONIKS Go
 
 [![Build Status](https://travis-ci.org/coniks-sys/coniks-go.svg?branch=master)](https://travis-ci.org/coniks-sys/coniks-go)
 [![Coverage Status](https://coveralls.io/repos/github/coniks-sys/coniks-go/badge.svg?branch=master&dummy=1)](https://coveralls.io/github/coniks-sys/coniks-go)
@@ -47,10 +47,9 @@ The preferred way to install CONIKS reference server or client implementation
 is by downloading the [latest release](releases/latest).
 <!-- and by following the contained instructions. -->
 
-If you prefer to build and install from source you need to have a recent Golang
-version installed (1.6+). See Golang's [documentation](https://golang.org/doc/install)
-on how-to install and configure Go. If Golang is setup correctly, you can simply
-run `go get github.com/coniks-sys/coniks-go` in your command line.
+If you prefer to build and install from source you need to have a recent 
+[Golang](https://golang.org/doc/install) version installed (1.6+). 
+If Golang is setup correctly, you can simply run `go get github.com/coniks-sys/coniks-go` in your command line.
 
 In both cases, installing CONIKS installs a [CONIKS-server](keyserver/) and a
 simple command-line [client](client). Both commands are documented in their
