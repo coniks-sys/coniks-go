@@ -17,6 +17,10 @@ This allows messaging clients to verify the identity of
 users automatically, and prevents malicious/compromised servers from
 hijacking secure communications without getting caught.
 
+This repository provides a [Golang](https://golang.org) implementation of the 
+CONIKS system. The implementation consists of a library, described in the 
+following section, and a standalone CONIKS-server and -client using this library.
+
 ## Golang Library
 
 The packages in this library implement the various components of the CONIKS
@@ -39,8 +43,8 @@ We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/re
 
 ## Installation
 
-The preferred way to install CONIKS is by downloading the
-[latest release](releases/latest).
+The preferred way to install CONIKS reference server or client implementation
+is by downloading the [latest release](releases/latest).
 <!-- and by following the contained instructions. -->
 
 If you prefer to build and install from source you need to have a recent Golang
