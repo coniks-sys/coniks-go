@@ -5,7 +5,7 @@
 
 http://coniks.org
 
-## Introduction
+## Overview
 
 CONIKS is a key management system that provides transparency and privacy
 for end-user public keys.
@@ -19,7 +19,8 @@ hijacking secure communications without getting caught.
 
 This repository provides a [Golang](https://golang.org) implementation of the 
 CONIKS system. The implementation consists of a library, described in the 
-following section, and a standalone CONIKS-server and -client using this library.
+following section, and a standalone CONIKS-server and -client, and a registration 
+proxy using this library.
 
 ## Golang Library
 
@@ -35,27 +36,29 @@ system and may be imported individually.
 - `protocol`: CONIKS protocols implementation/library
 - `storage`: Hooks for persistent storage backend (currently unused)
 
-## Disclaimer
-
-Please keep in mind that this CONIKS library is under active development.
-The repository may contain experimental features that aren't fully tested.
-We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/releases).
-
 ## Installation
 
 The preferred way to install CONIKS reference server or client implementation
 is by downloading the [latest release](releases/latest).
 <!-- and by following the contained instructions. -->
 
-If you prefer to build and install from source you need to have a recent 
-[Golang](https://golang.org/doc/install) version installed (1.6+). 
-If Golang is setup correctly, you can simply run `go get github.com/coniks-sys/coniks-go` in your command line.
+If you prefer to build and install from source you need to have 
+[Golang](https://golang.org/doc/install) version 1.6 or higher installed.
+If Golang is set up correctly, you can simply run 
+`go get github.com/coniks-sys/coniks-go` in your command line.
 
-In both cases, installing CONIKS installs a [CONIKS-server](keyserver/) and a
-simple command-line [client](client). Both commands are documented in their
-own package ([server here](keyserver) and [client here](client)).
+In both cases, installing coniks-go installs a [CONIKS-server](keyserver), a
+simple command-line [client](client), and the [registration-proxy](bots).
+For usage instructions, see the documentation in their respective packages
+([server here](keyserver) and [client here](client)).
 
-## API-Documentation
+## Disclaimer
+
+Please keep in mind that this CONIKS library is under active development.
+The repository may contain experimental features that aren't fully tested.
+We recommend using a [tagged release](https://github.com/coniks-sys/coniks-go/releases).
+
+## API Documentation
 
 https://godoc.org/github.com/coniks-sys/coniks-go
 
