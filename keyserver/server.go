@@ -65,7 +65,7 @@ type Address struct {
 
 // ServerPolicies contains a server's CONIKS policies configuration
 // including paths to the VRF private key, the signing private
-// key and the epoch deadline value.
+// key and the epoch deadline value in seconds.
 type ServerPolicies struct {
 	EpochDeadline protocol.Timestamp `toml:"epoch_deadline"`
 	VRFKeyPath    string             `toml:"vrf_key_path"`
