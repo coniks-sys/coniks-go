@@ -37,8 +37,8 @@ func loadConfigOrExit(cmd *cobra.Command) *client.Config {
 	return conf
 }
 
-// append "\n\r" to msg and then write to terminal in raw mode.
+// append "\r\n" to msg and then write to terminal in raw mode.
 func writeLineInRawMode(term *terminal.Terminal, msg string) {
-	msg += "\n\r"
+	msg += "\r\n"
 	term.Write([]byte(msg))
 }
