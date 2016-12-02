@@ -46,9 +46,8 @@ func run(cmd *cobra.Command) {
 		log.Fatal(err)
 	}
 	defer terminal.Restore(int(os.Stdin.Fd()), state)
-	term := terminal.NewTerminal(os.Stdin, "> ")
+	term := terminal.NewTerminal(os.Stdin, "coniks-client> ")
 	for {
-		term.SetPrompt("> ")
 		line, err := term.ReadLine()
 		if err != nil {
 			writeLineInRawMode(term, err.Error())
