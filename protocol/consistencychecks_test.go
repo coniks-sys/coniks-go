@@ -46,6 +46,20 @@ func TestVerifyWithError(t *testing.T) {
 	}
 }
 
+func TestMalformedClientMessage(t *testing.T) {
+	d, pk := NewTestDirectory(t, true)
+	cc := NewCC(d.LatestSTR(), true, pk)
+
+	request := &RegistrationRequest{
+		Username: "", // invalid username
+		Key:      key,
+	}
+	res, _ := d.Register(request)
+	if err := cc.HandleResponse(RegistrationType, res, "", key); err != ErrMalformedClientMessage {
+		t.Error("Unexpected verification result")
+	}
+}
+
 func TestMalformedDirectoryMessage(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
 	cc := NewCC(d.LatestSTR(), true, pk)
