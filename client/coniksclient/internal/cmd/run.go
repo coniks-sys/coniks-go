@@ -17,6 +17,8 @@ const help = "\n- register [name] [key]:\r\n" +
 	"	Register a new name-to-key binding on the CONIKS-server.\r\n" +
 	"- lookup [name]:\r\n" +
 	"	Lookup the key of some known contact or your own bindings.\r\n" +
+	"- help:\r\n" +
+	"	Display this message.\r\n" +
 	"- exit:\r\n" +
 	"	Close the REPL and exit the client.\r\n"
 
