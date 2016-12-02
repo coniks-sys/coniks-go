@@ -55,7 +55,11 @@ func run(cmd *cobra.Command) {
 			return
 		}
 
-		args := strings.Split(line, " ")
+		args := strings.Fields(line)
+		if len(args) < 1 {
+			writeLineInRawMode(term, `[!] Type "help" for more information.`)
+			continue
+		}
 		cmd := args[0]
 
 		switch cmd {

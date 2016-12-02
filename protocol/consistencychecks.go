@@ -71,8 +71,8 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 // cryptographic proof of having been issued nonetheless.
 func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	uname string, key []byte) ErrorCode {
-	if Errors[msg.Error] {
-		return msg.Error
+	if err := msg.validate(); err != nil {
+		return err.(ErrorCode)
 	}
 	switch requestType {
 	case RegistrationType, KeyLookupType:
@@ -85,9 +85,6 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 		}
 	default:
 		panic("[coniks] Unknown request type")
-	}
-	if err := msg.validate(); err != nil {
-		return err.(ErrorCode)
 	}
 	if err := cc.updateSTR(requestType, msg); err != nil {
 		return err.(ErrorCode)
