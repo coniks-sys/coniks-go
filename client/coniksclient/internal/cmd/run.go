@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/coniks-sys/coniks-go/client"
 	"github.com/coniks-sys/coniks-go/keyserver/testutil"
@@ -12,17 +13,19 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
+var help = `
+	- register [name] [key]:
+		Register a new name-to-key binding on the CONIKS-server.
+	- lookup [name]:
+		Lookup the key of some known contact or your own bindings.
+	- exit:
+		Close the REPL and exit the client.
+`
+
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run the test client.",
-	Long: `run gives you a REPL, so that you can invoke commands to perform CONIKS operations including registration and key lookup. Currently, run supports:
-	- register:
-		Register a new name-to-key binding on the CONIKS-server. You will be asked to input a username and a public key for the binding.
-		The username and the key are separated by new line character (ENTER key).
-	- lookup:
-		Lookup the key of some known contact or your own bindings.
-	- exit:
-		Close the REPL and exit the client.`,
+	Long: "Run gives you a REPL, so that you can invoke commands to perform CONIKS operations including registration and key lookup. Currently, it supports:\n"+help,
 	Run: func(cmd *cobra.Command, args []string) {
 		run(cmd)
 	},
@@ -46,38 +49,35 @@ func run(cmd *cobra.Command) {
 	term := terminal.NewTerminal(os.Stdin, "> ")
 	for {
 		term.SetPrompt("> ")
-		cmd, err := term.ReadLine()
+		line, err := term.ReadLine()
 		if err != nil {
-			writeLineInRawMode(term, "[!] Unknown command.")
-			continue
+			writeLineInRawMode(term, err.Error())
+			return
 		}
-		term.SetPrompt(">> ")
+
+		args := strings.Split(line, " ")
+		cmd := args[0]
+
 		switch cmd {
 		case "exit":
 			writeLineInRawMode(term, "[+] See ya.")
 			return
+		case "help":
+			writeLineInRawMode(term, help)
+			continue
 		case "register":
-			writeLineInRawMode(term, ">> Enter your name & public key:")
-			name, err := term.ReadLine()
-			if err != nil || name == "" {
-				writeLineInRawMode(term, "[!] Cannot read your name.")
+			if len(args) != 3 {
+				writeLineInRawMode(term, "[!] Incorrect number of args to register.")
 				continue
 			}
-			key, err := term.ReadLine()
-			if err != nil || key == "" {
-				writeLineInRawMode(term, "[!] Cannot read your key.")
-				continue
-			}
-			msg := register(cc, conf, name, key)
+			msg := register(cc, conf, args[1], args[2])
 			writeLineInRawMode(term, "[+] "+msg)
 		case "lookup":
-			writeLineInRawMode(term, ">> Enter the lookup name:")
-			name, err := term.ReadLine()
-			if err != nil {
-				writeLineInRawMode(term, "[!] Cannot read your name.")
+			if len(args) != 2 {
+				writeLineInRawMode(term, "[!] Incorrect number of args to lookup.")
 				continue
 			}
-			msg := keyLookup(cc, conf, name)
+			msg := keyLookup(cc, conf, args[1])
 			writeLineInRawMode(term, "[+] "+msg)
 		default:
 			writeLineInRawMode(term, "[!] Unrecognized command: "+cmd)
@@ -178,7 +178,7 @@ func keyLookup(cc *p.ConsistencyChecks, conf *client.Config, name string) string
 			if err != nil {
 				return ("Cannot get the key from the response, error: " + err.Error())
 			}
-			return ("Success! Key bound to name is: [" + string(key) + "]")
+			return ("Found! Key bound to name is: [" + string(key) + "]")
 		case p.ReqNameNotFound:
 			return ("Name isn't registered.")
 		}
