@@ -23,7 +23,7 @@ this creates a toml file which references these public-keys.
 The client looks for a file called 'config.toml' in its current working directory.
 If you prefer the config-file to be named or stored somewhere different you can
 specify where to look for the config with the --config flag. For example:
- testclient [cmd] --config /etc/coniks/clientconfig.toml
+ testclient init --dir /etc/coniks/
 `
 
 func loadConfigOrExit(cmd *cobra.Command) *client.Config {
