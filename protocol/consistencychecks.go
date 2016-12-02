@@ -71,6 +71,9 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 // cryptographic proof of having been issued nonetheless.
 func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	uname string, key []byte) ErrorCode {
+	if Errors[msg.Error] {
+		return msg.Error
+	}
 	switch requestType {
 	case RegistrationType, KeyLookupType:
 		if _, ok := msg.DirectoryResponse.(*DirectoryProof); !ok {
