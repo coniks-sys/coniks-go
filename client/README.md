@@ -58,6 +58,12 @@ Use "coniksclient [command] --help" for more information about a command.
 [+] Found! Key bound to name is: [alice_fake_public_key]
 ```
 
+##### Other commands
+
+Use `help` for more information.
+
+Use `exit` to close the REPL and exit the client.
+
 ## Disclaimer
 Please keep in mind that this CONIKS client is under active development.
 The repository may contain experimental features that aren't fully tested.
