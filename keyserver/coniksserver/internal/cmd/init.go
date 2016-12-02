@@ -53,7 +53,6 @@ func mkConfig(dir string) {
 		},
 	}
 	var conf = keyserver.ServerConfig{
-		DatabasePath:        "coniks.db",
 		LoadedHistoryLength: 1000000,
 		Addresses:           addrs,
 		Policies: &keyserver.ServerPolicies{

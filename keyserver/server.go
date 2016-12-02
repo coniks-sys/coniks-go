@@ -17,8 +17,6 @@ import (
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/protocol"
-	"github.com/coniks-sys/coniks-go/storage/kv"
-	"github.com/coniks-sys/coniks-go/storage/kv/leveldbkv"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
@@ -26,9 +24,6 @@ import (
 // which are read at initialization time from
 // a TOML format configuration file.
 type ServerConfig struct {
-	// DatabasePath is a path to the database for storing the
-	// server's directory.
-	DatabasePath string `toml:"database"`
 	// LoadedHistoryLength is the maximum number of
 	// snapshots kept in memory.
 	LoadedHistoryLength uint64 `toml:"loaded_history_length"`
@@ -93,8 +88,6 @@ type ConiksServer struct {
 	waitStop      sync.WaitGroup
 	waitCloseConn sync.WaitGroup
 
-	db kv.DB // TODO: it is a placeholer for issue #37
-
 	configFilePath string
 	reloadChan     chan os.Signal
 	epochTimer     *time.Timer
@@ -133,8 +126,7 @@ func LoadServerConfig(file string) (*ServerConfig, error) {
 	conf.configFilePath = file
 	conf.Policies.vrfKey = vrfKey
 	conf.Policies.signKey = signKey
-	// also update path for db & TLS cert files
-	conf.DatabasePath = utils.ResolvePath(conf.DatabasePath, file)
+	// also update path for TLS cert files
 	for _, addr := range conf.Addresses {
 		addr.TLSCertPath = utils.ResolvePath(addr.TLSCertPath, file)
 		addr.TLSKeyPath = utils.ResolvePath(addr.TLSKeyPath, file)
@@ -145,9 +137,6 @@ func LoadServerConfig(file string) (*ServerConfig, error) {
 // NewConiksServer creates a new reference implementation of
 // a CONIKS key server.
 func NewConiksServer(conf *ServerConfig) *ConiksServer {
-	// open db
-	kvdb := leveldbkv.OpenDB(conf.DatabasePath)
-
 	// create server instance
 	server := new(ConiksServer)
 	server.dir = protocol.NewDirectory(
@@ -157,7 +146,6 @@ func NewConiksServer(conf *ServerConfig) *ConiksServer {
 		conf.LoadedHistoryLength,
 		true)
 	server.stop = make(chan struct{})
-	server.db = kvdb
 	server.configFilePath = conf.configFilePath
 	server.reloadChan = make(chan os.Signal, 1)
 	signal.Notify(server.reloadChan, syscall.SIGUSR2)
@@ -291,5 +279,5 @@ func resolveAndListen(addr *Address) (ln net.Listener,
 func (server *ConiksServer) Shutdown() error {
 	close(server.stop)
 	server.waitStop.Wait()
-	return server.db.Close()
+	return nil
 }
