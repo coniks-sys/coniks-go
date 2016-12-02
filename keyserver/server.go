@@ -185,13 +185,18 @@ func (server *ConiksServer) Run(addrs []*Address) {
 		ln, tlsConfig, perms := resolveAndListen(addr)
 		server.waitStop.Add(1)
 		go func() {
+			verb := "Listening"
+			if addr.AllowRegistration {
+				verb = "Accepting registrations"
+			}
+			log.Printf("[info] %s on %s\n", verb, addr.Address)
 			server.handleRequests(ln, tlsConfig, server.makeHandler(perms))
 			server.waitStop.Done()
 		}()
 	}
 
 	if !hasRegistrationPerm {
-		log.Println("[Warning] None of the addresses permit registration")
+		log.Println("[warning] None of the addresses permit registration")
 	}
 
 	server.waitStop.Add(1)
@@ -232,7 +237,7 @@ func (server *ConiksServer) updatePolicies() {
 			server.Lock()
 			server.dir.SetPolicies(conf.Policies.EpochDeadline)
 			server.Unlock()
-			log.Println("Policies reloaded!")
+			log.Println("[info] Policies reloaded!")
 		}
 	}
 }
