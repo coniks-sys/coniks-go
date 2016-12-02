@@ -13,14 +13,14 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-const help = "\n- register [name] [key]:\r\n" +
+const help = "- register [name] [key]:\r\n" +
 	"	Register a new name-to-key binding on the CONIKS-server.\r\n" +
 	"- lookup [name]:\r\n" +
 	"	Lookup the key of some known contact or your own bindings.\r\n" +
 	"- help:\r\n" +
 	"	Display this message.\r\n" +
 	"- exit:\r\n" +
-	"	Close the REPL and exit the client.\r\n"
+	"	Close the REPL and exit the client."
 
 var runCmd = &cobra.Command{
 	Use:   "run",
@@ -120,6 +120,9 @@ func register(cc *p.ConsistencyChecks, conf *client.Config, name string, key str
 	response := client.UnmarshalResponse(p.RegistrationType, res)
 	err = cc.HandleResponse(p.RegistrationType, response, name, []byte(key))
 	switch err {
+	case p.CheckBadSTR:
+		// FIXME: remove me
+		return ("Error: " + err.Error() + ". Maybe the client missed an epoch in between two commands, monitoring isn't supported yet.")
 	case p.CheckPassed:
 		switch response.Error {
 		case p.ReqSuccess:
@@ -174,6 +177,9 @@ func keyLookup(cc *p.ConsistencyChecks, conf *client.Config, name string) string
 		err = cc.HandleResponse(p.KeyLookupType, response, name, nil)
 	}
 	switch err {
+	case p.CheckBadSTR:
+		// FIXME: remove me
+		return ("Error: " + err.Error() + ". Maybe the client missed an epoch in between two commands, monitoring isn't supported yet.")
 	case p.CheckPassed:
 		switch response.Error {
 		case p.ReqSuccess:
