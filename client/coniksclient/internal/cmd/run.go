@@ -79,6 +79,9 @@ func run(cmd *cobra.Command) {
 			}
 			msg := keyLookup(cc, conf, name)
 			writeLineInRawMode(term, "[+] "+msg)
+		default:
+			writeLineInRawMode(term, "[!] Unrecognized command: " + cmd)
+			continue
 		}
 	}
 }
