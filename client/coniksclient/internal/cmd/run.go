@@ -13,14 +13,12 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-var help = `
-	- register [name] [key]:
-		Register a new name-to-key binding on the CONIKS-server.
-	- lookup [name]:
-		Lookup the key of some known contact or your own bindings.
-	- exit:
-		Close the REPL and exit the client.
-`
+const help = "\n- register [name] [key]:\r\n" +
+	"	Register a new name-to-key binding on the CONIKS-server.\r\n" +
+	"- lookup [name]:\r\n" +
+	"	Lookup the key of some known contact or your own bindings.\r\n" +
+	"- exit:\r\n" +
+	"	Close the REPL and exit the client.\r\n"
 
 var runCmd = &cobra.Command{
 	Use:   "run",
