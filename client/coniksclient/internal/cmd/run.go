@@ -25,7 +25,7 @@ var help = `
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run the test client.",
-	Long: "Run gives you a REPL, so that you can invoke commands to perform CONIKS operations including registration and key lookup. Currently, it supports:\n"+help,
+	Long:  "Run gives you a REPL, so that you can invoke commands to perform CONIKS operations including registration and key lookup. Currently, it supports:\n" + help,
 	Run: func(cmd *cobra.Command, args []string) {
 		run(cmd)
 	},

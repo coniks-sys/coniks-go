@@ -20,8 +20,7 @@ Usage:
 
 Available Commands:
   init        Creates a config file for the client.
-  lookup      Lookup a name.
-  register    Register a name-to-key binding.
+  run         Run the test client.
 
 Use "coniksclient [command] --help" for more information about a command.
 ```
@@ -42,26 +41,21 @@ Use "coniksclient [command] --help" for more information about a command.
 ### Run the client
 
 ```
-⇒  coniksclient run # this will open a REPL
+⇒  coniksclient run  # this will open a REPL
 ```
 
 ##### Register a new name-to-public key mapping with the CONIKS server
 ```
-> register
->> Enter your name & public key:
->> alice
->> alice_fake_public_key
+> register [name] [key]
 # The client should display something like this if the request is successful
 [+] Succesfully registered name: alice
 ```
 
 ##### Look up a public key
 ```
-> lookup
->> Enter the lookup name:
->> alice
+> lookup [name]
 # The client should display something like this if the request is successful
-[+] Success! Key bound to name is: [alice_fake_public_key]
+[+] Found! Key bound to name is: [alice_fake_public_key]
 ```
 
 ## Disclaimer
