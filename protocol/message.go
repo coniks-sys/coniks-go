@@ -90,6 +90,33 @@ type MonitoringRequest struct {
 	EndEpoch   uint64 `json:"end_epoch"`
 }
 
+// An AuditingRequest is a message with a CONIKS key directory's address
+// as a string that a CONIKS client sends to a CONIKS auditor to request
+// the latest STR the auditor has observed for the given directory.
+// If the client needs to request a directory's STR for a prior epoch, it
+// must send an AuditingInEpochRequest.
+//
+// The response to a successful request is an ObservedDirectoryProof.
+type AuditingRequest struct {
+	DirectoryAddr string `json:"directory_addr"`
+}
+
+// An AuditingInEpochRequest is a message with a key directory's address
+// as a string and an epoch as a uint64 that a CONIKS client sends to
+// a CONIKS auditor to retrieve the STR it observed for the directory in
+// the given epoch. The client sends this request type when it needs to
+// audit a directory's STR for a prior epoch (i.e. as part of a
+// key lookup in epoch check or a monitoring check). The client can send an
+// AuditingRequest if it needs to audit a directory's STR for its latest
+// epoch.
+//
+// The response to a successful request is an ObservedDirectoryProofs with
+// a list of STRs covering the epoch range [Epoch, d.LatestSTR().Epoch].
+type AuditingInEpochRequest struct {
+	DirectoryAddr string `json:"directory_addr"`
+	Epoch         uint64 `json:"epoch"`
+}
+
 // A Response message indicates the result of a CONIKS client request
 // with an appropriate error code, and defines the set of cryptographic
 // proofs a CONIKS directory must return as part of its response.
@@ -99,7 +126,7 @@ type Response struct {
 }
 
 // A DirectoryResponse is a message that includes cryptographic proofs
-// about the key directory that a CONIKS key directory returns
+// about the key directory that a CONIKS key directory or auditor returns
 // to a CONIKS client.
 type DirectoryResponse interface{}
 
@@ -124,8 +151,22 @@ type DirectoryProofs struct {
 	STR []*m.SignedTreeRoot
 }
 
+// An ObservedSTR response includes a single signed tree root
+// STR. A CONIKS auditor returns this DirectoryResponse type upon an
+// AuditingRequest.
+type ObservedSTR struct {
+	STR *m.SignedTreeRoot
+}
+
+// An ObservedSTRs response includes a list of signed tree roots
+// STR. A CONIKS auditor returns this DirectoryResponse type upon an
+// AudutingRequest.
+type ObservedSTRs struct {
+	STR []*m.SignedTreeRoot
+}
+
 // NewErrorResponse creates a new response message indicating the error
-// that occurred while a CONIKS directory was
+// that occurred while a CONIKS directory or a CONIKS auditor was
 // processing a client request.
 func NewErrorResponse(e ErrorCode) *Response {
 	return &Response{Error: e}
@@ -133,6 +174,8 @@ func NewErrorResponse(e ErrorCode) *Response {
 
 var _ DirectoryResponse = (*DirectoryProof)(nil)
 var _ DirectoryResponse = (*DirectoryProofs)(nil)
+var _ DirectoryResponse = (*ObservedSTR)(nil)
+var _ DirectoryResponse = (*ObservedSTRs)(nil)
 
 // NewRegistrationProof creates the response message a CONIKS directory
 // sends to a client upon a RegistrationRequest,
@@ -211,6 +254,40 @@ func NewMonitoringProof(ap []*m.AuthenticationPath,
 		Error: ReqSuccess,
 		DirectoryResponse: &DirectoryProofs{
 			AP:  ap,
+			STR: str,
+		},
+	}, ReqSuccess
+}
+
+// NewObservedSTR creates the response message a CONIKS auditor
+// sends to a client upon an AuditingRequest,
+// and returns a Response containing an ObservedSTR struct.
+// auditlog.Audit() passes the signed tree root for the auditor's latest
+// observed epoch str.
+//
+// See auditlog.Audit() for details on the contents of the created
+// ObservedSTR.
+func NewObservedSTR(str *m.SignedTreeRoot) (*Response, ErrorCode) {
+	return &Response{
+		Error: ReqSuccess,
+		DirectoryResponse: &ObservedSTR{
+			STR: str,
+		},
+	}, ReqSuccess
+}
+
+// NewObservedSTRs creates the response message a CONIKS auditor
+// sends to a client upon an AuditingInEpochRequest,
+// and returns a Response containing an ObservedSTRs struct.
+// auditlog.AuditInEpoch() passes a list of signed tree roots
+// that the auditor observed for the requested range of epochs str.
+//
+// See auditlog.AuditInEpoch() for details on the contents of the created
+// ObservedSTRs.
+func NewObservedSTRs(str []*m.SignedTreeRoot) (*Response, ErrorCode) {
+	return &Response{
+		Error: ReqSuccess,
+		DirectoryResponse: &ObservedSTRs{
 			STR: str,
 		},
 	}, ReqSuccess
