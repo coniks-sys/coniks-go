@@ -15,16 +15,16 @@ const (
 )
 
 // A Request message defines the data a CONIKS client must send to a CONIKS
-// server for a particular request.
+// directory for a particular request.
 type Request struct {
 	Type    int
 	Request interface{}
 }
 
 // A RegistrationRequest is a message with a username as a string and a
-// public key as bytes that a CONIKS client sends to a CONIKS server
-// to register a new entry (i.e. name-to-key binding) with a CONIKS
-// key directory. Optionally, the client can include the user's key
+// public key as bytes that a CONIKS client sends to a CONIKS directory
+// to register a new entry (i.e. name-to-key binding).
+// Optionally, the client can include the user's key
 // change and visibility policies as boolean values in the
 // request. These flags are currently unused by the CONIKS protocols.
 //
@@ -38,7 +38,7 @@ type RegistrationRequest struct {
 }
 
 // A KeyLookupRequest is a message with a username as a string
-// that a CONIKS client sends to a CONIKS server to retrieve the
+// that a CONIKS client sends to a CONIKS directory to retrieve the
 // public key bound to the given username at the latest epoch.
 // If the client needs to look up a username's key for a prior epoch, it
 // must send a KeyLookupInEpochRequest.
@@ -51,15 +51,15 @@ type KeyLookupRequest struct {
 }
 
 // A KeyLookupInEpochRequest is a message with a username as a string and
-// an epoch as a uint64 that a CONIKS client sends to the server to
+// an epoch as a uint64 that a CONIKS client sends to the directory to
 // retrieve the public key bound to the username in the given epoch.
 // The client sends this request type when it needs to obtain
 // a user's key for a past epoch. The client can send a KeyLookupRequest
 // if it needs to look up a user's key for the latest epoch.
 //
 // The response to a successful request is a DirectoryProofs with an AP
-// of length 1 containing the auth path for the requested Epoch, and an
-// STR covering the epoch range [Epoch, d.LatestSTR().Epoch].
+// of length 1 containing the auth path for the requested Epoch, and a list
+// of STRs covering the epoch range [Epoch, d.LatestSTR().Epoch].
 type KeyLookupInEpochRequest struct {
 	Username string `json:"username"`
 	Epoch    uint64 `json:"epoch"`
@@ -67,7 +67,7 @@ type KeyLookupInEpochRequest struct {
 
 // A MonitoringRequest is a message with a username as a string and the
 // start and end epochs of an epoch range as two uint64 that a CONIKS
-// client sends to the server to monitor the given user's key in a CONIKS
+// client sends to the directory to monitor the given user's key in a CONIKS
 // key directory, i.e. to ensure that the key bound to the username hasn't
 // changed unexpectedly.
 //
@@ -92,21 +92,21 @@ type MonitoringRequest struct {
 
 // A Response message indicates the result of a CONIKS client request
 // with an appropriate error code, and defines the set of cryptographic
-// proofs a CONIKS server must return as part of its response.
+// proofs a CONIKS directory must return as part of its response.
 type Response struct {
 	Error             ErrorCode
 	DirectoryResponse `json:",omitempty"`
 }
 
 // A DirectoryResponse is a message that includes cryptographic proofs
-// about the key directory that a CONIKS key server returns to a
-// CONIKS client.
+// about the key directory that a CONIKS key directory returns
+// to a CONIKS client.
 type DirectoryResponse interface{}
 
 // A DirectoryProof response includes an authentication path AP for a
 // given username-to-key binding in the directory, a signed tree root
 // STR, and optionally a temporary binding for the given binding for a
-// single epoch. A CONIKS server returns this DirectoryResponse
+// single epoch. A CONIKS directory returns this DirectoryResponse
 // type upon a RegistrationRequest or a KeyLookupRequest.
 type DirectoryProof struct {
 	AP  *m.AuthenticationPath
@@ -116,16 +116,17 @@ type DirectoryProof struct {
 
 // A DirectoryProofs response includes a list of authentication paths
 // AP for a given username-to-key binding in the directory and a list of
-// signed tree roots STR for a range of epochs. A CONIKS server returns
-// this DirectoryResponse
-// type upon a KeyLookupInEpochRequest or a MonitoringRequest.
+// signed tree roots STR for a range of epochs. A CONIKS directory returns
+// this DirectoryResponse type upon a KeyLookupInEpochRequest or a
+// MonitoringRequest.
 type DirectoryProofs struct {
 	AP  []*m.AuthenticationPath
 	STR []*m.SignedTreeRoot
 }
 
 // NewErrorResponse creates a new response message indicating the error
-// that occurred while a CONIKS server was processing a client request.
+// that occurred while a CONIKS directory was
+// processing a client request.
 func NewErrorResponse(e ErrorCode) *Response {
 	return &Response{Error: e}
 }
@@ -133,7 +134,7 @@ func NewErrorResponse(e ErrorCode) *Response {
 var _ DirectoryResponse = (*DirectoryProof)(nil)
 var _ DirectoryResponse = (*DirectoryProofs)(nil)
 
-// NewRegistrationProof creates the response message a CONIKS server
+// NewRegistrationProof creates the response message a CONIKS directory
 // sends to a client upon a RegistrationRequest,
 // and returns a Response containing a DirectoryProof struct.
 // directory.Register() passes an authentication path ap, temporary binding
@@ -154,7 +155,7 @@ func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 	}, e
 }
 
-// NewKeyLookupProof creates the response message a CONIKS server
+// NewKeyLookupProof creates the response message a CONIKS directory
 // sends to a client upon a KeyLookupRequest,
 // and returns a Response containing a DirectoryProof struct.
 // directory.KeyLookup() passes an authentication path ap, temporary binding
@@ -175,7 +176,7 @@ func NewKeyLookupProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 	}, e
 }
 
-// NewKeyLookupInEpochProof creates the response message a CONIKS server
+// NewKeyLookupInEpochProof creates the response message a CONIKS directory
 // sends to a client upon a KeyLookupRequest,
 // and returns a Response containing a DirectoryProofs struct.
 // directory.KeyLookupInEpoch() passes an authentication path ap and error
@@ -196,7 +197,7 @@ func NewKeyLookupInEpochProof(ap *m.AuthenticationPath,
 	}, e
 }
 
-// NewMonitoringProof creates the response message a CONIKS server
+// NewMonitoringProof creates the response message a CONIKS directory
 // sends to a client upon a MonitoringRequest,
 // and returns a Response containing a DirectoryProofs struct.
 // directory.Monitor() passes a list of authentication paths ap and a
@@ -234,7 +235,7 @@ func (msg *Response) validate() error {
 }
 
 // GetKey returns the key extracted from
-// a validated CONIKS server's response.
+// a validated CONIKS directory's response.
 //
 // If the response contains a single authentication path,
 // the key is obtained from that authentication path or the
