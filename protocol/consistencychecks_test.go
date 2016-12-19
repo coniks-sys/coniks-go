@@ -34,11 +34,11 @@ func TestVerifyWithError(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
 
 	// modify the pinning STR so that the consistency check should fail.
-	str := *(d.LatestSTR())
+	str := d.LatestSTR()
 	str.Signature = append([]byte{}, str.Signature...)
 	str.Signature[0]++
 
-	cc := NewCC(&str, true, pk)
+	cc := NewCC(str, true, pk)
 
 	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != ReqSuccess || e2 != CheckBadSTR {
 		t.Error("Expect", ReqSuccess, "got", e1)
