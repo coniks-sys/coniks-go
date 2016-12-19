@@ -100,6 +100,8 @@ func NewTwitterBot(path string) (Bot, error) {
 	bot.coniksAddress = conf.CONIKSAddress
 	bot.handle = conf.Handle
 
+	bot.deleteOldDMs()
+
 	return bot, nil
 }
 
@@ -111,22 +113,25 @@ func NewTwitterBot(path string) (Bot, error) {
 // via DM.
 func (bot *TwitterBot) Run() {
 	demux := twitter.NewSwitchDemux()
-	demux.DM = func(dm *twitter.DirectMessage) {
-		if strings.EqualFold(dm.SenderScreenName, bot.handle) {
+	demux.DM = func(requestDM *twitter.DirectMessage) {
+		if strings.EqualFold(requestDM.SenderScreenName, bot.handle) {
 			return
 		}
+		var responseDM *twitter.DirectMessage
+		var err error
 		// check if received DM has proper format
-		if strings.HasPrefix(dm.Text, messagePrefix) {
-			msg := strings.TrimPrefix(dm.Text, messagePrefix)
-			res := bot.HandleRegistration(dm.SenderScreenName, []byte(msg))
+		if strings.HasPrefix(requestDM.Text, messagePrefix) {
+			msg := strings.TrimPrefix(requestDM.Text, messagePrefix)
+			res := bot.HandleRegistration(requestDM.SenderScreenName, []byte(msg))
 			// Hackity, hack, hack!
-			// Twitter APIs probably doesn't want people call them so fast
+			// Twitter APIs probably don't want people call them so fast
 			time.Sleep(5 * time.Second)
-			err := bot.SendDM(dm.SenderScreenName, messagePrefix+res)
+			responseDM, err = bot.sendDM(requestDM.SenderScreenName, messagePrefix+res)
 			if err != nil {
 				log.Printf("[registration bot] " + err.Error())
 			}
 		}
+		bot.deleteRequestDMs(requestDM, responseDM)
 	}
 
 	userParams := &twitter.StreamUserParams{
@@ -197,10 +202,56 @@ func (bot *TwitterBot) HandleRegistration(username string, msg []byte) string {
 	return string(res)
 }
 
-// SendDM sends a Twitter direct message msg to the given Twitter screenname.
+// sendDM sends a Twitter direct message msg to the given Twitter screenname.
 // The sender screenname should be set to the bot's reserved Twitter handle.
-func (bot *TwitterBot) SendDM(screenname, msg string) error {
+func (bot *TwitterBot) sendDM(screenname, msg string) (*twitter.DirectMessage, error) {
 	params := &twitter.DirectMessageNewParams{ScreenName: screenname, Text: msg}
-	_, _, err := bot.client.DirectMessages.New(params)
-	return err
+	dm, _, err := bot.client.DirectMessages.New(params)
+	return dm, err
+}
+
+// deleteOldDMs deletes all prior DMs before the bot runs.
+func (bot *TwitterBot) deleteOldDMs() {
+	log.Println("[registration bot] Deleting old DMs ...")
+	// GET /direct_messages returns at most 200 recent DMs.
+	// See https://dev.twitter.com/rest/reference/get/direct_messages
+	params := &twitter.DirectMessageGetParams{Count: 200}
+	for {
+		dms, _, err := bot.client.DirectMessages.Get(params)
+		if err != nil {
+			log.Println("[registration bot] Cannot get Twitter bot's DMs. Error: " + err.Error())
+		}
+		if len(dms) == 0 {
+			log.Println("[registration bot] Deleted all old DMs")
+			return
+		}
+		for i := 0; i < len(dms); i++ {
+			_, _, err = bot.client.DirectMessages.Destroy(dms[i].ID, nil)
+			if err != nil {
+				log.Println("[registration bot] Could not remove Twitter bot's DM. Error: " + err.Error())
+			}
+		}
+	}
+}
+
+// deleteRequestDMs waits for 5 mins and
+// then removes the request and response DMs.
+// This should be called each time the bot handles a registration request.
+func (bot *TwitterBot) deleteRequestDMs(requestDM, responseDM *twitter.DirectMessage) {
+	timer := time.NewTimer(time.Second * 300)
+
+	go func() {
+		defer timer.Stop()
+		<-timer.C
+		_, _, err := bot.client.DirectMessages.Destroy(requestDM.ID, nil)
+		if err != nil {
+			log.Println("[registration bot] Could not remove Twitter bot's DM. Error: " + err.Error())
+		}
+		if responseDM != nil {
+			_, _, err = bot.client.DirectMessages.Destroy(responseDM.ID, nil)
+			if err != nil {
+				log.Println("[registration bot] Could not remove Twitter bot's DM. Error: " + err.Error())
+			}
+		}
+	}()
 }
