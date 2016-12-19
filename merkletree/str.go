@@ -1,11 +1,6 @@
 package merkletree
 
 import (
-	"bytes"
-
-	"encoding/json"
-
-	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/utils"
 )
@@ -29,44 +24,7 @@ type SignedTreeRoot struct {
 	PreviousEpoch   uint64
 	PreviousSTRHash []byte
 	Signature       []byte
-	Ad              AssocData
-}
-
-// TODO(arlolra): Look into using a DirSTR instead, to avoid this mess.
-
-// RawAd makes json.RawMessage implement the AssocData interface.
-type RawAd json.RawMessage
-
-// Serialize should never be called.
-func (r RawAd) Serialize() []byte {
-	panic("[str] Should never be called")
-	return nil
-}
-
-// UnmarshalJSON returns the STR with a json.RawMessage as AssocData for
-// further unmarshalling by the caller.
-func (str *SignedTreeRoot) UnmarshalJSON(m []byte) error {
-	type Str struct {
-		tree            *MerkleTree
-		TreeHash        []byte
-		Epoch           uint64
-		PreviousEpoch   uint64
-		PreviousSTRHash []byte
-		Signature       []byte
-		Ad              json.RawMessage
-	}
-	hStr := &Str{}
-	if err := json.Unmarshal(m, hStr); err != nil {
-		return err
-	}
-	str.tree = hStr.tree
-	str.TreeHash = hStr.TreeHash
-	str.Epoch = hStr.Epoch
-	str.PreviousEpoch = hStr.PreviousEpoch
-	str.PreviousSTRHash = hStr.PreviousSTRHash
-	str.Signature = hStr.Signature
-	str.Ad = RawAd(hStr.Ad)
-	return nil
+	Ad              AssocData `json:"-"`
 }
 
 // NewSTR constructs a SignedTreeRoot with the given signing key pair,
@@ -102,15 +60,4 @@ func (str *SignedTreeRoot) Serialize() []byte {
 	strBytes = append(strBytes, str.PreviousSTRHash...) // previous STR hash
 	strBytes = append(strBytes, str.Ad.Serialize()...)
 	return strBytes
-}
-
-// VerifyHashChain computes the hash of savedSTR's signature,
-// and compares it to the hash of previous STR included
-// in the issued STR. The hash chain is valid if
-// these two hash values are equal and consecutive.
-func (str *SignedTreeRoot) VerifyHashChain(savedSTR *SignedTreeRoot) bool {
-	hash := crypto.Digest(savedSTR.Signature)
-	return str.PreviousEpoch == savedSTR.Epoch &&
-		str.Epoch == savedSTR.Epoch+1 &&
-		bytes.Equal(hash, str.PreviousSTRHash)
 }

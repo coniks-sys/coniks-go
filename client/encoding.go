@@ -3,7 +3,6 @@ package client
 import (
 	"encoding/json"
 
-	"github.com/coniks-sys/coniks-go/merkletree"
 	p "github.com/coniks-sys/coniks-go/protocol"
 )
 
@@ -43,13 +42,6 @@ func UnmarshalResponse(t int, msg []byte) *p.Response {
 				Error: p.ErrMalformedDirectoryMessage,
 			}
 		}
-		policies := &p.Policies{}
-		if err := json.Unmarshal([]byte(response.STR.Ad.(merkletree.RawAd)), policies); err != nil {
-			return &p.Response{
-				Error: p.ErrMalformedDirectoryMessage,
-			}
-		}
-		response.STR.Ad = policies
 		return &p.Response{
 			Error:             res.Error,
 			DirectoryResponse: response,

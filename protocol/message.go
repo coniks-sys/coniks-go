@@ -110,7 +110,7 @@ type DirectoryResponse interface{}
 // type upon a RegistrationRequest or a KeyLookupRequest.
 type DirectoryProof struct {
 	AP  *m.AuthenticationPath
-	STR *m.SignedTreeRoot
+	STR *DirSTR
 	TB  *TemporaryBinding `json:",omitempty"`
 }
 
@@ -121,7 +121,7 @@ type DirectoryProof struct {
 // MonitoringRequest.
 type DirectoryProofs struct {
 	AP  []*m.AuthenticationPath
-	STR []*m.SignedTreeRoot
+	STR []*DirSTR
 }
 
 // NewErrorResponse creates a new response message indicating the error
@@ -143,7 +143,7 @@ var _ DirectoryResponse = (*DirectoryProofs)(nil)
 //
 // See directory.Register() for details on the contents of the created
 // DirectoryProof.
-func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
+func NewRegistrationProof(ap *m.AuthenticationPath, str *DirSTR,
 	tb *TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
 	return &Response{
 		Error: e,
@@ -164,7 +164,7 @@ func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 //
 // See directory.KeyLookup() for details on the contents of the created
 // DirectoryProof.
-func NewKeyLookupProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
+func NewKeyLookupProof(ap *m.AuthenticationPath, str *DirSTR,
 	tb *TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
 	return &Response{
 		Error: e,
@@ -186,7 +186,7 @@ func NewKeyLookupProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 // See directory.KeyLookupInEpoch() for details on the contents of the
 // created DirectoryProofs.
 func NewKeyLookupInEpochProof(ap *m.AuthenticationPath,
-	str []*m.SignedTreeRoot, e ErrorCode) (*Response, ErrorCode) {
+	str []*DirSTR, e ErrorCode) (*Response, ErrorCode) {
 	aps := append([]*m.AuthenticationPath{}, ap)
 	return &Response{
 		Error: e,
@@ -206,7 +206,7 @@ func NewKeyLookupInEpochProof(ap *m.AuthenticationPath,
 // See directory.Monitor() for details on the contents of the created
 // DirectoryProofs.
 func NewMonitoringProof(ap []*m.AuthenticationPath,
-	str []*m.SignedTreeRoot) (*Response, ErrorCode) {
+	str []*DirSTR) (*Response, ErrorCode) {
 	return &Response{
 		Error: ReqSuccess,
 		DirectoryResponse: &DirectoryProofs{

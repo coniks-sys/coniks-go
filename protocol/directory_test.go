@@ -255,7 +255,7 @@ func TestMonitoringBadStartEpoch(t *testing.T) {
 
 func TestPoliciesChanges(t *testing.T) {
 	d, _ := NewTestDirectory(t, true)
-	if p := GetPolicies(d.LatestSTR()).EpochDeadline; p != 1 {
+	if p := d.LatestSTR().Policies.EpochDeadline; p != 1 {
 		t.Fatal("Unexpected policies", "want", 1, "got", p)
 	}
 
@@ -263,13 +263,13 @@ func TestPoliciesChanges(t *testing.T) {
 	d.SetPolicies(2)
 	d.Update()
 	// expect the policies doesn't change yet
-	if p := GetPolicies(d.LatestSTR()).EpochDeadline; p != 1 {
+	if p := d.LatestSTR().Policies.EpochDeadline; p != 1 {
 		t.Fatal("Unexpected policies", "want", 1, "got", p)
 	}
 
 	d.Update()
 	// expect the new policies
-	if p := GetPolicies(d.LatestSTR()).EpochDeadline; p != 2 {
+	if p := d.LatestSTR().Policies.EpochDeadline; p != 2 {
 		t.Fatal("Unexpected policies", "want", 2, "got", p)
 	}
 	p0 := GetPolicies(d.pad.GetSTR(0)).EpochDeadline

@@ -87,8 +87,8 @@ func (d *ConiksDirectory) EpochDeadline() Timestamp {
 }
 
 // LatestSTR returns this ConiksDirectory's latest STR.
-func (d *ConiksDirectory) LatestSTR() *merkletree.SignedTreeRoot {
-	return d.pad.LatestSTR()
+func (d *ConiksDirectory) LatestSTR() *DirSTR {
+	return NewDirSTR(d.pad.LatestSTR())
 }
 
 // NewTB creates a new temporary binding for the given name-to-key mapping.
@@ -252,7 +252,7 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 			ErrMalformedClientMessage
 	}
 
-	var strs []*merkletree.SignedTreeRoot
+	var strs []*DirSTR
 	startEp := req.Epoch
 	endEp := d.LatestSTR().Epoch
 
@@ -261,7 +261,7 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *KeyLookupInEpochRequest) (
 		return NewErrorResponse(ErrDirectory), ErrDirectory
 	}
 	for ep := startEp; ep <= endEp; ep++ {
-		str := d.pad.GetSTR(ep)
+		str := NewDirSTR(d.pad.GetSTR(ep))
 		strs = append(strs, str)
 	}
 
@@ -302,7 +302,7 @@ func (d *ConiksDirectory) Monitor(req *MonitoringRequest) (
 			ErrMalformedClientMessage
 	}
 
-	var strs []*merkletree.SignedTreeRoot
+	var strs []*DirSTR
 	var aps []*merkletree.AuthenticationPath
 	startEp := req.StartEpoch
 	endEp := req.EndEpoch
@@ -315,7 +315,7 @@ func (d *ConiksDirectory) Monitor(req *MonitoringRequest) (
 			return NewErrorResponse(ErrDirectory), ErrDirectory
 		}
 		aps = append(aps, ap)
-		str := d.pad.GetSTR(ep)
+		str := NewDirSTR(d.pad.GetSTR(ep))
 		strs = append(strs, str)
 	}
 
