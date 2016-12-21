@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/coniks-sys/coniks-go/client"
 	"github.com/spf13/cobra"
@@ -39,5 +40,5 @@ func loadConfigOrExit(cmd *cobra.Command) *client.Config {
 
 // append "\r\n" to msg and then write to terminal in raw mode.
 func writeLineInRawMode(term *terminal.Terminal, msg string) {
-	term.Write([]byte(msg + "\r\n"))
+	term.Write([]byte("<" + time.Now().Format("15:04:05.999999999") + "> " + msg + "\r\n"))
 }
