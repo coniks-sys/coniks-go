@@ -1,13 +1,17 @@
 package merkletree
 
-import "testing"
+import (
+	"bytes"
+	"reflect"
+	"testing"
+)
 
 func TestVerifyHashChain(t *testing.T) {
 	var N uint64 = 100
 
 	keyPrefix := "key"
 	valuePrefix := []byte("value")
-	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey1, 10)
+	pad, err := NewPAD(&MockAd{""}, signKey, vrfPrivKey1, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,5 +42,28 @@ func TestVerifyHashChain(t *testing.T) {
 			t.Fatal("Spurious STR at epoch", i)
 		}
 		savedSTR = str
+	}
+}
+
+func TestSTREncodingDecoding(t *testing.T) {
+	pad, err := NewPAD(&MockAd{"data"}, signKey, vrfPrivKey1, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var buff bytes.Buffer
+	if err = EncodeSTR(&buff, pad.LatestSTR()); err != nil {
+		t.Fatal(err)
+	}
+
+	strGot, err := DecodeSTR(&buff)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(strGot.Ad, pad.LatestSTR().Ad) ||
+		!bytes.Equal(strGot.tree.hash, pad.LatestSTR().tree.hash) ||
+		!bytes.Equal(strGot.Signature, pad.LatestSTR().Signature) {
+		t.Fatal("Malformed encoding/decoding")
 	}
 }

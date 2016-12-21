@@ -2,7 +2,9 @@ package merkletree
 
 import (
 	"bytes"
+	"encoding/gob"
 	"errors"
+	"io"
 
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/utils"
@@ -74,10 +76,10 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 		direction := lookupIndexBits[depth]
 		var hashArr [crypto.HashSizeByte]byte
 		if direction {
-			copy(hashArr[:], nodePointer.(*interiorNode).leftHash)
+			copy(hashArr[:], nodePointer.(*interiorNode).LeftHash)
 			nodePointer = nodePointer.(*interiorNode).rightChild
 		} else {
-			copy(hashArr[:], nodePointer.(*interiorNode).rightHash)
+			copy(hashArr[:], nodePointer.(*interiorNode).RightHash)
 			nodePointer = nodePointer.(*interiorNode).leftChild
 		}
 		authPath.PrunedTree = append(authPath.PrunedTree, hashArr)
@@ -91,13 +93,13 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 	case *userLeafNode:
 		pNode := nodePointer.(*userLeafNode)
 		authPath.Leaf = &ProofNode{
-			Level:      pNode.level,
-			Index:      pNode.index,
-			Value:      pNode.value,
+			Level:      pNode.Level,
+			Index:      pNode.Index,
+			Value:      pNode.Value,
 			IsEmpty:    false,
-			Commitment: &crypto.Commit{pNode.commitment.Salt, pNode.commitment.Value},
+			Commitment: &crypto.Commit{pNode.Commitment.Salt, pNode.Commitment.Value},
 		}
-		if bytes.Equal(nodePointer.(*userLeafNode).index, lookupIndex) {
+		if bytes.Equal(nodePointer.(*userLeafNode).Index, lookupIndex) {
 			return authPath
 		}
 		// reached a different leaf with a matching prefix
@@ -108,8 +110,8 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 	case *emptyNode:
 		pNode := nodePointer.(*emptyNode)
 		authPath.Leaf = &ProofNode{
-			Level:      pNode.level,
-			Index:      pNode.index,
+			Level:      pNode.Level,
+			Index:      pNode.Index,
 			Value:      nil,
 			IsEmpty:    true,
 			Commitment: nil,
@@ -130,10 +132,10 @@ func (m *MerkleTree) Set(index []byte, key string, value []byte) error {
 		return err
 	}
 	toAdd := userLeafNode{
-		key:        key,
-		value:      append([]byte{}, value...), // make a copy of value
-		index:      index,
-		commitment: commitment,
+		Key:        key,
+		Value:      append([]byte{}, value...), // make a copy of value
+		Index:      index,
+		Commitment: commitment,
 	}
 	m.insertNode(index, &toAdd)
 	return nil
@@ -157,23 +159,23 @@ insertLoop:
 				panic(ErrInvalidTree)
 			}
 
-			if bytes.Equal(currentNodeUL.index, toAdd.index) {
+			if bytes.Equal(currentNodeUL.Index, toAdd.Index) {
 				// replace the value
 				toAdd.parent = currentNodeUL.parent
-				toAdd.level = currentNodeUL.level
+				toAdd.Level = currentNodeUL.Level
 				*currentNodeUL = *toAdd
 				return
 			}
 
 			newInteriorNode := newInteriorNode(currentNodeUL.parent, depth, indexBits[:depth])
 
-			direction := utils.GetNthBit(currentNodeUL.index, depth)
+			direction := utils.GetNthBit(currentNodeUL.Index, depth)
 			if direction {
 				newInteriorNode.rightChild = currentNodeUL
 			} else {
 				newInteriorNode.leftChild = currentNodeUL
 			}
-			currentNodeUL.level = depth + 1
+			currentNodeUL.Level = depth + 1
 			currentNodeUL.parent = newInteriorNode
 			if newInteriorNode.parent.(*interiorNode).leftChild == nodePointer {
 				newInteriorNode.parent.(*interiorNode).leftChild = newInteriorNode
@@ -185,20 +187,20 @@ insertLoop:
 			currentNodeI := nodePointer.(*interiorNode)
 			direction := indexBits[depth]
 			if direction { // go right
-				currentNodeI.rightHash = nil
+				currentNodeI.RightHash = nil
 				if currentNodeI.rightChild.isEmpty() {
 					currentNodeI.rightChild = toAdd
-					toAdd.level = depth + 1
+					toAdd.Level = depth + 1
 					toAdd.parent = currentNodeI
 					break insertLoop
 				} else {
 					nodePointer = currentNodeI.rightChild
 				}
 			} else { // go left
-				currentNodeI.leftHash = nil
+				currentNodeI.LeftHash = nil
 				if currentNodeI.leftChild.isEmpty() {
 					currentNodeI.leftChild = toAdd
-					toAdd.level = depth + 1
+					toAdd.Level = depth + 1
 					toAdd.parent = currentNodeI
 					break insertLoop
 				} else {
@@ -249,4 +251,60 @@ func (m *MerkleTree) Clone() *MerkleTree {
 		root:  m.root.clone(nil).(*interiorNode),
 		hash:  append([]byte{}, m.hash...),
 	}
+}
+
+// encodeTree writes the tree's nonce into buff first,
+// following by all the nodes data.
+func encodeTree(buff io.Writer, m *MerkleTree) error {
+	enc := gob.NewEncoder(buff)
+	if err := enc.Encode(m.nonce); err != nil {
+		return err
+	}
+	if err := encodeNode(enc, m.root); err != nil {
+		return err
+	}
+	return nil
+}
+
+// decodeTree reconstructs the tree from the buffer
+// that was written using encodeTree.
+func decodeTree(buff io.Reader) (*MerkleTree, error) {
+	m := new(MerkleTree)
+	dec := gob.NewDecoder(buff)
+	if err := dec.Decode(&m.nonce); err != nil {
+		return nil, err
+	}
+	root, err := reconstructTree(dec, nil)
+	if err != nil {
+		return nil, err
+	}
+	m.root = root.(*interiorNode)
+	m.hash = m.root.hash(m)
+	return m, nil
+}
+
+func reconstructTree(dec *gob.Decoder, parent merkleNode) (merkleNode, error) {
+	n, err := decodeNode(dec)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := n.(*emptyNode); ok {
+		n.(*emptyNode).parent = parent
+		return n, nil
+	}
+	if _, ok := n.(*userLeafNode); ok {
+		n.(*userLeafNode).parent = parent
+		return n, nil
+	}
+	n.(*interiorNode).parent = parent
+	n.(*interiorNode).leftChild, err = reconstructTree(dec, n)
+	if err != nil {
+		return nil, err
+	}
+	n.(*interiorNode).rightChild, err = reconstructTree(dec, n)
+	if err != nil {
+		return nil, err
+	}
+	return n, nil
 }

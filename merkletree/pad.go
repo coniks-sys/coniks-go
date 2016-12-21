@@ -2,7 +2,9 @@ package merkletree
 
 import (
 	"bytes"
+	"encoding/gob"
 	"errors"
+	"io"
 
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
@@ -169,7 +171,7 @@ func (pad *PAD) reshuffle() {
 		panic(err)
 	}
 	pad.tree.visitLeafNodes(func(n *userLeafNode) {
-		if err := newTree.Set(pad.Index(n.key), n.key, n.value); err != nil {
+		if err := newTree.Set(pad.Index(n.Key), n.Key, n.Value); err != nil {
 			panic(err)
 		}
 	})
@@ -179,4 +181,61 @@ func (pad *PAD) reshuffle() {
 func (pad *PAD) computePrivateIndex(key string, vrfKey vrf.PrivateKey) (index, proof []byte) {
 	index, proof = vrfKey.Prove([]byte(key))
 	return
+}
+
+// EncodePAD encodes the pad as following order:
+// the signing key, the pad's current tree (possibly includes new bindings),
+// the latest version of the STR and the current policies in place.
+func EncodePAD(buff io.Writer, pad *PAD) error {
+	enc := gob.NewEncoder(buff)
+	// FIXME: Do we really want to save the private keys to db?
+	if err := enc.Encode(pad.signKey); err != nil {
+		return err
+	}
+	if err := enc.Encode(pad.vrfKey); err != nil {
+		return err
+	}
+	if err := encodeTree(buff, pad.tree); err != nil {
+		return err
+	}
+	if err := EncodeSTR(buff, pad.latestSTR); err != nil {
+		return err
+	}
+	if err := enc.Encode(&pad.ad); err != nil {
+		return err
+	}
+	return nil
+}
+
+// DecodePAD reconstructs the PAD from the buff written by EncodePAD.
+func DecodePAD(length uint64, buff io.Reader) (*PAD, error) {
+	var pad PAD
+	pad.snapshots = make(map[uint64]*SignedTreeRoot, length)
+	pad.loadedEpochs = make([]uint64, 0, length)
+
+	dec := gob.NewDecoder(buff)
+	if err := dec.Decode(&pad.signKey); err != nil {
+		return nil, err
+	}
+	if err := dec.Decode(&pad.vrfKey); err != nil {
+		return nil, err
+	}
+	m, err := decodeTree(buff)
+	if err != nil {
+		return nil, err
+	}
+	pad.tree = m
+
+	str, err := DecodeSTR(buff)
+	if err != nil {
+		return nil, err
+	}
+	pad.latestSTR = str
+	pad.snapshots[str.Epoch] = str
+	pad.loadedEpochs = append(pad.loadedEpochs, str.Epoch)
+
+	if err := dec.Decode(&pad.ad); err != nil {
+		return nil, err
+	}
+	return &pad, nil
 }

@@ -2,12 +2,12 @@ package merkletree
 
 import (
 	"bytes"
-	"testing"
-
 	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
+	"testing"
 
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 )
@@ -20,14 +20,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-}
-
-type TestAd struct {
-	data string
-}
-
-func (t TestAd) Serialize() []byte {
-	return []byte(t.data)
 }
 
 // 1st: epoch = 0 (empty tree)
@@ -46,7 +38,7 @@ func TestPADHashChain(t *testing.T) {
 
 	treeHashes := make(map[uint64][]byte)
 
-	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey1, 10)
+	pad, err := NewPAD(&MockAd{""}, signKey, vrfPrivKey1, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +144,7 @@ func TestPADHashChain(t *testing.T) {
 func TestHashChainExceedsMaximumSize(t *testing.T) {
 	var hashChainLimit uint64 = 4
 
-	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey2, hashChainLimit)
+	pad, err := NewPAD(&MockAd{""}, signKey, vrfPrivKey2, hashChainLimit)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,7 +185,7 @@ func TestAssocDataChange(t *testing.T) {
 	key3 := "key3"
 	val3 := []byte("value3")
 
-	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey1, 10)
+	pad, err := NewPAD(&MockAd{""}, signKey, vrfPrivKey1, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +194,7 @@ func TestAssocDataChange(t *testing.T) {
 		t.Fatal(err)
 	}
 	// TODO: key change between epoch 1 and 2:
-	pad.Update(TestAd{""})
+	pad.Update(&MockAd{""})
 
 	if err := pad.Set(key2, val2); err != nil {
 		t.Fatal(err)
@@ -261,6 +253,66 @@ func TestNewPADMissingAssocData(t *testing.T) {
 	}
 }
 
+func TestPADEncodingDecoding(t *testing.T) {
+	key1 := "key"
+	val1 := []byte("value")
+
+	key2 := "key2"
+	val2 := []byte("value2")
+
+	key3 := "key3"
+	val3 := []byte("value3")
+
+	pad, err := NewPAD(&MockAd{"data"}, signKey, vrfPrivKey1, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := pad.Set(key1, val1); err != nil {
+		t.Fatal(err)
+	}
+	if err := pad.Set(key2, val2); err != nil {
+		t.Fatal(err)
+	}
+	pad.Update(&MockAd{"data"})
+	// insert a new binding and don't update the pad
+	if err := pad.Set(key3, val3); err != nil {
+		t.Fatal(err)
+	}
+	index3 := vrfPrivKey1.Compute([]byte(key3))
+
+	// encode the pad
+	var buff bytes.Buffer
+	if err := EncodePAD(&buff, pad); err != nil {
+		t.Fatal(err)
+	}
+
+	padGot, err := DecodePAD(10, &buff)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(padGot.ad, pad.ad) ||
+		!bytes.Equal(padGot.LatestSTR().Signature, pad.LatestSTR().Signature) {
+		t.Fatal("Malformed encoding/decoding")
+	}
+
+	ap, err := padGot.Lookup(key1)
+	if ap.Leaf.Value == nil || !bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
+		t.Fatalf("Cannot find key: %v", key1)
+	}
+	ap, err = padGot.Lookup(key2)
+	if ap.Leaf.Value == nil || !bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
+		t.Fatalf("Cannot find key: %v", key2)
+	}
+
+	ap = padGot.tree.Get(index3)
+	if ap.Leaf.Value == nil || !bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
+		t.Fatalf("Cannot find key: %v", key3)
+	}
+	padGot.Update(nil) // just to make sure everything is okay
+}
+
 // TODO move the following to some (internal?) testutils package
 type testErrorRandReader struct{}
 
@@ -282,7 +334,7 @@ func TestNewPADErrorWhileCreatingTree(t *testing.T) {
 	origRand := mockRandReadWithErroringReader()
 	defer unMockRandReader(origRand)
 
-	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey1, 3)
+	pad, err := NewPAD(&MockAd{""}, signKey, vrfPrivKey1, 3)
 	if err == nil || pad != nil {
 		t.Fatal("NewPad should return an error in case the tree creation failed")
 	}
@@ -388,7 +440,7 @@ func benchPADLookup(b *testing.B, entries uint64) {
 // `updateEvery`. If `updateEvery > N` createPAD won't update the STR.
 func createPad(N uint64, keyPrefix string, valuePrefix []byte, snapLen uint64,
 	updateEvery uint64) (*PAD, error) {
-	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey1, snapLen)
+	pad, err := NewPAD(&MockAd{""}, signKey, vrfPrivKey1, snapLen)
 	if err != nil {
 		return nil, err
 	}
