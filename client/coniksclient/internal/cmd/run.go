@@ -17,6 +17,10 @@ const help = "- register [name] [key]:\r\n" +
 	"	Register a new name-to-key binding on the CONIKS-server.\r\n" +
 	"- lookup [name]:\r\n" +
 	"	Lookup the key of some known contact or your own bindings.\r\n" +
+	"- enable timestamp:\r\n" +
+	"	Print timestamp of format <15:04:05.999999999> along with the result.\r\n" +
+	"- disable timestamp:\r\n" +
+	"	Disable timestamp printing.\r\n" +
 	"- help:\r\n" +
 	"	Display this message.\r\n" +
 	"- exit:\r\n" +
@@ -40,6 +44,8 @@ func init() {
 func run(cmd *cobra.Command) {
 	conf := loadConfigOrExit(cmd)
 	cc := p.NewCC(nil, true, conf.SigningPubKey)
+	// for debugging only
+	printTimestamp := false
 
 	state, err := terminal.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
@@ -50,41 +56,54 @@ func run(cmd *cobra.Command) {
 	for {
 		line, err := term.ReadLine()
 		if err != nil {
-			writeLineInRawMode(term, err.Error())
+			writeLineInRawMode(term, err.Error(), printTimestamp)
 			return
 		}
 
 		args := strings.Fields(line)
 		if len(args) < 1 {
-			writeLineInRawMode(term, `[!] Type "help" for more information.`)
+			writeLineInRawMode(term, `[!] Type "help" for more information.`, printTimestamp)
 			continue
 		}
 		cmd := args[0]
 
 		switch cmd {
 		case "exit":
-			writeLineInRawMode(term, "[+] See ya.")
+			writeLineInRawMode(term, "[+] See ya.", printTimestamp)
 			return
 		case "help":
-			writeLineInRawMode(term, help)
-			continue
+			writeLineInRawMode(term, help, printTimestamp)
+		case "enable", "disable":
+			if len(args) != 2 {
+				writeLineInRawMode(term, "[!] Unrecognized command: "+line, printTimestamp)
+				continue
+			}
+			switch args[1] {
+			case "timestamp":
+				if cmd == "enable" {
+					printTimestamp = true
+				} else {
+					printTimestamp = false
+				}
+			default:
+				writeLineInRawMode(term, "[!] Unrecognized command: "+line, printTimestamp)
+			}
 		case "register":
 			if len(args) != 3 {
-				writeLineInRawMode(term, "[!] Incorrect number of args to register.")
+				writeLineInRawMode(term, "[!] Incorrect number of args to register.", printTimestamp)
 				continue
 			}
 			msg := register(cc, conf, args[1], args[2])
-			writeLineInRawMode(term, "[+] "+msg)
+			writeLineInRawMode(term, "[+] "+msg, printTimestamp)
 		case "lookup":
 			if len(args) != 2 {
-				writeLineInRawMode(term, "[!] Incorrect number of args to lookup.")
+				writeLineInRawMode(term, "[!] Incorrect number of args to lookup.", printTimestamp)
 				continue
 			}
 			msg := keyLookup(cc, conf, args[1])
-			writeLineInRawMode(term, "[+] "+msg)
+			writeLineInRawMode(term, "[+] "+msg, printTimestamp)
 		default:
-			writeLineInRawMode(term, "[!] Unrecognized command: "+cmd)
-			continue
+			writeLineInRawMode(term, "[!] Unrecognized command: "+cmd, printTimestamp)
 		}
 	}
 }
