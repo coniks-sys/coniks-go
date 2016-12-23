@@ -42,6 +42,7 @@ func UnmarshalResponse(t int, msg []byte) *p.Response {
 				Error: p.ErrMalformedDirectoryMessage,
 			}
 		}
+		response.STR.Ad = response.STR.Policies
 		return &p.Response{
 			Error:             res.Error,
 			DirectoryResponse: response,
@@ -52,6 +53,9 @@ func UnmarshalResponse(t int, msg []byte) *p.Response {
 			return &p.Response{
 				Error: p.ErrMalformedDirectoryMessage,
 			}
+		}
+		for i := 0; i < len(response.STR); i++ {
+			response.STR[i].Ad = response.STR[i].Policies
 		}
 		return &p.Response{
 			Error:             res.Error,
