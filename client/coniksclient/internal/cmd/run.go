@@ -190,7 +190,7 @@ func keyLookup(cc *p.ConsistencyChecks, conf *client.Config, name string) string
 		return ("Invalid config!")
 	}
 
-	response := client.UnmarshalResponse(p.RegistrationType, res)
+	response := client.UnmarshalResponse(p.KeyLookupType, res)
 	if key, ok := cc.Bindings[name]; ok {
 		err = cc.HandleResponse(p.KeyLookupType, response, name, []byte(key))
 	} else {
