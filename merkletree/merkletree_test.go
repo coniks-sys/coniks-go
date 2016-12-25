@@ -39,10 +39,10 @@ func TestOneEntry(t *testing.T) {
 	h.Write(utils.ToBytes([]bool{true}))
 	h.Write(utils.UInt32ToBytes(1))
 	h.Read(expect[:])
-	if !bytes.Equal(m.root.rightHash, expect[:]) {
+	if !bytes.Equal(m.root.RightHash, expect[:]) {
 		t.Error("Wrong righ hash!",
 			"expected", expect,
-			"get", m.root.rightHash)
+			"get", m.root.RightHash)
 	}
 
 	r := m.Get(index)
@@ -70,10 +70,10 @@ func TestOneEntry(t *testing.T) {
 	h.Write(commit[:])
 	h.Read(expect[:])
 
-	if !bytes.Equal(m.root.leftHash, expect[:]) {
+	if !bytes.Equal(m.root.LeftHash, expect[:]) {
 		t.Error("Wrong left hash!",
 			"expected", expect,
-			"get", m.root.leftHash)
+			"get", m.root.LeftHash)
 	}
 
 	r = m.Get([]byte("abc"))

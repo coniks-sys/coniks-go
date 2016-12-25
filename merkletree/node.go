@@ -1,34 +1,38 @@
 package merkletree
 
 import (
+	"encoding/gob"
+
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
 type node struct {
 	parent merkleNode
-	level  uint32
 }
 
 type interiorNode struct {
 	node
+	Level      uint32
 	leftChild  merkleNode
 	rightChild merkleNode
-	leftHash   []byte
-	rightHash  []byte
+	LeftHash   []byte
+	RightHash  []byte
 }
 
 type userLeafNode struct {
 	node
-	key        string
-	value      []byte
-	index      []byte
-	commitment *crypto.Commit
+	Level      uint32
+	Key        string
+	Value      []byte
+	Index      []byte
+	Commitment *crypto.Commit
 }
 
 type emptyNode struct {
 	node
-	index []byte
+	Level uint32
+	Index []byte
 }
 
 func newInteriorNode(parent merkleNode, level uint32, prefixBits []bool) *interiorNode {
@@ -37,27 +41,23 @@ func newInteriorNode(parent merkleNode, level uint32, prefixBits []bool) *interi
 	prefixRight := append([]bool(nil), prefixBits...)
 	prefixRight = append(prefixRight, true)
 	leftBranch := &emptyNode{
-		node: node{
-			level: level + 1,
-		},
-		index: utils.ToBytes(prefixLeft),
+		Level: level + 1,
+		Index: utils.ToBytes(prefixLeft),
 	}
 
 	rightBranch := &emptyNode{
-		node: node{
-			level: level + 1,
-		},
-		index: utils.ToBytes(prefixRight),
+		Level: level + 1,
+		Index: utils.ToBytes(prefixRight),
 	}
 	newNode := &interiorNode{
 		node: node{
 			parent: parent,
-			level:  level,
 		},
+		Level:      level,
 		leftChild:  leftBranch,
 		rightChild: rightBranch,
-		leftHash:   nil,
-		rightHash:  nil,
+		LeftHash:   nil,
+		RightHash:  nil,
 	}
 	leftBranch.parent = newNode
 	rightBranch.parent = newNode
@@ -76,22 +76,22 @@ var _ merkleNode = (*interiorNode)(nil)
 var _ merkleNode = (*emptyNode)(nil)
 
 func (n *interiorNode) hash(m *MerkleTree) []byte {
-	if n.leftHash == nil {
-		n.leftHash = n.leftChild.hash(m)
+	if n.LeftHash == nil {
+		n.LeftHash = n.leftChild.hash(m)
 	}
-	if n.rightHash == nil {
-		n.rightHash = n.rightChild.hash(m)
+	if n.RightHash == nil {
+		n.RightHash = n.rightChild.hash(m)
 	}
-	return crypto.Digest(n.leftHash, n.rightHash)
+	return crypto.Digest(n.LeftHash, n.RightHash)
 }
 
 func (n *userLeafNode) hash(m *MerkleTree) []byte {
 	return crypto.Digest(
 		[]byte{LeafIdentifier},               // K_leaf
 		[]byte(m.nonce),                      // K_n
-		[]byte(n.index),                      // i
-		[]byte(utils.UInt32ToBytes(n.level)), // l
-		[]byte(n.commitment.Value),           // commit(key|| value)
+		[]byte(n.Index),                      // i
+		[]byte(utils.UInt32ToBytes(n.Level)), // l
+		[]byte(n.Commitment.Value),           // commit(key|| value)
 	)
 }
 
@@ -99,8 +99,8 @@ func (n *emptyNode) hash(m *MerkleTree) []byte {
 	return crypto.Digest(
 		[]byte{EmptyBranchIdentifier},        // K_empty
 		[]byte(m.nonce),                      // K_n
-		[]byte(n.index),                      // i
-		[]byte(utils.UInt32ToBytes(n.level)), // l
+		[]byte(n.Index),                      // i
+		[]byte(utils.UInt32ToBytes(n.Level)), // l
 	)
 }
 
@@ -108,10 +108,10 @@ func (n *interiorNode) clone(parent *interiorNode) merkleNode {
 	newNode := &interiorNode{
 		node: node{
 			parent: parent,
-			level:  n.level,
 		},
-		leftHash:  append([]byte{}, n.leftHash...),
-		rightHash: append([]byte{}, n.rightHash...),
+		Level:     n.Level,
+		LeftHash:  append([]byte{}, n.LeftHash...),
+		RightHash: append([]byte{}, n.RightHash...),
 	}
 	if n.leftChild == nil ||
 		n.rightChild == nil {
@@ -126,12 +126,12 @@ func (n *userLeafNode) clone(parent *interiorNode) merkleNode {
 	return &userLeafNode{
 		node: node{
 			parent: parent,
-			level:  n.level,
 		},
-		key:        n.key,
-		value:      n.value,
-		index:      append([]byte{}, n.index...), // make a copy of index
-		commitment: n.commitment,
+		Level:      n.Level,
+		Key:        n.Key,
+		Value:      n.Value,
+		Index:      append([]byte{}, n.Index...), // make a copy of index
+		Commitment: n.Commitment,
 	}
 }
 
@@ -139,9 +139,9 @@ func (n *emptyNode) clone(parent *interiorNode) merkleNode {
 	return &emptyNode{
 		node: node{
 			parent: parent,
-			level:  n.level,
 		},
-		index: append([]byte{}, n.index...), // make a copy of index
+		Level: n.Level,
+		Index: append([]byte{}, n.Index...), // make a copy of index
 	}
 }
 
@@ -155,4 +155,41 @@ func (n *interiorNode) isEmpty() bool {
 
 func (n *emptyNode) isEmpty() bool {
 	return true
+}
+
+// gob encoding/decoding
+
+func init() {
+	gob.Register(&interiorNode{})
+	gob.Register(&userLeafNode{})
+	gob.Register(&emptyNode{})
+}
+
+// encodeNode encodes a merkleNode n using the gob.Encoder enc.
+// If n is an interior node, this also encodes n's children recursively.
+func encodeNode(enc *gob.Encoder, n merkleNode) error {
+	err := enc.Encode(&n)
+	if err != nil {
+		return err
+	}
+	if in, ok := n.(*interiorNode); ok {
+		err = encodeNode(enc, in.leftChild)
+		if err != nil {
+			return err
+		}
+		err = encodeNode(enc, in.rightChild)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// decodeNode returns a merkleNode from the decoder.
+func decodeNode(dec *gob.Decoder) (merkleNode, error) {
+	var get merkleNode
+	if err := dec.Decode(&get); err != nil {
+		return nil, err
+	}
+	return get, nil
 }

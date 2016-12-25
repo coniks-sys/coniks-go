@@ -2,6 +2,8 @@ package merkletree
 
 import (
 	"bytes"
+	"encoding/gob"
+	"io"
 
 	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
@@ -74,4 +76,31 @@ func (str *SignedTreeRoot) VerifyHashChain(savedSTR *SignedTreeRoot) bool {
 	return str.PreviousEpoch == savedSTR.Epoch &&
 		str.Epoch == savedSTR.Epoch+1 &&
 		bytes.Equal(hash, str.PreviousSTRHash)
+}
+
+// EncodeSTR encodes the export fields of the
+// SignedTreeRoot str following by the corresponding Merkle tree.
+func EncodeSTR(buff io.Writer, str *SignedTreeRoot) error {
+	enc := gob.NewEncoder(buff)
+	if err := enc.Encode(&str); err != nil {
+		return err
+	}
+	if err := encodeTree(buff, str.tree); err != nil {
+		return err
+	}
+	return nil
+}
+
+// DecodeSTR reconstructs the STR from the buff written by EncodeSTR.
+func DecodeSTR(buff io.Reader) (*SignedTreeRoot, error) {
+	dec := gob.NewDecoder(buff)
+	var str SignedTreeRoot
+	var err error
+	if err = dec.Decode(&str); err != nil {
+		return nil, err
+	}
+	if str.tree, err = decodeTree(buff); err != nil {
+		return nil, err
+	}
+	return &str, nil
 }
