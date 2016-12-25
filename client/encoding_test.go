@@ -43,7 +43,7 @@ func TestUnmarshalSampleMessage(t *testing.T) {
 	msg, _ := keyserver.MarshalResponse(res)
 	response := UnmarshalResponse(protocol.RegistrationType, []byte(msg))
 	str := response.DirectoryResponse.(*protocol.DirectoryProof).STR
-	if str.Ad == nil || !bytes.Equal(str.Ad.Serialize(), str.Policies.Serialize()) {
+	if !bytes.Equal(d.LatestSTR().Serialize(), str.Serialize()) {
 		t.Error("Cannot unmarshal Associate Data properly")
 	}
 }
