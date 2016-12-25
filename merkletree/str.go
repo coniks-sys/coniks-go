@@ -51,9 +51,19 @@ func NewSTR(key sign.PrivateKey, ad AssocData, m *MerkleTree, epoch uint64, prev
 	return str
 }
 
-// Serialize serializes the signed tree root into
-// a specified format for signing.
+// Serialize serializes the signed tree root
+// and its associated data into a specified format for signing.
+// One should use this function for signing as well as
+// verifying the signature.
+// Any composition struct of SignedTreeRoot with
+// a specific AssocData should override this method.
 func (str *SignedTreeRoot) Serialize() []byte {
+	return append(str.SerializeInternal(), str.Ad.Serialize()...)
+}
+
+// SerializeInternal serializes the signed tree root into
+// a specified format.
+func (str *SignedTreeRoot) SerializeInternal() []byte {
 	var strBytes []byte
 	strBytes = append(strBytes, utils.ULongToBytes(str.Epoch)...) // t - epoch number
 	if str.Epoch > 0 {
@@ -61,7 +71,6 @@ func (str *SignedTreeRoot) Serialize() []byte {
 	}
 	strBytes = append(strBytes, str.TreeHash...)        // root
 	strBytes = append(strBytes, str.PreviousSTRHash...) // previous STR hash
-	strBytes = append(strBytes, str.Ad.Serialize()...)
 	return strBytes
 }
 
