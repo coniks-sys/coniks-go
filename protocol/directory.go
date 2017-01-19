@@ -126,7 +126,7 @@ func (d *ConiksDirectory) NewTB(name string, key []byte) *TemporaryBinding {
 // snapshot.
 // In any case, str is the signed tree root for the latest epoch.
 // If Register() encounters an internal error at any point, it returns
-// a message.NewErrorRespose(ErrDirectory) tuple.
+// a message.NewErrorResponse(ErrDirectory) tuple.
 func (d *ConiksDirectory) Register(req *RegistrationRequest) (
 	*Response, ErrorCode) {
 	// make sure the request is well-formed
