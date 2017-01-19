@@ -15,6 +15,7 @@ env:
 
 script:
   - test -z "$(go fmt ./...)"
+  - go vet ./...
   - ./test_coverage.sh
 
 after_success:
