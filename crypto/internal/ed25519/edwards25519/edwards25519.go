@@ -916,7 +916,7 @@ func FeInvert(out, z *FieldElement) {
 	FeMul(out, &t1, &t0) // 254..5,3,1,0
 }
 
-func fePow22523(out, z *FieldElement) {
+func FePow22523(out, z *FieldElement) {
 	var t0, t1, t2 FieldElement
 	var i int
 
@@ -1147,7 +1147,7 @@ func (p *ExtendedGroupElement) FromParityAndY(bit byte, y *FieldElement) bool {
 	FeMul(&p.X, &p.X, &v)
 	FeMul(&p.X, &p.X, &u) // x = uv^7
 
-	fePow22523(&p.X, &p.X) // x = (uv^7)^((q-5)/8)
+	FePow22523(&p.X, &p.X) // x = (uv^7)^((q-5)/8)
 	FeMul(&p.X, &p.X, &v3)
 	FeMul(&p.X, &p.X, &u) // x = uv^3(uv^7)^((q-5)/8)
 
@@ -2249,4 +2249,24 @@ func ScReduce(out *[32]byte, s *[64]byte) {
 	out[29] = byte(s11 >> 1)
 	out[30] = byte(s11 >> 9)
 	out[31] = byte(s11 >> 17)
+}
+
+func FeIsequal(f, g FieldElement) int {
+	var h FieldElement
+	FeSub(&h, &f, &g)
+	return 1 ^ (1 & (feIsNonzero(h) >> 8))
+}
+
+func feIsNonzero(f FieldElement) int {
+	var s [32]byte
+	FeToBytes(&s, &f)
+	var zero [32]byte
+	d := byte(0)
+	x := s
+	y := zero
+
+	for i := 0; i < 32; i++ {
+		d |= x[i] ^ y[i]
+	}
+	return int((1 & ((d - 1) >> 8)) - 1)
 }
