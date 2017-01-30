@@ -454,18 +454,29 @@ func HashToPoint(p *edwards25519.ExtendedGroupElement, in []byte) {
 	copy(hs[:], hash[:32])
 
 	edwards25519.FeFromBytes(&h, &hs)
-	Elligator(&u, h)
-	var p3 edwards25519.ExtendedGroupElement
 
+	Elligator(&u, h)
+
+	var p3 edwards25519.ExtendedGroupElement
 	geMontXtoExtendedFieldElement(&p3, u, sign_bit)
-	// TODO compare with ge_scalarmult_cofactor ...
+
 	edwards25519.GeDouble(p, &p3)
-	edwards25519.GeDouble(p, &p3)
-	edwards25519.GeDouble(p, &p3)
+	edwards25519.GeDouble(p, p)
+	edwards25519.GeDouble(p, p)
+}
+
+/* sqrt(-(A+2)) */
+var a_bytes = [32]byte{
+	0x06, 0x7e, 0x45, 0xff, 0xaa, 0x04, 0x6e, 0xcc,
+	0x82, 0x1a, 0x7d, 0x4b, 0xd1, 0xd3, 0xa1, 0xc5,
+	0x7e, 0x4f, 0xfc, 0x03, 0xdc, 0x08, 0x7b, 0xd2,
+	0xbb, 0x06, 0xa0, 0x60, 0xf4, 0xed, 0x26, 0x0f,
 }
 
 func geMontXtoExtendedFieldElement(p *edwards25519.ExtendedGroupElement, u edwards25519.FieldElement, edSignBit byte) {
-	var x, y, v, v2, iv, nx edwards25519.FieldElement
+	var x, y, v, A, v2, iv, nx edwards25519.FieldElement
+
+	edwards25519.FeFromBytes(&A, &a_bytes)
 
 	/* given u, recover edwards y */
 	/* given u, recover v */
@@ -473,12 +484,13 @@ func geMontXtoExtendedFieldElement(p *edwards25519.ExtendedGroupElement, u edwar
 
 	montgomeryXToEdwardsY(&y, &u) /* y = (u - 1) / (u + 1) */
 
-	FeMontRhs(&v2, &u)             /* v^2 = u(u^2 + Au + 1) */
-	edwards25519.FeSquare(&v, &v2) /* v = sqrt(v^2) */
+	FeMontRhs(&v2, &u) /* v^2 = u(u^2 + Au + 1) */
 
-	edwards25519.FeMul(&x, &u, &edwards25519.A) /* x = u * sqrt(-(A+2)) */
-	edwards25519.FeInvert(&iv, &v)              /* 1/v */
-	edwards25519.FeMul(&x, &x, &iv)             /* x = (u/v) * sqrt(-(A+2)) */
+	edwards25519.FeSqrt(&v, &v2) /* v = sqrt(v^2) */
+
+	edwards25519.FeMul(&x, &u, &A)  /* x = u * sqrt(-(A+2)) */
+	edwards25519.FeInvert(&iv, &v)  /* 1/v */
+	edwards25519.FeMul(&x, &x, &iv) /* x = (u/v) * sqrt(-(A+2)) */
 
 	edwards25519.FeNeg(&nx, &x) /* negate x to match sign bit */
 	edwards25519.FeCMove(&x, &nx, int32(edwards25519.FeIsNegative(&x)^edSignBit))

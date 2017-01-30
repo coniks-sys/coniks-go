@@ -233,10 +233,9 @@ func TestElligatorFast(t *testing.T) {
 
 	HashToPoint(&p3, htp[:])
 
-	var htpb [32]byte
-	p3.ToBytes(&htpb)
-	if !bytes.Equal(htpb[:], hashtopoint_correct_output1[:]) {
-		fmt.Println(hex.Dump(htpb[:]))
+	p3.ToBytes(&htp)
+	if !bytes.Equal(htp[:], hashtopoint_correct_output1[:]) {
+		fmt.Println(hex.Dump(htp[:]))
 		fmt.Println(hex.Dump(hashtopoint_correct_output1[:]))
 		t.Fatal("hash_to_point #1 failed")
 	}
@@ -248,7 +247,7 @@ func TestElligatorFast(t *testing.T) {
 	HashToPoint(&p3, htp[:])
 	p3.ToBytes(&htp)
 	//TEST("hash_to_point #2", memcmp(htp, hashtopoint_correct_output2, 32) == 0);
-	if !bytes.Equal(htpb[:], hashtopoint_correct_output2[:]) {
+	if !bytes.Equal(htp[:], hashtopoint_correct_output2[:]) {
 		fmt.Println(hex.Dump(htp[:]))
 		fmt.Println(hex.Dump(hashtopoint_correct_output2[:]))
 		t.Fatal("hash_to_point #2 failed")

@@ -861,6 +861,22 @@ func FeSquare2(h, f *FieldElement) {
 	h[9] = int32(h9)
 }
 
+func FeSqrt(out, a *FieldElement) {
+	var exp, b, b2, bi, i FieldElement
+
+	i = SqrtM1
+	FePow22523(&exp, a) /* b = a^(q-5)/8        */
+	FeMul(&b, a, &exp)  /* b = a * a^(q-5)/8    */
+	FeSquare(&b2, &b)   /* b^2 = a * a^(q-1)/4  */
+
+	/* note b^4 == a^2, so b^2 == a or -a
+	 * if b^2 != a, multiply it by sqrt(-1) */
+	FeMul(&bi, &b, &i)
+	FeCMove(&b, &bi, int32(1^FeIsequal(b2, *a)))
+
+	FeCopy(out, &b)
+}
+
 func FeInvert(out, z *FieldElement) {
 	var t0, t1, t2, t3 FieldElement
 	var i int
@@ -2261,12 +2277,12 @@ func feIsNonzero(f FieldElement) int {
 	var s [32]byte
 	FeToBytes(&s, &f)
 	var zero [32]byte
-	d := byte(0)
+	d := 0
 	x := s
 	y := zero
 
 	for i := 0; i < 32; i++ {
-		d |= x[i] ^ y[i]
+		d |= int(x[i]) ^ int(y[i])
 	}
-	return int((1 & ((d - 1) >> 8)) - 1)
+	return (1 & ((d - 1) >> 8)) - 1
 }
