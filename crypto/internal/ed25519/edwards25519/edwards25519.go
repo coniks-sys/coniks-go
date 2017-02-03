@@ -7,8 +7,6 @@
 // http://ed25519.cr.yp.to/.
 package edwards25519
 
-import "math"
-
 // This code is a port of the public domain, "ref10" implementation of ed25519
 // from SUPERCOP.
 
@@ -993,6 +991,28 @@ func FePow22523(out, z *FieldElement) {
 	FeMul(out, &t0, z)
 }
 
+func FeIsequal(f, g FieldElement) int {
+	var h FieldElement
+	FeSub(&h, &f, &g)
+	return 1 ^ (1 & (feIsNonzero(h) >> 8))
+}
+
+func feIsNonzero(f FieldElement) int {
+	var s [32]byte
+	FeToBytes(&s, &f)
+	var zero [32]byte
+
+	return FeCompare(s, zero)
+}
+
+func FeCompare(x, y [32]byte) int {
+	d := 0
+	for i := 0; i < 32; i++ {
+		d |= int(x[i]) ^ int(y[i])
+	}
+	return (1 & ((d - 1) >> 8)) - 1
+}
+
 // Group elements are members of the elliptic curve -x^2 + y^2 = 1 + d * x^2 *
 // y^2 where d = -121665/121666.
 //
@@ -1396,6 +1416,23 @@ func GeDoubleScalarMultVartime(r *ProjectiveGroupElement, a *[32]byte, A *Extend
 
 		t.ToProjective(r)
 	}
+}
+
+func GeToMontX(u *FieldElement, ed *ExtendedGroupElement) {
+	/*
+	   u = (y + 1) / (1 - y)
+	   or
+	   u = (y + z) / (z - y)
+
+	   NOTE: y=1 is converted to u=0 since fe_invert is mod-exp
+	*/
+	var yPlusOne, oneMinusY, invOneMinusY FieldElement
+
+	FeAdd(&yPlusOne, &ed.Y, &ed.Z)
+	FeSub(&oneMinusY, &ed.Z, &ed.Y)
+	FeInvert(&invOneMinusY, &oneMinusY)
+	FeMul(u, &yPlusOne, &invOneMinusY)
+
 }
 
 // equal returns 1 if b == c and 0 otherwise.
@@ -1918,29 +1955,17 @@ func ScMulAdd(s, a, b, c *[32]byte) {
 	s[31] = byte(s11 >> 17)
 }
 
-// Input:
-//   s[0]+256*s[1]+...+256^63*s[63] = s
-//   s <= l
-//
-// Output:
-//   s[0]+256*s[1]+...+256^31*s[31] = l - s
-//   where l = 2^252 + 27742317777372353535851937790883648493.
-func ScNeg(r, s *[32]byte) {
-	l := [32]byte{237, 211, 245, 92, 26, 99, 18, 88, 214, 156, 247, 162, 222, 249, 222, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16}
-	var carry int32
-	for i := 0; i < 32; i++ {
-		carry = carry + int32(l[i]) - int32(s[i])
-		negative := carry & math.MinInt32 // extract the sign bit (min=0b100...)
-		negative |= negative >> 16
-		negative |= negative >> 8
-		negative |= negative >> 4
-		negative |= negative >> 2
-		negative |= negative >> 1
-		carry += negative & 256 // +=256 if negative, unmodified otherwise
-		r[i] = byte(carry)
-		// carry for next iteration
-		carry = negative & (-1) // -1 if negative, 0 otherwise
-	}
+var lMinus1 = [32]byte{0xec, 0xd3, 0xf5, 0x5c, 0x1a, 0x63, 0x12, 0x58,
+	0xd6, 0x9c, 0xf7, 0xa2, 0xde, 0xf9, 0xde, 0x14,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10}
+
+// ScNeg computes:
+// b = -a (mod l)
+//  where l = 2^252 + 27742317777372353535851937790883648493.
+func ScNeg(b, a *[32]byte) {
+	var zero [32]byte
+	ScMulAdd(b, &lMinus1, a, &zero)
 }
 
 // Input:
@@ -2267,22 +2292,26 @@ func ScReduce(out *[32]byte, s *[64]byte) {
 	out[31] = byte(s11 >> 17)
 }
 
-func FeIsequal(f, g FieldElement) int {
-	var h FieldElement
-	FeSub(&h, &f, &g)
-	return 1 ^ (1 & (feIsNonzero(h) >> 8))
+// ScCMove is equivalent to FeCMove but operates directly on the [32]byte
+// representation instead on the FieldElement. Can be used to spare a
+// FieldElement.FromBytes operation.
+func ScCMove(f, g *[32]byte, b int32) {
+	var x [32]byte
+	for i := range x {
+		x[i] = (f[i] ^ g[i])
+	}
+	b = -b
+	for i := range x {
+		x[i] &= byte(b)
+	}
+	for i := range f {
+		f[i] ^= x[i]
+	}
 }
 
-func feIsNonzero(f FieldElement) int {
-	var s [32]byte
-	FeToBytes(&s, &f)
-	var zero [32]byte
-	d := 0
-	x := s
-	y := zero
-
-	for i := 0; i < 32; i++ {
-		d |= int(x[i]) ^ int(y[i])
-	}
-	return (1 & ((d - 1) >> 8)) - 1
+// ScClamp Sets and clears bits to make a random 32 bytes into a private key
+func ScClamp(a *[32]byte) {
+	a[0] &= 248
+	a[31] &= 127
+	a[31] |= 64
 }
