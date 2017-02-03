@@ -1091,6 +1091,13 @@ func (p *ExtendedGroupElement) Double(r *CompletedGroupElement) {
 	q.Double(r)
 }
 
+func GeNeg(r *ExtendedGroupElement, p ExtendedGroupElement) {
+	FeNeg(&r.X, &p.X)
+	FeCopy(&r.Y, &p.Y)
+	FeCopy(&r.Z, &p.Z)
+	FeNeg(&r.T, &p.T)
+}
+
 func GeDouble(r, p *ExtendedGroupElement) {
 	var q ProjectiveGroupElement
 	p.ToProjective(&q)
@@ -1164,10 +1171,11 @@ func (p *ExtendedGroupElement) FromBytesBaseGroup(s *[32]byte) bool {
 
 func (p *ExtendedGroupElement) FromBytes(s *[32]byte) bool {
 	FeFromBytes(&p.Y, s)
-	return p.FromParityAndY(s[31]>>7, &p.Y)
+	return p.FromParityAndY((s[31] >> 7), &p.Y)
 }
 
 func (p *ExtendedGroupElement) FromParityAndY(bit byte, y *FieldElement) bool {
+	// compare to ge_frombytes_negate_vartime
 	var u, v, v3, vxx, check FieldElement
 
 	FeCopy(&p.Y, y)
@@ -1204,7 +1212,6 @@ func (p *ExtendedGroupElement) FromParityAndY(bit byte, y *FieldElement) bool {
 			tmp2[31-i] = v
 		}
 	}
-
 	if FeIsNegative(&p.X) != bit {
 		FeNeg(&p.X, &p.X)
 	}
@@ -1361,6 +1368,16 @@ func GeScalarMult(r *ExtendedGroupElement, a *[32]byte, A *ExtendedGroupElement)
 		GeDouble(&p, &p)
 	}
 	ExtendedGroupElementCopy(r, &q)
+}
+
+// GeIsNeutral
+// returns 1 if p is the neutral point
+// returns 0 otherwise
+func GeIsNeutral(p *ExtendedGroupElement) bool {
+	var zero FieldElement
+	FeZero(&zero)
+	//  Check if p == neutral element == (0, 1)
+	return FeIsequal(p.X, zero)&FeIsequal(p.Y, p.Z) == 1
 }
 
 // GeDoubleScalarMultVartime sets r = a*A + b*B
