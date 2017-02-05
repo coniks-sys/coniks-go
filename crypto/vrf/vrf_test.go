@@ -3,7 +3,12 @@ package vrf
 import (
 	"bytes"
 	"testing"
-	// "fmt"
+
+	"crypto/sha512"
+	"encoding/hex"
+	"fmt"
+	"github.com/coniks-sys/coniks-go/crypto/internal/ed25519/edwards25519"
+	"github.com/coniks-sys/coniks-go/crypto/internal/ed25519/extra25519"
 )
 
 func TestHonestComplete(t *testing.T) {
@@ -11,7 +16,7 @@ func TestHonestComplete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pk, _ := sk.Public()
+	pk := sk.Public()
 	alice := []byte("alice")
 	aliceVRF := sk.Compute(alice)
 	aliceVRFFromProof, aliceProof := sk.Prove(alice)
@@ -22,10 +27,10 @@ func TestHonestComplete(t *testing.T) {
 	// fmt.Printf("aliceVRF:     %X\n", aliceVRF)
 	// fmt.Printf("aliceProof:   %X\n", aliceProof)
 
-	if !pk.Verify(alice, aliceVRF, aliceProof) {
-		t.Errorf("Gen -> Compute -> Prove -> Verify -> FALSE")
+	if ok, _ := pk.verifyInteral(alice, aliceProof); !ok {
+		t.Errorf("Gen -> Sign -> Verify -> FALSE")
 	}
-	if !bytes.Equal(aliceVRF, aliceVRFFromProof) {
+	if !bytes.Equal(aliceVRF[:], aliceVRFFromProof) {
 		t.Errorf("Compute != Prove")
 	}
 }
@@ -36,11 +41,8 @@ func TestConvertPrivateKeyToPublicKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pk, ok := sk.Public()
-	if !ok {
-		t.Fatal("Couldn't obtain public key.")
-	}
-	if !bytes.Equal(sk[32:], pk) {
+	pk := sk.Public()
+	if !bytes.Equal(sk[32:], pk[:]) {
 		t.Fatal("Raw byte respresentation doesn't match public key.")
 	}
 }
@@ -50,85 +52,201 @@ func TestFlipBitForgery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pk, _ := sk.Public()
+	pk := sk.Public()
 	alice := []byte("alice")
 	for i := 0; i < 32; i++ {
 		for j := uint(0); j < 8; j++ {
 			aliceVRF := sk.Compute(alice)
 			aliceVRF[i] ^= 1 << j
 			_, aliceProof := sk.Prove(alice)
-			if pk.Verify(alice, aliceVRF, aliceProof) {
+			if pk.Verify(alice, aliceVRF[:], aliceProof) {
 				t.Fatalf("forged by using aliceVRF[%d]^=%d:\n (sk=%x)", i, j, sk)
 			}
 		}
 	}
 }
 
-func sampleVectorTest(pk PublicKey, aliceVRF, aliceProof []byte, t *testing.T) {
-	alice := []byte{97, 108, 105, 99, 101}
+func TestVxed25519Vectors(t *testing.T) {
+	signature_correct := [96]byte{
+		0x23, 0xc6, 0xe5, 0x93, 0x3f, 0xcd, 0x56, 0x47,
+		0x7a, 0x86, 0xc9, 0x9b, 0x76, 0x2c, 0xb5, 0x24,
+		0xc3, 0xd6, 0x05, 0x55, 0x38, 0x83, 0x4d, 0x4f,
+		0x8d, 0xb8, 0xf0, 0x31, 0x07, 0xec, 0xeb, 0xa0,
+		0xa0, 0x01, 0x50, 0xb8, 0x4c, 0xbb, 0x8c, 0xcd,
+		0x23, 0xdc, 0x65, 0xfd, 0x0e, 0x81, 0xb2, 0x86,
+		0x06, 0xa5, 0x6b, 0x0c, 0x4f, 0x53, 0x6d, 0xc8,
+		0x8b, 0x8d, 0xc9, 0x04, 0x6e, 0x4a, 0xeb, 0x08,
+		0xce, 0x08, 0x71, 0xfc, 0xc7, 0x00, 0x09, 0xa4,
+		0xd6, 0xc0, 0xfd, 0x2d, 0x1a, 0xe5, 0xb6, 0xc0,
+		0x7c, 0xc7, 0x22, 0x3b, 0x69, 0x59, 0xa8, 0x26,
+		0x2b, 0x57, 0x78, 0xd5, 0x46, 0x0e, 0x0f, 0x05,
+	}
+	var privKey [32]byte
+	var vrfOutPrev, vrfOut [32]byte
+	privKey[8] = 189
+	edwards25519.ScClamp(&privKey)
+	msgLen := 200
+	msg := make([]byte, msgLen)
+	r := bytes.NewReader(privKey[:])
+	sk, _ := GenerateKey(r)
 
-	// Positive test case
-	if !pk.Verify(alice, aliceVRF, aliceProof) {
-		t.Errorf("TestSampleVectors HonestVector Failed")
+	random := make([]byte, 64)
+	signature := sk.signInternal(msg, bytes.NewReader(random))
+	if !bytes.Equal(signature, signature_correct[:]) {
+		t.Fatal("VXEdDSA sign failed")
+	}
+	var ok bool
+	if ok, vrfOut = sk.Public().verifyInteral(msg, signature); !ok {
+		t.Fatal("VXEdDSA verify #1 failed")
 	}
 
-	// Negative test cases - try increment the first byte of every vector
-	pk[0]++
-	if pk.Verify(alice, aliceVRF, aliceProof) {
-		t.Errorf("TestSampleVectors ForgedVector (pk modified) Passed")
+	copy(vrfOutPrev[:], vrfOut[:])
+	signature[0] ^= 1
+	if ok, _ := sk.Public().verifyInteral(msg, signature); ok {
+		t.Fatal("VXEdDSA verify #2 should have failed!")
 	}
-	pk[0]--
+	var sigPrev [96]byte
+	copy(sigPrev[:], signature[:])
+	sigPrev[0] ^= 1 // undo prev disturbance
 
-	alice[0]++
-	if pk.Verify(alice, aliceVRF, aliceProof) {
-		t.Errorf("TestSampleVectors ForgedVector (alice modified) Passed")
+	random[0] ^= 1
+	signature = sk.signInternal(msg, bytes.NewReader(random))
+	if ok, vrfOut = sk.Public().verifyInteral(msg, signature); !ok {
+		t.Fatal("VXEdDSA verify #3 failed")
 	}
-	alice[0]--
-
-	aliceVRF[0]++
-	if pk.Verify(alice, aliceVRF, aliceProof) {
-		t.Errorf("TestSampleVectors ForgedVector (aliceVRF modified) Passed")
+	if !bytes.Equal(vrfOut[:], vrfOutPrev[:]) {
+		t.Fatal("VXEdDSA VRF value has changed")
 	}
-	aliceVRF[0]--
-
-	aliceProof[0]++
-	if pk.Verify(alice, aliceVRF, aliceProof) {
-		t.Errorf("TestSampleVectors ForgedVector (aliceProof modified) Passed")
+	if bytes.Equal(signature[32:96], sigPrev[32:96]) {
+		t.Fatal("VXEdDSA (h, s) changed")
 	}
-	aliceProof[0]--
 }
 
-func TestSampleVectorSets(t *testing.T) {
+func TestVxed25519VectorsSlow(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipped slow test in short mode")
+	}
+	signature_10k_correct := [96]byte{
+		0xa1, 0x96, 0x96, 0xe5, 0x87, 0x3f, 0x6e, 0x5c,
+		0x2e, 0xd3, 0x73, 0xab, 0x04, 0x0c, 0x1f, 0x26,
+		0x3c, 0xca, 0x52, 0xc4, 0x7e, 0x49, 0xaa, 0xce,
+		0xb5, 0xd6, 0xa2, 0x29, 0x46, 0x3f, 0x1b, 0x54,
+		0x45, 0x94, 0x9b, 0x6c, 0x27, 0xf9, 0x2a, 0xed,
+		0x17, 0xa4, 0x72, 0xbf, 0x35, 0x37, 0xc1, 0x90,
+		0xac, 0xb3, 0xfd, 0x2d, 0xf1, 0x01, 0x05, 0xbe,
+		0x56, 0x5c, 0xaf, 0x63, 0x65, 0xad, 0x38, 0x04,
+		0x70, 0x53, 0xdf, 0x2b, 0xc1, 0x45, 0xc8, 0xee,
+		0x02, 0x0d, 0x2b, 0x22, 0x23, 0x7a, 0xbf, 0xfa,
+		0x43, 0x31, 0xb3, 0xac, 0x26, 0xd9, 0x76, 0xfc,
+		0xfe, 0x30, 0xa1, 0x7c, 0xce, 0x10, 0x67, 0x0e,
+	}
 
-	var aliceVRF, aliceProof []byte
-	var pk []byte
+	signature_100k_correct := [96]byte{
+		0xc9, 0x11, 0x2b, 0x55, 0xfa, 0xc4, 0xb2, 0xfe,
+		0x00, 0x7d, 0xf6, 0x45, 0xcb, 0xd2, 0x73, 0xc9,
+		0x43, 0xba, 0x20, 0xf6, 0x9c, 0x18, 0x84, 0xef,
+		0x6c, 0x65, 0x7a, 0xdb, 0x49, 0xfc, 0x1e, 0xbe,
+		0x31, 0xb3, 0xe6, 0xa4, 0x68, 0x2f, 0xd0, 0x30,
+		0x81, 0xfc, 0x0d, 0xcd, 0x2d, 0x00, 0xab, 0xae,
+		0x9f, 0x08, 0xf0, 0x99, 0xff, 0x9f, 0xdc, 0x2d,
+		0x68, 0xd6, 0xe7, 0xe8, 0x44, 0x2a, 0x5b, 0x0e,
+		0x48, 0x67, 0xe2, 0x41, 0x4a, 0xd9, 0x0c, 0x2a,
+		0x2b, 0x4e, 0x66, 0x09, 0x87, 0xa0, 0x6b, 0x3b,
+		0xd1, 0xd9, 0xa3, 0xe3, 0xa5, 0x69, 0xed, 0xc1,
+		0x42, 0x03, 0x93, 0x0d, 0xbc, 0x7e, 0xe9, 0x08,
+	}
 
-	// Following sets of test vectors are collected from TestHonestComplete(),
-	// and are used for testing the JS implementation of vrf.verify()
-	// Reference: https://github.com/yahoo/end-to-end/pull/58
+	signature_1m_correct := [96]byte{
+		0xf8, 0xb1, 0x20, 0xf2, 0x1e, 0x5c, 0xbf, 0x5f,
+		0xea, 0x07, 0xcb, 0xb5, 0x77, 0xb8, 0x03, 0xbc,
+		0xcb, 0x6d, 0xf1, 0xc1, 0xa5, 0x03, 0x05, 0x7b,
+		0x01, 0x63, 0x9b, 0xf9, 0xed, 0x3e, 0x57, 0x47,
+		0xd2, 0x5b, 0xf4, 0x7e, 0x7c, 0x45, 0xce, 0xfc,
+		0x06, 0xb3, 0xf4, 0x05, 0x81, 0x9f, 0x53, 0xb0,
+		0x18, 0xe3, 0xfa, 0xcb, 0xb2, 0x52, 0x3e, 0x57,
+		0xcb, 0x34, 0xcc, 0x81, 0x60, 0xb9, 0x0b, 0x04,
+		0x07, 0x79, 0xc0, 0x53, 0xad, 0xc4, 0x4b, 0xd0,
+		0xb5, 0x7d, 0x95, 0x4e, 0xbe, 0xa5, 0x75, 0x0c,
+		0xd4, 0xbf, 0xa7, 0xc0, 0xcf, 0xba, 0xe7, 0x7c,
+		0xe2, 0x90, 0xef, 0x61, 0xa9, 0x29, 0x66, 0x0d,
+	}
 
-	pk = []byte{194, 191, 96, 139, 106, 249, 24, 253, 198, 131, 88, 169, 100, 231, 7, 211, 70, 171, 171, 207, 24, 30, 150, 114, 77, 124, 240, 123, 191, 14, 29, 111}
-	aliceVRF = []byte{68, 98, 55, 78, 153, 189, 11, 15, 8, 238, 132, 5, 53, 28, 232, 22, 222, 98, 21, 139, 89, 67, 111, 197, 213, 75, 86, 226, 178, 71, 245, 159}
-	aliceProof = []byte{49, 128, 4, 253, 103, 241, 164, 51, 21, 45, 168, 55, 18, 103, 22, 233, 245, 136, 242, 238, 113, 218, 160, 122, 129, 89, 72, 103, 250, 222, 3, 3, 239, 235, 93, 98, 173, 115, 168, 24, 222, 165, 186, 224, 138, 76, 201, 237, 130, 201, 47, 18, 191, 24, 61, 80, 113, 139, 246, 233, 23, 94, 177, 12, 193, 106, 38, 172, 66, 192, 22, 188, 177, 14, 144, 100, 38, 179, 96, 70, 55, 157, 80, 139, 145, 62, 94, 195, 181, 224, 183, 42, 64, 66, 145, 162}
-	sampleVectorTest(pk, aliceVRF, aliceProof, t)
+	signature_10m_correct := [96]byte{
+		0xf5, 0xa4, 0xbc, 0xec, 0xc3, 0x3d, 0xd0, 0x43,
+		0xd2, 0x81, 0x27, 0x9e, 0xf0, 0x4c, 0xbe, 0xf3,
+		0x77, 0x01, 0x56, 0x41, 0x0e, 0xff, 0x0c, 0xb9,
+		0x66, 0xec, 0x4d, 0xe0, 0xb7, 0x25, 0x63, 0x6b,
+		0x5c, 0x08, 0x39, 0x80, 0x4e, 0x37, 0x1b, 0x2c,
+		0x46, 0x6f, 0x86, 0x99, 0x1c, 0x4e, 0x31, 0x60,
+		0xdb, 0x4c, 0xfe, 0xc5, 0xa2, 0x4d, 0x71, 0x2b,
+		0xd6, 0xd0, 0xc3, 0x98, 0x88, 0xdb, 0x0e, 0x0c,
+		0x68, 0x4a, 0xd3, 0xc7, 0x56, 0xac, 0x8d, 0x95,
+		0x7b, 0xbd, 0x99, 0x50, 0xe8, 0xd3, 0xea, 0xf3,
+		0x7b, 0x26, 0xf2, 0xa2, 0x2b, 0x02, 0x58, 0xca,
+		0xbd, 0x2c, 0x2b, 0xf7, 0x77, 0x58, 0xfe, 0x09,
+	}
 
-	pk = []byte{133, 36, 180, 21, 60, 103, 35, 92, 204, 245, 236, 174, 242, 50, 212, 69, 124, 230, 1, 106, 94, 95, 201, 55, 208, 252, 195, 13, 12, 96, 87, 170}
-	aliceVRF = []byte{35, 127, 188, 177, 246, 242, 213, 46, 16, 72, 1, 196, 69, 181, 160, 204, 69, 230, 17, 147, 251, 207, 203, 184, 154, 122, 118, 10, 144, 76, 229, 234}
-	aliceProof = []byte{253, 33, 80, 241, 250, 172, 198, 28, 16, 171, 161, 194, 110, 175, 158, 233, 250, 89, 35, 174, 221, 101, 98, 136, 32, 191, 82, 127, 92, 208, 199, 10, 123, 46, 70, 95, 56, 102, 63, 137, 53, 160, 128, 216, 134, 152, 87, 58, 19, 244, 167, 108, 144, 13, 97, 232, 207, 75, 107, 57, 193, 124, 231, 5, 242, 122, 182, 247, 155, 187, 86, 165, 114, 46, 188, 52, 21, 121, 238, 100, 85, 32, 119, 116, 250, 208, 32, 60, 145, 53, 145, 76, 84, 153, 185, 28}
-	sampleVectorTest(pk, aliceVRF, aliceProof, t)
+	const MSG_LEN = 200
+	var privkey [32]byte
+	msg := make([]byte, MSG_LEN)
+	var random [64]byte
+	signature := bytes.Repeat([]byte{3}, 96)
 
-	pk = []byte{85, 126, 176, 228, 114, 43, 110, 223, 111, 129, 204, 38, 215, 110, 165, 148, 223, 232, 79, 254, 150, 107, 61, 29, 216, 14, 238, 104, 55, 163, 121, 185}
-	aliceVRF = []byte{171, 240, 42, 215, 128, 5, 247, 64, 164, 154, 198, 231, 6, 174, 207, 10, 95, 231, 117, 189, 88, 103, 72, 229, 43, 218, 184, 162, 44, 183, 196, 159}
-	aliceProof = []byte{99, 103, 243, 119, 251, 30, 21, 57, 69, 162, 192, 80, 7, 49, 244, 136, 13, 252, 150, 165, 215, 181, 55, 203, 141, 124, 197, 36, 20, 183, 239, 14, 238, 213, 240, 96, 181, 187, 24, 137, 152, 152, 38, 186, 80, 141, 72, 15, 209, 178, 60, 205, 22, 31, 101, 185, 225, 159, 22, 118, 84, 179, 95, 0, 124, 140, 237, 187, 8, 77, 233, 213, 207, 211, 251, 153, 71, 112, 61, 89, 53, 26, 195, 167, 254, 73, 218, 135, 145, 89, 12, 4, 16, 255, 63, 89}
-	sampleVectorTest(pk, aliceVRF, aliceProof, t)
+	t.Log("Pseudorandom VXEdDSA...\n")
+	iterations := 100000 // up to 10000000 (super slow ... )
+	for count := 1; count <= iterations; count++ {
+		b := sha512.Sum512(signature[:96])
+		copy(privkey[:], b[:32])
+		b = sha512.Sum512(privkey[:32])
+		copy(random[:], b[:64])
 
+		edwards25519.ScClamp(&privkey)
+		sk, err := GenerateKey(bytes.NewReader(privkey[:]))
+		if err != nil {
+			t.Fatalf("Couldn't generate key in %d\n", count)
+		}
+		if count == 1 {
+			fmt.Println("First iteration sk", hex.Dump(sk[:]))
+		}
+		pk := sk.Public()
+		signature = sk.signInternal(msg[:], bytes.NewReader(random[:]))
+		if ok, _ := pk.verifyInteral(msg[:], signature); !ok {
+			t.Fatalf("VXEdDSA verify failure #1 %d\n", count)
+		}
+		if (b[63] & 1) == 1 {
+			signature[count%96] ^= 1
+		} else {
+			msg[count%MSG_LEN] ^= 1
+		}
+
+		if count == 10000 {
+			if !bytes.Equal(signature, signature_10k_correct[:]) {
+				t.Errorf("VXEDDSA 10K doesn't match %d\n", count)
+			}
+		}
+		if count == 100000 {
+			if !bytes.Equal(signature, signature_100k_correct[:]) {
+				t.Errorf("VXEDDSA 100K doesn't match %d\n", count)
+			}
+		}
+		if count == 1000000 {
+			if !bytes.Equal(signature, signature_1m_correct[:]) {
+				t.Errorf("VXEDDSA 1m doesn't match %d\n", count)
+			}
+		}
+		if count == 10000000 {
+			if !bytes.Equal(signature, signature_10m_correct[:]) {
+				t.Errorf("VXEDDSA 10m doesn't match %d\n", count)
+			}
+		}
+	}
 }
 
 func BenchmarkHashToGE(b *testing.B) {
 	alice := []byte("alice")
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		hashToCurve(alice)
+		extra25519.HashToPoint(alice)
 	}
 }
 
@@ -152,7 +270,7 @@ func BenchmarkProve(b *testing.B) {
 	alice := []byte("alice")
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		sk.Prove(alice)
+		sk.signInternal(alice, nil)
 	}
 }
 
@@ -162,11 +280,10 @@ func BenchmarkVerify(b *testing.B) {
 		b.Fatal(err)
 	}
 	alice := []byte("alice")
-	aliceVRF := sk.Compute(alice)
-	_, aliceProof := sk.Prove(alice)
-	pk, _ := sk.Public()
+	aliceProof := sk.signInternal(alice, nil)
+	pk := sk.Public()
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		pk.Verify(alice, aliceVRF, aliceProof)
+		pk.verifyInteral(alice, aliceProof)
 	}
 }

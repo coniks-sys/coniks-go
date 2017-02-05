@@ -124,7 +124,7 @@ func LoadServerConfig(file string) (*ServerConfig, error) {
 	}
 
 	conf.configFilePath = file
-	conf.Policies.vrfKey = vrfKey
+	copy(conf.Policies.vrfKey[:], vrfKey)
 	conf.Policies.signKey = signKey
 	// also update path for TLS cert files
 	for _, addr := range conf.Addresses {

@@ -167,19 +167,6 @@ var calculatev_correct_output = [32]byte{
 }
 
 func TestElligatorFast(t *testing.T) {
-	// TODO remove sha512 tests:
-	want := sha512_correct_output
-	sha512Input := []byte("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu")
-	got := sha512.Sum512(sha512Input)
-	if !bytes.Equal(want[:], got[:]) {
-		t.Fatal("SHA512 #1 isn't equal to test-vector")
-	}
-	sha512Input[111] ^= 1
-	got = sha512.Sum512(sha512Input)
-	if bytes.Equal(want[:], got[:]) {
-		t.Fatal("SHA512 #2 shouldn't be the same")
-	}
-
 	var b [32]byte
 	for count := 0; count < 32; count++ {
 		b[count] = byte(count)
@@ -188,27 +175,25 @@ func TestElligatorFast(t *testing.T) {
 	var out edwards25519.FieldElement
 	edwards25519.FeFromBytes(&in, &b)
 
-	Elligator(&out, in)
+	elligator(&out, in)
 
 	var b2 [32]byte
 	edwards25519.FeToBytes(&b2, &out)
 	//TEST("Elligator vector", memcmp(bytes, elligator_correct_output, 32) == 0);
 	if !bytes.Equal(b2[:], elligator_correct_output[:]) {
-		fmt.Println(hex.Dump(b2[:]))
-		fmt.Println(hex.Dump(elligator_correct_output[:]))
 		t.Fatal("Elligator test vector faile")
 	}
 
 	/* Elligator(0) == 0 test */
 	edwards25519.FeZero(&in)
-	Elligator(&out, in)
+	elligator(&out, in)
 
 	var bi, bo [32]byte
 	edwards25519.FeToBytes(&bi, &in)
 	edwards25519.FeToBytes(&bo, &out)
 
 	if !bytes.Equal(bi[:], bo[:]) {
-		fmt.Println("Elligator(0) != 0")
+		t.Error("Elligator(0) != 0")
 	}
 
 	/* ge_montx_to_p3(0) -> order2 point test */
@@ -217,7 +202,7 @@ func TestElligatorFast(t *testing.T) {
 	edwards25519.FeZero(&zero)
 	edwards25519.FeSub(&negone, &zero, &one)
 	var p3 edwards25519.ExtendedGroupElement
-	geMontXtoExtendedFieldElement(&p3, zero, 0)
+	GeMontXtoExtendedGroupElement(&p3, zero, 0)
 	if !(edwards25519.FeIsequal(p3.X, zero) == 1 &&
 		edwards25519.FeIsequal(p3.Y, negone) == 1 &&
 		edwards25519.FeIsequal(p3.Z, one) == 1 &&
@@ -231,7 +216,7 @@ func TestElligatorFast(t *testing.T) {
 		htp[count] = byte(count)
 	}
 
-	HashToPoint(&p3, htp[:])
+	p3 = *HashToPoint(htp[:])
 
 	p3.ToBytes(&htp)
 	if !bytes.Equal(htp[:], hashtopoint_correct_output1[:]) {
@@ -244,7 +229,7 @@ func TestElligatorFast(t *testing.T) {
 		htp[count] = byte(count + 1)
 	}
 
-	HashToPoint(&p3, htp[:])
+	p3 = *HashToPoint(htp[:])
 	p3.ToBytes(&htp)
 	//TEST("hash_to_point #2", memcmp(htp, hashtopoint_correct_output2, 32) == 0);
 	if !bytes.Equal(htp[:], hashtopoint_correct_output2[:]) {
@@ -252,7 +237,25 @@ func TestElligatorFast(t *testing.T) {
 		fmt.Println(hex.Dump(hashtopoint_correct_output2[:]))
 		t.Fatal("hash_to_point #2 failed")
 	}
-	// TODO add other tests from:
-	// https://github.com/WhisperSystems/curve25519-java/blob/master/android/jni/ed25519/tests/tests.c
-	/* calculate_U vector test */
+
+	/* TODO move to VRF package: calculate_V vector test */
+	//Bv := edwards25519.ExtendedGroupElement{}
+	//var V		 [32]byte
+	//Vbuf := make([]byte, 200)
+	//var a		 [32]byte
+	//var A		 [32]byte
+	//Vmsg := []byte{0x00, 0x01, 0x02}
+	//
+	//for count:=0; count < 32; count++ {
+	//	a[count] = byte(8 + count)
+	//	A[count] = byte(9 + count)
+	//}
+	//// sc_clamp(a):
+	//a[0] &= 248; a[31] &= 127; a[31] |= 64
+	//_ = calculateBvAndV(&V, Vbuf, a, A, Vmsg)
+	//if !bytes.Equal(V[:], calculatev_correct_output[:]) {
+	//	fmt.Println(hex.Dump(V[:]))
+	//	fmt.Println(hex.Dump(calculatev_correct_output[:]))
+	//	t.Fatal("calculate_Bv_and_V vector failed")
+	//}
 }

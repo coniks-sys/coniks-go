@@ -378,7 +378,8 @@ func legendreIsNonsquare(in edwards25519.FieldElement) int32 {
 	return int32(1 & b[31])
 }
 
-func montgomeryXToEdwardsY(out, x *edwards25519.FieldElement) {
+// compare to fe_montx_to_edy
+func FeMontgomeryXToEdwardsY(out, x *edwards25519.FieldElement) {
 	/*
 	   	 y = (u - 1) / (u + 1)
 
@@ -392,7 +393,7 @@ func montgomeryXToEdwardsY(out, x *edwards25519.FieldElement) {
 	edwards25519.FeMul(out, &tt, &t) // (u-1)/(u+1)
 }
 
-func Elligator(u *edwards25519.FieldElement, r edwards25519.FieldElement) {
+func elligator(u *edwards25519.FieldElement, r edwards25519.FieldElement) {
 	/* r = input
 	 * x = -A/(1+2r^2)                # 2 is nonsquare
 	 * e = (x^3 + Ax^2 + x)^((q-1)/2) # legendre symbol
@@ -437,32 +438,23 @@ func HashToEdwards(out *edwards25519.ExtendedGroupElement, h *[32]byte) {
 	hh[31] &= 127
 	edwards25519.FeFromBytes(&out.Y, &hh)
 	representativeToMontgomeryX(&out.X, &out.Y)
-	montgomeryXToEdwardsY(&out.Y, &out.X)
+	FeMontgomeryXToEdwardsY(&out.Y, &out.X)
 	if ok := out.FromParityAndY(bit, &out.Y); !ok {
 		panic("HashToEdwards: point not on curve")
 	}
 }
 
-func HashToPoint(p *edwards25519.ExtendedGroupElement, in []byte) {
-	var h, u edwards25519.FieldElement
-	hash := sha512.Sum512(in)
-
-	/* take the high bit as Edwards sign bit */
-	sign_bit := (hash[31] & 0x80) >> 7
-	hash[31] &= 0x7F
-	var hs [32]byte
-	copy(hs[:], hash[:32])
-
-	edwards25519.FeFromBytes(&h, &hs)
-
-	Elligator(&u, h)
-
-	var p3 edwards25519.ExtendedGroupElement
-	geMontXtoExtendedFieldElement(&p3, u, sign_bit)
-
-	edwards25519.GeDouble(p, &p3)
-	edwards25519.GeDouble(p, p)
-	edwards25519.GeDouble(p, p)
+func HashToPoint(m []byte) *edwards25519.ExtendedGroupElement {
+	// H(n) = (f(h(n))^8)
+	var hmb [32]byte
+	h64 := sha512.Sum512(m)
+	copy(hmb[:], h64[:32])
+	var hm edwards25519.ExtendedGroupElement
+	HashToEdwards(&hm, &hmb)
+	edwards25519.GeDouble(&hm, &hm)
+	edwards25519.GeDouble(&hm, &hm)
+	edwards25519.GeDouble(&hm, &hm)
+	return &hm
 }
 
 /* sqrt(-(A+2)) */
@@ -473,7 +465,7 @@ var a_bytes = [32]byte{
 	0xbb, 0x06, 0xa0, 0x60, 0xf4, 0xed, 0x26, 0x0f,
 }
 
-func geMontXtoExtendedFieldElement(p *edwards25519.ExtendedGroupElement, u edwards25519.FieldElement, edSignBit byte) {
+func GeMontXtoExtendedGroupElement(p *edwards25519.ExtendedGroupElement, u edwards25519.FieldElement, edSignBit byte) {
 	var x, y, v, A, v2, iv, nx edwards25519.FieldElement
 
 	edwards25519.FeFromBytes(&A, &a_bytes)
@@ -482,7 +474,7 @@ func geMontXtoExtendedFieldElement(p *edwards25519.ExtendedGroupElement, u edwar
 	/* given u, recover v */
 	/* given u and v, recover edwards x */
 
-	montgomeryXToEdwardsY(&y, &u) /* y = (u - 1) / (u + 1) */
+	FeMontgomeryXToEdwardsY(&y, &u) /* y = (u - 1) / (u + 1) */
 
 	FeMontRhs(&v2, &u) /* v^2 = u(u^2 + Au + 1) */
 
