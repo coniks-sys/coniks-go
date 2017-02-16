@@ -100,7 +100,7 @@ func (l *ConiksAuditLog) Update(addr string, newSTR *m.SignedTreeRoot) error {
 
 	h := l.histories[addr]
 
-	if err := h.verifySTRConsistency(newSTR); err != nil {
+	if err := verifySTRConsistency(h.signKey, h.latestSTR, newSTR); err != nil {
 		return err
 	}
 
@@ -108,24 +108,6 @@ func (l *ConiksAuditLog) Update(addr string, newSTR *m.SignedTreeRoot) error {
 	h.snapshots[h.latestSTR.Epoch] = h.latestSTR
 	h.latestSTR = newSTR
 	return nil
-}
-
-// verifySTRConsistency checks the consistency between 2 snapshots.
-// It uses the pinned signing key in the directory history
-// to verify the STR's signature and verifies
-// the hash chain using the latestSTR stored in the history.
-// TODO: dedup this: write generic verifySTRConsistency
-func (h *directoryHistory) verifySTRConsistency(str *m.SignedTreeRoot) error {
-	// verify STR's signature
-	if !h.signKey.Verify(str.Serialize(), str.Signature) {
-		return CheckBadSignature
-	}
-	if str.VerifyHashChain(h.latestSTR) {
-		return nil
-	}
-
-	// TODO: verify the directory's policies as well. See #115
-	return CheckBadSTR
 }
 
 // GetObservedSTR gets the observed STR for the CONIKS directory address indicated

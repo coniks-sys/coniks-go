@@ -117,7 +117,7 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 			return nil
 		}
 		// Otherwise, expect that we've entered a new epoch
-		if err := cc.verifySTRConsistency(cc.SavedSTR, str); err != nil {
+		if err := verifySTRConsistency(cc.signKey, cc.SavedSTR, str); err != nil {
 			return err
 		}
 
@@ -140,12 +140,15 @@ func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
 }
 
 // verifySTRConsistency checks the consistency between 2 snapshots.
-// It uses the pinned signing key in cc
-// to verify the STR's signature and should not verify
-// the hash chain using the STR stored in cc.
-func (cc *ConsistencyChecks) verifySTRConsistency(savedSTR, str *m.SignedTreeRoot) error {
+// It uses the signing key signKey to verify the STR's signature.
+// The signKey param either comes from a client's
+// pinned signing key in cc, or an auditor's pinned signing key
+// in its history.
+// In the case of a client-side consistency check, verifySTRConsistency()
+// should not verify the hash chain using the STR stored in cc.
+func verifySTRConsistency(signKey sign.PublicKey, savedSTR, str *m.SignedTreeRoot) error {
 	// verify STR's signature
-	if !cc.signKey.Verify(str.Serialize(), str.Signature) {
+	if !signKey.Verify(str.Serialize(), str.Signature) {
 		return CheckBadSignature
 	}
 	if str.VerifyHashChain(savedSTR) {
