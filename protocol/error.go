@@ -8,7 +8,8 @@ package protocol
 // An ErrorCode implements the built-in error interface type.
 type ErrorCode int
 
-// These codes indicate the status of a client-server message exchange.
+// These codes indicate the status of a client-server or client-auditor message
+// exchange.
 // Codes prefixed by "Req" indicate different client request results.
 // Codes prefixed by "Err" indicate an internal server error or a malformed
 // message.
@@ -16,6 +17,8 @@ const (
 	ReqSuccess ErrorCode = iota + 100
 	ReqNameExisted
 	ReqNameNotFound
+	// auditor->client: no observed history for the requested directory
+	ReqUnknownDirectory
 
 	ErrDirectory
 	ErrMalformedClientMessage
