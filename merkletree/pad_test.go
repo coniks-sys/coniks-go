@@ -345,10 +345,15 @@ func benchPADUpdate(b *testing.B, entries uint64) {
 			b.Fatal(err)
 		}
 	}
+	// clone current PAD's state:
+	orgTree := pad.tree.Clone()
 	b.ResetTimer()
 
 	// now benchmark re-hashing the tree:
 	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		pad.tree = orgTree.Clone()
+		b.StartTimer()
 		pad.Update(nil)
 	}
 }
