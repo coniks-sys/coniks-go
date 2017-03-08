@@ -134,7 +134,7 @@ func TestGetObservedSTRInEpoch(t *testing.T) {
 	if err != ReqSuccess {
 		t.Fatal("Unable to get latest range of STRs")
 	}
-	if obs.STR == nil {
+	if obs.STR == nil || len(obs.STR) < 1 {
 		t.Fatal("Expect returned STR to be not nil")
 	}
 	if len(obs.STR) != 5 {

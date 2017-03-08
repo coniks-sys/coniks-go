@@ -24,6 +24,7 @@ const (
 	ErrAuditLog
 	ErrMalformedClientMessage
 	ErrMalformedDirectoryMessage
+	ErrMalformedAuditorMessage
 )
 
 // These codes indicate the result
@@ -52,6 +53,7 @@ var Errors = map[ErrorCode]bool{
 	ErrDirectory:                 true,
 	ErrAuditLog:                  true,
 	ErrMalformedDirectoryMessage: true,
+	ErrMalformedAuditorMessage:   true,
 }
 
 var (
@@ -64,6 +66,7 @@ var (
 		ErrDirectory:                 "[coniks] Directory error",
 		ErrAuditLog:                  "[coniks] Audit log error",
 		ErrMalformedDirectoryMessage: "[coniks] Malformed directory message",
+		ErrMalformedAuditorMessage: "[coniks] Malformed auditor message",
 
 		CheckPassed:         "[coniks] Consistency checks passed",
 		CheckBadSignature:   "[coniks] Directory's signature on STR or TB is invalid",
