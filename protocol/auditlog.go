@@ -44,7 +44,7 @@ func NewAuditLog() *ConiksAuditLog {
 
 // IsKnownDirectory checks to see if an entry for the directory
 // address addr exists in the audit log l. IsKnownDirectory() does not
-//  validate the entries themselves. It returns true if an entry exists,
+// validate the entries themselves. It returns true if an entry exists,
 // and false otherwise.
 func (l *ConiksAuditLog) IsKnownDirectory(addr string) bool {
 	h := l.histories[addr]
@@ -54,15 +54,15 @@ func (l *ConiksAuditLog) IsKnownDirectory(addr string) bool {
 	return false
 }
 
-// FIXME: pass Request message as param
+// FIXME: pass Response message as param
 // masomel: will probably want to write a more generic function
 // for "catching up" on a history in case an auditor misses epochs
 func (l *ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 	oldSTRs map[uint64]*m.SignedTreeRoot, latestSTR *m.SignedTreeRoot) error {
 
-	// panic if we want to create a new entry for an addr we already know
+	// error if we want to create a new entry for an addr we already know
 	if l.IsKnownDirectory(addr) {
-		panic("[protocol] Trying to add an audit log entry for an existing address")
+		return ErrAuditLog
 	}
 
 	// create the new directory history
@@ -73,11 +73,14 @@ func (l *ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 
 	// add each old STR into the history
 	for ep := startEp; ep < endEp; ep++ {
-		if str := oldSTRs[ep]; str != nil {
-			h.snapshots[ep] = str
+		str := oldSTRs[ep]
+		if str == nil {
+			return ErrMalformedDirectoryMessage
 		}
-		return ErrMalformedDirectoryMessage
+		h.snapshots[ep] = str
 	}
+
+	l.histories[addr] = h
 
 	// FIXME: verify the consistency of each new STR
 	return nil
@@ -90,12 +93,12 @@ func (l *ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 // check error otherwise. Update() assumes that Insert() has been called for
 // addr prior to its first call and thereby expects that an entry for addr
 // exists in the audit log l.
-// FIXME: pass Request message as param
+// FIXME: pass Response message as param
 func (l *ConiksAuditLog) Update(addr string, newSTR *m.SignedTreeRoot) error {
 
 	// panic if we want to update an entry for which we don't have
 	if !l.IsKnownDirectory(addr) {
-		panic("[protocol] Trying to update audit log entry for non-existent address")
+		return ErrAuditLog
 	}
 
 	h := l.histories[addr]
