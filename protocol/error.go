@@ -11,7 +11,7 @@ type ErrorCode int
 // These codes indicate the status of a client-server or client-auditor message
 // exchange.
 // Codes prefixed by "Req" indicate different client request results.
-// Codes prefixed by "Err" indicate an internal server error or a malformed
+// Codes prefixed by "Err" indicate an internal server/auditor error or a malformed
 // message.
 const (
 	ReqSuccess ErrorCode = iota + 100
@@ -21,6 +21,7 @@ const (
 	ReqUnknownDirectory
 
 	ErrDirectory
+	ErrAuditLog
 	ErrMalformedClientMessage
 	ErrMalformedDirectoryMessage
 )
@@ -49,6 +50,7 @@ const (
 var Errors = map[ErrorCode]bool{
 	ErrMalformedClientMessage:    true,
 	ErrDirectory:                 true,
+	ErrAuditLog:                  true,
 	ErrMalformedDirectoryMessage: true,
 }
 
@@ -60,6 +62,7 @@ var (
 
 		ErrMalformedClientMessage:    "[coniks] Malformed client message",
 		ErrDirectory:                 "[coniks] Directory error",
+		ErrAuditLog:                  "[coniks] Audit log error",
 		ErrMalformedDirectoryMessage: "[coniks] Malformed directory message",
 
 		CheckPassed:         "[coniks] Consistency checks passed",
