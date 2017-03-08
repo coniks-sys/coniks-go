@@ -100,6 +100,50 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	return CheckPassed
 }
 
+// handleDirectorySTRs is supposed to be used by CONIKS clients to
+// handle auditor responses, and by CONIKS auditors to handle directory responses.
+func HandleDirectorySTRs(requestType int, msg *Response, signKey sign.PublicKey,
+	savedSTR *m.SignedTreeRoot, e error, isClient bool) error {
+	var str *m.SignedTreeRoot
+	if err := msg.validate(); err != nil {
+		return e
+	}
+
+	switch requestType {
+	case AuditType:
+		if _, ok := msg.DirectoryResponse.(*ObservedSTR); !ok {
+			return e
+		}
+		str = msg.DirectoryResponse.(*ObservedSTR).STR
+		// TODO: compare the STR with the saved one on the client
+		// if the auditor has returned a more recent STR, should the
+		// client update its savedSTR? Should this force a new round of
+		// monitoring?
+	case AuditInEpochType:
+		// this is the default request type for an auditor
+		// since the auditor conservatively assumes it may
+		// have missed epochs
+
+		// FIXME
+		//if _, ok := msg.DirectoryResponse.(*ObservedSTRs); !ok {
+		//	return e
+		//}
+		//str = msg.DirectoryResponse.(*ObservedSTRs).STR
+	default:
+		panic("[coniks] Unknown auditing request type")
+	}
+	// we assume the requestType is AuditInEpochType if we're here
+
+	// verify the timeliness of the STR if we're the auditor
+	// check the consistency of the newly received STRs
+	// FIXME: use `XXInEpoch` version of verifySTRConsistency
+	if err := verifySTRConsistency(signKey, savedSTR, str); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	var str *m.SignedTreeRoot
 	switch requestType {
@@ -110,9 +154,6 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 			cc.SavedSTR = str
 			return nil
 		}
-		// FIXME: check whether the STR was issued on time and whatnot.
-		// Maybe it has something to do w/ #81 and client transitioning between epochs.
-		// Try to verify w/ what's been saved
 		if err := cc.verifySTR(str); err == nil {
 			return nil
 		}
@@ -132,6 +173,12 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 
 // verifySTR checks whether the received STR is the same with
 // the SavedSTR using reflect.DeepEqual().
+// FIXME: check whether the STR was issued on time and whatnot.
+// Maybe it has something to do w/ #81 and client transitioning between epochs.
+// Try to verify w/ what's been saved
+// FIXME: make this generic so the auditor can also verify the timeliness of the
+// STR etc. Might make sense to separate the comparison, which is only done on the client,
+// from the rest.
 func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
 	if reflect.DeepEqual(cc.SavedSTR, str) {
 		return nil

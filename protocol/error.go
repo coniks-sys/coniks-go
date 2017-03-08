@@ -66,7 +66,7 @@ var (
 		ErrDirectory:                 "[coniks] Directory error",
 		ErrAuditLog:                  "[coniks] Audit log error",
 		ErrMalformedDirectoryMessage: "[coniks] Malformed directory message",
-		ErrMalformedAuditorMessage: "[coniks] Malformed auditor message",
+		ErrMalformedAuditorMessage:   "[coniks] Malformed auditor message",
 
 		CheckPassed:         "[coniks] Consistency checks passed",
 		CheckBadSignature:   "[coniks] Directory's signature on STR or TB is invalid",

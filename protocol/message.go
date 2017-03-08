@@ -12,6 +12,8 @@ const (
 	KeyLookupType
 	KeyLookupInEpochType
 	MonitoringType
+	AuditType
+	AuditInEpochType
 )
 
 // A Request message defines the data a CONIKS client must send to a CONIKS
@@ -161,7 +163,7 @@ type ObservedSTR struct {
 
 // An ObservedSTRs response includes a list of signed tree roots
 // STR. A CONIKS auditor returns this DirectoryResponse type upon an
-// AudutingRequest.
+// AuditingInEpochRequest.
 type ObservedSTRs struct {
 	STR []*m.SignedTreeRoot
 }
