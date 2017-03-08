@@ -307,6 +307,16 @@ func (msg *Response) validate() error {
 	case *DirectoryProofs:
 		// TODO: also do above assertions here
 		return nil
+	case *ObservedSTR:
+		if df.STR == nil {
+			return ErrMalformedAuditorMessage
+		}
+		return nil
+	case *ObservedSTRs:
+		if df.STR == nil || len(df.STR) < 1 {
+			return ErrMalformedAuditorMessage
+		}
+		return nil
 	default:
 		panic("[coniks] Malformed response")
 	}
