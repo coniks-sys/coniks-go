@@ -2,6 +2,7 @@
 // on data received from a CONIKS directory.
 // These include data binding proof verification,
 // and non-equivocation checks.
+// TODO: move all STR-verifying functionality to a separate module
 
 package protocol
 
