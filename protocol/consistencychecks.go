@@ -26,15 +26,14 @@ import (
 // subsequent responses from the ConiksDirectory to any
 // client request.
 type ConsistencyChecks struct {
-	// SavedSTR stores the latest verified signed tree root.
-	SavedSTR *m.SignedTreeRoot
+	// auditState stores the latest verified signed tree root
+	// as well as the server's signing key
+	auditState *auditorState
 	Bindings map[string][]byte
 
 	// extensions settings
 	useTBs bool
 	TBs    map[string]*TemporaryBinding
-
-	signKey sign.PublicKey
 }
 
 // NewCC creates an instance of ConsistencyChecks using
@@ -46,10 +45,9 @@ func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *Con
 		panic("[coniks] Currently the server is forced to use TBs")
 	}
 	cc := &ConsistencyChecks{
-		SavedSTR: savedSTR,
+		auditState: newAuditorState(signKey, savedSTR),
 		Bindings: make(map[string][]byte),
 		useTBs:   useTBs,
-		signKey:  signKey,
 	}
 	if useTBs {
 		cc.TBs = make(map[string]*TemporaryBinding)
@@ -101,65 +99,21 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	return CheckPassed
 }
 
-// handleDirectorySTRs is supposed to be used by CONIKS clients to
-// handle auditor responses, and by CONIKS auditors to handle directory responses.
-func HandleDirectorySTRs(requestType int, msg *Response, signKey sign.PublicKey,
-	savedSTR *m.SignedTreeRoot, e error, isClient bool) error {
-	var str *m.SignedTreeRoot
-	if err := msg.validate(); err != nil {
-		return e
-	}
-
-	switch requestType {
-	case AuditType:
-		if _, ok := msg.DirectoryResponse.(*ObservedSTR); !ok {
-			return e
-		}
-		str = msg.DirectoryResponse.(*ObservedSTR).STR
-		// TODO: compare the STR with the saved one on the client
-		// if the auditor has returned a more recent STR, should the
-		// client update its savedSTR? Should this force a new round of
-		// monitoring?
-	case AuditInEpochType:
-		// this is the default request type for an auditor
-		// since the auditor conservatively assumes it may
-		// have missed epochs
-
-		// FIXME
-		//if _, ok := msg.DirectoryResponse.(*ObservedSTRs); !ok {
-		//	return e
-		//}
-		//str = msg.DirectoryResponse.(*ObservedSTRs).STR
-	default:
-		panic("[coniks] Unknown auditing request type")
-	}
-	// we assume the requestType is AuditInEpochType if we're here
-
-	// verify the timeliness of the STR if we're the auditor
-	// check the consistency of the newly received STRs
-	// FIXME: use `XXInEpoch` version of verifySTRConsistency
-	if err := verifySTRConsistency(signKey, savedSTR, str); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	var str *m.SignedTreeRoot
 	switch requestType {
 	case RegistrationType, KeyLookupType:
 		str = msg.DirectoryResponse.(*DirectoryProof).STR
 		// First response
-		if cc.SavedSTR == nil {
-			cc.SavedSTR = str
+		if cc.auditState.latestSTR == nil {
+			cc.auditState.latestSTR = str
 			return nil
 		}
-		if err := cc.verifySTR(str); err == nil {
+		if err := cc.auditState.verfySTR(str); err == nil {
 			return nil
 		}
 		// Otherwise, expect that we've entered a new epoch
-		if err := verifySTRConsistency(cc.signKey, cc.SavedSTR, str); err != nil {
+		if err := cc.auditState.verifySTRConsistency(str); err != nil {
 			return err
 		}
 
@@ -168,43 +122,8 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	}
 
 	// And update the saved STR
-	cc.SavedSTR = str
+	cc.auditState.latestSTR = str
 	return nil
-}
-
-// verifySTR checks whether the received STR is the same with
-// the SavedSTR using reflect.DeepEqual().
-// FIXME: check whether the STR was issued on time and whatnot.
-// Maybe it has something to do w/ #81 and client transitioning between epochs.
-// Try to verify w/ what's been saved
-// FIXME: make this generic so the auditor can also verify the timeliness of the
-// STR etc. Might make sense to separate the comparison, which is only done on the client,
-// from the rest.
-func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
-	if reflect.DeepEqual(cc.SavedSTR, str) {
-		return nil
-	}
-	return CheckBadSTR
-}
-
-// verifySTRConsistency checks the consistency between 2 snapshots.
-// It uses the signing key signKey to verify the STR's signature.
-// The signKey param either comes from a client's
-// pinned signing key in cc, or an auditor's pinned signing key
-// in its history.
-// In the case of a client-side consistency check, verifySTRConsistency()
-// should not verify the hash chain using the STR stored in cc.
-func verifySTRConsistency(signKey sign.PublicKey, savedSTR, str *m.SignedTreeRoot) error {
-	// verify STR's signature
-	if !signKey.Verify(str.Serialize(), str.Signature) {
-		return CheckBadSignature
-	}
-	if str.VerifyHashChain(savedSTR) {
-		return nil
-	}
-
-	// TODO: verify the directory's policies as well. See #115
-	return CheckBadSTR
 }
 
 func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *Response,
@@ -375,7 +294,7 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(df *DirectoryProof,
 	}
 
 	// verify TB's Signature
-	if !cc.signKey.Verify(tb.Serialize(str.Signature), tb.Signature) {
+	if !cc.auditState.signKey.Verify(tb.Serialize(str.Signature), tb.Signature) {
 		return CheckBadSignature
 	}
 

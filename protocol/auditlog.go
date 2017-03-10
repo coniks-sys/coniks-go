@@ -11,9 +11,8 @@ import (
 )
 
 type directoryHistory struct {
-	signKey   sign.PublicKey
+	auditState *auditorState
 	snapshots map[uint64]*m.SignedTreeRoot
-	latestSTR *m.SignedTreeRoot
 }
 
 // A ConiksAuditLog maintains the histories
@@ -26,10 +25,10 @@ type ConiksAuditLog struct {
 }
 
 func newDirectoryHistory(signKey sign.PublicKey, str *m.SignedTreeRoot) *directoryHistory {
-	h := new(directoryHistory)
-	h.signKey = signKey
-	h.snapshots = make(map[uint64]*m.SignedTreeRoot)
-	h.latestSTR = str
+	h := &directoryHistory{
+		auditState: newAuditorState(signKey, str),
+		snapshots: make(map[uint64]*m.SignedTreeRoot),
+	}
 	return h
 }
 
@@ -37,8 +36,9 @@ func newDirectoryHistory(signKey sign.PublicKey, str *m.SignedTreeRoot) *directo
 // log; the auditor will add an entry for each CONIKS directory
 // the first time it observes an STR for that directory.
 func NewAuditLog() *ConiksAuditLog {
-	l := new(ConiksAuditLog)
-	l.histories = make(map[string]*directoryHistory)
+	l := &ConiksAuditLog{
+		histories: make(map[string]*directoryHistory),
+	}
 	return l
 }
 
@@ -54,7 +54,6 @@ func (l *ConiksAuditLog) IsKnownDirectory(addr string) bool {
 	return false
 }
 
-// FIXME: pass Response message as param
 // masomel: will probably want to write a more generic function
 // for "catching up" on a history in case an auditor misses epochs
 func (l *ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
@@ -82,18 +81,16 @@ func (l *ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 
 	l.histories[addr] = h
 
-	// FIXME: verify the consistency of each new STR
 	return nil
 }
 
-// Update verifies the consistency of a newly observed STR newSTR for
-// the directory addr, and inserts the newSTR into addr's directory history
-// if the checks (i.e. STR signature and hash chain verifications) pass.
-// Update() returns nil if the checks pass, and the appropriate consistency
-// check error otherwise. Update() assumes that Insert() has been called for
+// Update adds the newSTR into addr's directory history
+// and returns nil if no error occurs, and an ErrAuditLog error
+// otherwise. Update() assumes that Insert() has been called for
 // addr prior to its first call and thereby expects that an entry for addr
 // exists in the audit log l.
-// FIXME: pass Response message as param
+// Update() also assumes that auditor.verifySTRConsistency() has been
+// called for newSTR and that this check has passed.
 func (l *ConiksAuditLog) Update(addr string, newSTR *m.SignedTreeRoot) error {
 
 	// panic if we want to update an entry for which we don't have
@@ -103,13 +100,43 @@ func (l *ConiksAuditLog) Update(addr string, newSTR *m.SignedTreeRoot) error {
 
 	h := l.histories[addr]
 
-	if err := verifySTRConsistency(h.signKey, h.latestSTR, newSTR); err != nil {
-		return err
+	// update the latest STR
+	h.snapshots[h.latestSTR.Epoch] = h.auditState.latestSTR
+	h.auditState.latestSTR = newSTR
+	return nil
+}
+
+// Update adds the newSTR into addr's directory history
+// and returns nil if no error occurs, and an ErrAuditLog error
+// otherwise. Update() assumes that Insert() has been called for
+// addr prior to its first call and thereby expects that an entry for addr
+// exists in the audit log l.
+// Update() also assumes that auditor.verifySTRConsistency() has been
+// called for newSTR and that this check has passed.
+func (l *ConiksAuditLog) UpdateRange(addr string, strs[] *m.SignedTreeRoot) error {
+
+	// panic if we want to update an entry for which we don't have
+	if !l.IsKnownDirectory(addr) {
+		return ErrAuditLog
+	}
+
+	h := l.histories[addr]
+
+	startEp := h.auditState.latestSTR.Epoch
+	endEp := latestSTR.Epoch
+
+	// add each old STR into the history
+	for ep := startEp; ep < endEp; ep++ {
+		str := oldSTRs[ep]
+		if str == nil {
+			return ErrMalformedDirectoryMessage
+		}
+		h.snapshots[ep] = str
 	}
 
 	// update the latest STR
-	h.snapshots[h.latestSTR.Epoch] = h.latestSTR
-	h.latestSTR = newSTR
+	h.snapshots[h.latestSTR.Epoch] = h.auditState.latestSTR
+	h.auditState.latestSTR = newSTR
 	return nil
 }
 
