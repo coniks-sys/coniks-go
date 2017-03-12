@@ -63,7 +63,8 @@ func TestInsertExistingHistory(t *testing.T) {
 		t.Fatal("Error inserting new server history")
 	}
 
-	// let's make sure that we can't re-insert a new server history into our log
+	// let's make sure that we can't re-insert a new server
+	// history into our log
 	err = aud.Insert("test-server", pk, nil, d.LatestSTR())
 	if err != ErrAuditLog {
 		t.Fatal("Expected an ErrAuditLog when inserting an existing server history")
@@ -79,7 +80,8 @@ func TestUpdateUnknownHistory(t *testing.T) {
 		t.Fatal("Error inserting new server history")
 	}
 
-	// let's make sure that we can't re-insert a new server history into our log
+	// let's make sure that we can't re-insert a new server
+	// history into our log
 	err = aud.Update("unknown", d.LatestSTR())
 	if err != ErrAuditLog {
 		t.Fatal("Expected an ErrAuditLog when updating an unknown server history")
@@ -97,10 +99,11 @@ func TestGetObservedSTR(t *testing.T) {
 
 	res, err := aud.GetObservedSTR(&AuditingRequest{
 		DirectoryAddr: "test-server"})
-	obs := res.DirectoryResponse.(*ObservedSTR)
 	if err != ReqSuccess {
 		t.Fatal("Unable to get latest observed STR")
 	}
+
+	obs := res.DirectoryResponse.(*ObservedSTR)
 	if obs.STR == nil {
 		t.Fatal("Expect returned STR to be not nil")
 	}
@@ -130,10 +133,11 @@ func TestGetObservedSTRInEpoch(t *testing.T) {
 	res, err := aud.GetObservedSTRInEpoch(&AuditingInEpochRequest{
 		DirectoryAddr: "test-server",
 		Epoch:         uint64(6)})
-	obs := res.DirectoryResponse.(*ObservedSTRs)
 	if err != ReqSuccess {
 		t.Fatal("Unable to get latest range of STRs")
 	}
+
+	obs := res.DirectoryResponse.(*ObservedSTRs)
 	if obs.STR == nil || len(obs.STR) < 1 {
 		t.Fatal("Expect returned STR to be not nil")
 	}

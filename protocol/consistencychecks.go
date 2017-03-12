@@ -101,8 +101,9 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	return CheckPassed
 }
 
-// handleDirectorySTRs is supposed to be used by CONIKS clients to
-// handle auditor responses, and by CONIKS auditors to handle directory responses.
+// HandleDirectorySTRs is supposed to be used by CONIKS clients to
+// handle auditor responses, and by CONIKS auditors to handle directory
+// responses.
 func HandleDirectorySTRs(requestType int, msg *Response, signKey sign.PublicKey,
 	savedSTR *m.SignedTreeRoot, e error, isClient bool) error {
 	var str *m.SignedTreeRoot

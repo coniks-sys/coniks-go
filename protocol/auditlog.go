@@ -54,6 +54,17 @@ func (l *ConiksAuditLog) IsKnownDirectory(addr string) bool {
 	return false
 }
 
+// Insert creates a new directory history for the key directory addr
+// and inserts it into the audit log l.
+// The directory history is initialized with the key directory's
+// signing key signKey, a list of STRs representing the
+// directory's prior history oldSTRs, and the directory's latest STR
+// latestSTR.
+// Insert() returns an ErrAuditLog if the auditor attempts to create
+// a new history for a known directory, an ErrMalformedDirectoryMessage
+// if oldSTRs is malformed, and nil otherwise.
+// Insert() only creates the initial entry in the log for addr. Use Update()
+// to insert newly observed STRs for addr in subsequent epochs.
 // FIXME: pass Response message as param
 // masomel: will probably want to write a more generic function
 // for "catching up" on a history in case an auditor misses epochs
@@ -96,7 +107,7 @@ func (l *ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 // FIXME: pass Response message as param
 func (l *ConiksAuditLog) Update(addr string, newSTR *m.SignedTreeRoot) error {
 
-	// panic if we want to update an entry for which we don't have
+	// error if we want to update the entry for an addr we don't know
 	if !l.IsKnownDirectory(addr) {
 		return ErrAuditLog
 	}
@@ -113,8 +124,9 @@ func (l *ConiksAuditLog) Update(addr string, newSTR *m.SignedTreeRoot) error {
 	return nil
 }
 
-// GetObservedSTR gets the observed STR for the CONIKS directory address indicated
-// in the AuditingRequest req received from a CONIKS client from the auditor's latest
+// GetObservedSTR gets the observed STR for the CONIKS directory address
+// indicated in the AuditingRequest req received from a CONIKS client from
+// the auditor's latest
 // directory history entry, and returns a tuple of the form
 // (response, error).
 // The response (which also includes the error code) is supposed to
@@ -144,22 +156,22 @@ func (l *ConiksAuditLog) GetObservedSTR(req *AuditingRequest) (*Response, ErrorC
 	return NewErrorResponse(ReqUnknownDirectory), ReqUnknownDirectory
 }
 
-// GetObservedSTRInEpoch gets the observed STR for the CONIKS directory address
-// for a prior directory history entry indicated in the
+// GetObservedSTRInEpoch gets the observed STR for the CONIKS directory
+// address for a prior directory history entry indicated in the
 // AuditingInEpochRequest req received from a CONIKS client,
 // and returns a tuple of the form (response, error).
 // The response (which also includes the error code) is supposed to
 // be sent back to the client. The returned error is used by the auditor
 // for logging purposes.
 //
-// A request without a directory address or with an epoch greater than the latest
-// observed epoch of this directory is considered malformed, and causes
-// GetObservedSTRInEpoch() to return a
+// A request without a directory address or with an epoch greater than
+// the latest observed epoch of this directory is considered malformed,
+// and causes GetObservedSTRInEpoch() to return a
 // message.NewErrorResponse(ErrMalformedClientMessage) tuple.
 // GetObservedSTRInEpoch() returns a message.NewObservedSTRs(strs) tuple.
 // strs is a list of STRs for the epoch range [ep,
-// l.histories[req.DirectoryAddr].latestSTR.Epoch], where ep is the past epoch
-// for which the client has requested the observed STR.
+// l.histories[req.DirectoryAddr].latestSTR.Epoch], where ep is the past
+// epoch for which the client has requested the observed STR.
 // If the auditor doesn't have any history entries for the requested CONIKS
 // directory, GetObservedSTR() returns a
 // message.NewErrorResponse(ReqUnknownDirectory) tuple.
