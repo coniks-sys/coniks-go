@@ -7,13 +7,12 @@ package protocol
 
 import (
 	"github.com/coniks-sys/coniks-go/crypto/sign"
-	m "github.com/coniks-sys/coniks-go/merkletree"
 )
 
 type directoryHistory struct {
 	signKey   sign.PublicKey
-	snapshots map[uint64]*m.SignedTreeRoot
-	latestSTR *m.SignedTreeRoot
+	snapshots map[uint64]*DirSTR
+	latestSTR *DirSTR
 }
 
 // A ConiksAuditLog maintains the histories
@@ -25,10 +24,10 @@ type ConiksAuditLog struct {
 	histories map[string]*directoryHistory
 }
 
-func newDirectoryHistory(signKey sign.PublicKey, str *m.SignedTreeRoot) *directoryHistory {
+func newDirectoryHistory(signKey sign.PublicKey, str *DirSTR) *directoryHistory {
 	h := new(directoryHistory)
 	h.signKey = signKey
-	h.snapshots = make(map[uint64]*m.SignedTreeRoot)
+	h.snapshots = make(map[uint64]*DirSTR)
 	h.latestSTR = str
 	return h
 }
@@ -69,7 +68,7 @@ func (l *ConiksAuditLog) IsKnownDirectory(addr string) bool {
 // masomel: will probably want to write a more generic function
 // for "catching up" on a history in case an auditor misses epochs
 func (l *ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
-	oldSTRs map[uint64]*m.SignedTreeRoot, latestSTR *m.SignedTreeRoot) error {
+	oldSTRs map[uint64]*DirSTR, latestSTR *DirSTR) error {
 
 	// error if we want to create a new entry for an addr we already know
 	if l.IsKnownDirectory(addr) {
@@ -105,7 +104,7 @@ func (l *ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 // addr prior to its first call and thereby expects that an entry for addr
 // exists in the audit log l.
 // FIXME: pass Response message as param
-func (l *ConiksAuditLog) Update(addr string, newSTR *m.SignedTreeRoot) error {
+func (l *ConiksAuditLog) Update(addr string, newSTR *DirSTR) error {
 
 	// error if we want to update the entry for an addr we don't know
 	if !l.IsKnownDirectory(addr) {
@@ -192,7 +191,7 @@ func (l *ConiksAuditLog) GetObservedSTRInEpoch(req *AuditingInEpochRequest) (*Re
 				ErrMalformedClientMessage
 		}
 
-		var strs []*m.SignedTreeRoot
+		var strs []*DirSTR
 		startEp := req.Epoch
 		endEp := h.latestSTR.Epoch
 

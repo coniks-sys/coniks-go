@@ -105,8 +105,8 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 // handle auditor responses, and by CONIKS auditors to handle directory
 // responses.
 func HandleDirectorySTRs(requestType int, msg *Response, signKey sign.PublicKey,
-	savedSTR *m.SignedTreeRoot, e error, isClient bool) error {
-	var str *m.SignedTreeRoot
+	savedSTR *DirSTR, e error, isClient bool) error {
+	var str *DirSTR
 	if err := msg.validate(); err != nil {
 		return e
 	}
@@ -181,7 +181,7 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 // FIXME: make this generic so the auditor can also verify the timeliness of the
 // STR etc. Might make sense to separate the comparison, which is only done on the client,
 // from the rest.
-func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
+func (cc *ConsistencyChecks) verifySTR(str *DirSTR) error {
 	if reflect.DeepEqual(cc.SavedSTR, str) {
 		return nil
 	}
@@ -195,7 +195,7 @@ func (cc *ConsistencyChecks) verifySTR(str *m.SignedTreeRoot) error {
 // in its history.
 // In the case of a client-side consistency check, verifySTRConsistency()
 // should not verify the hash chain using the STR stored in cc.
-func verifySTRConsistency(signKey sign.PublicKey, savedSTR, str *m.SignedTreeRoot) error {
+func verifySTRConsistency(signKey sign.PublicKey, savedSTR, str *DirSTR) error {
 	// verify STR's signature
 	if !signKey.Verify(str.Serialize(), str.Signature) {
 		return CheckBadSignature

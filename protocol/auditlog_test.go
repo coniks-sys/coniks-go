@@ -1,7 +1,6 @@
 package protocol
 
 import (
-	m "github.com/coniks-sys/coniks-go/merkletree"
 	"testing"
 )
 
@@ -41,7 +40,7 @@ func TestInsertPriorHistory(t *testing.T) {
 	aud := NewAuditLog()
 
 	// create 10 epochs
-	priorSTRs := make(map[uint64]*m.SignedTreeRoot)
+	priorSTRs := make(map[uint64]*DirSTR)
 	for i := 0; i < 10; i++ {
 		priorSTRs[d.LatestSTR().Epoch] = d.LatestSTR()
 		d.Update()
@@ -118,7 +117,7 @@ func TestGetObservedSTRInEpoch(t *testing.T) {
 	aud := NewAuditLog()
 
 	// create 10 epochs
-	priorSTRs := make(map[uint64]*m.SignedTreeRoot)
+	priorSTRs := make(map[uint64]*DirSTR)
 	for i := 0; i < 10; i++ {
 		priorSTRs[d.LatestSTR().Epoch] = d.LatestSTR()
 		d.Update()
@@ -155,7 +154,7 @@ func TestGetObservedSTRUnknown(t *testing.T) {
 	aud := NewAuditLog()
 
 	// create 10 epochs
-	priorSTRs := make(map[uint64]*m.SignedTreeRoot)
+	priorSTRs := make(map[uint64]*DirSTR)
 	for i := 0; i < 10; i++ {
 		priorSTRs[d.LatestSTR().Epoch] = d.LatestSTR()
 		d.Update()
@@ -188,7 +187,7 @@ func TestGetObservedSTRMalformed(t *testing.T) {
 	aud := NewAuditLog()
 
 	// create 10 epochs
-	priorSTRs := make(map[uint64]*m.SignedTreeRoot)
+	priorSTRs := make(map[uint64]*DirSTR)
 	for i := 0; i < 10; i++ {
 		priorSTRs[d.LatestSTR().Epoch] = d.LatestSTR()
 		d.Update()

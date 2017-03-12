@@ -213,28 +213,14 @@ type DirectoryProofs struct {
 // STR. A CONIKS auditor returns this DirectoryResponse type upon an
 // AuditingRequest.
 type ObservedSTR struct {
-	STR *m.SignedTreeRoot
+	STR *DirSTR
 }
 
 // An ObservedSTRs response includes a list of signed tree roots
 // STR. A CONIKS auditor returns this DirectoryResponse type upon an
 // AudutingRequest.
 type ObservedSTRs struct {
-	STR []*m.SignedTreeRoot
-}
-
-// An ObservedSTR response includes a single signed tree root
-// STR. A CONIKS auditor returns this DirectoryResponse type upon an
-// AuditingRequest.
-type ObservedSTR struct {
-	STR *m.SignedTreeRoot
-}
-
-// An ObservedSTRs response includes a list of signed tree roots
-// STR. A CONIKS auditor returns this DirectoryResponse type upon an
-// AuditingInEpochRequest.
-type ObservedSTRs struct {
-	STR []*m.SignedTreeRoot
+	STR []*DirSTR
 }
 
 // NewErrorResponse creates a new response message indicating the error
@@ -353,7 +339,7 @@ func NewObservedSTR(str *m.SignedTreeRoot) (*Response, ErrorCode) {
 //
 // See auditlog.AuditInEpoch() for details on the contents of the created
 // ObservedSTRs.
-func NewObservedSTRs(str []*m.SignedTreeRoot) (*Response, ErrorCode) {
+func NewObservedSTRs(str []*DirSTR) (*Response, ErrorCode) {
 	return &Response{
 		Error: ReqSuccess,
 		DirectoryResponse: &ObservedSTRs{
