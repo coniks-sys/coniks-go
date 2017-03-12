@@ -49,6 +49,8 @@ for "read-only" requests (lookups, monitoring etc).
     allow_registration = true
     cert = "server.pem"
     key = "server.key"
+[logger]
+...
 ```
 
 ### Run the server

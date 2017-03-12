@@ -61,8 +61,9 @@ func mkConfig(dir string) {
 			SignKeyPath:   "sign.priv",
 		},
 		Logger: &utils.LoggerConfig{
-			Environment: "development",
-			Path:        "coniksserver.log",
+			EnableStacktrace: true,
+			Environment:      "development",
+			Path:             "coniksserver.log",
 		},
 	}
 
