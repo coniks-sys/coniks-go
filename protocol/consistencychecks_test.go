@@ -3,6 +3,9 @@ package protocol
 import (
 	"bytes"
 	"testing"
+
+	"github.com/coniks-sys/coniks-go/crypto/sign"
+	"github.com/coniks-sys/coniks-go/merkletree"
 )
 
 var (
@@ -30,6 +33,21 @@ func lookupAndVerify(d *ConiksDirectory, cc *ConsistencyChecks,
 	return err, cc.HandleResponse(KeyLookupType, res, name, key)
 }
 
+func monitorAndVerify(d *ConiksDirectory, cc *ConsistencyChecks,
+	name string, key []byte, startEp, endEp uint64) (error, error) {
+	request := &MonitoringRequest{
+		Username:   name,
+		StartEpoch: startEp,
+		EndEpoch:   endEp,
+	}
+	res, err := d.Monitor(request)
+	return err, cc.HandleResponse(MonitoringType, res, name, key)
+}
+
+func newTestVerifier(str *DirSTR, pk sign.PublicKey) *ConsistencyChecks {
+	return NewCC(str, pk, nil, true, nil)
+}
+
 func TestVerifyWithError(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
 	str := d.LatestSTR()
@@ -40,7 +58,7 @@ func TestVerifyWithError(t *testing.T) {
 	str2.Signature[0]++
 	str.SignedTreeRoot = &str2
 
-	cc := NewCC(str, true, pk)
+	cc := newTestVerifier(str, pk)
 
 	e1, e2 := registerAndVerify(d, cc, alice, key)
 	if e1 != ReqSuccess {
@@ -53,7 +71,7 @@ func TestVerifyWithError(t *testing.T) {
 
 func TestMalformedClientMessage(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
-	cc := NewCC(d.LatestSTR(), true, pk)
+	cc := newTestVerifier(d.LatestSTR(), pk)
 
 	request := &RegistrationRequest{
 		Username: "", // invalid username
@@ -67,7 +85,7 @@ func TestMalformedClientMessage(t *testing.T) {
 
 func TestMalformedDirectoryMessage(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
-	cc := NewCC(d.LatestSTR(), true, pk)
+	cc := newTestVerifier(d.LatestSTR(), pk)
 
 	request := &RegistrationRequest{
 		Username: "alice",
@@ -83,8 +101,7 @@ func TestMalformedDirectoryMessage(t *testing.T) {
 
 func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
-
-	cc := NewCC(d.LatestSTR(), true, pk)
+	cc := newTestVerifier(d.LatestSTR(), pk)
 
 	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != ReqSuccess || e2 != CheckPassed {
 		t.Error(e1)
@@ -126,41 +143,28 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 }
 
 func TestVerifyFullfilledPromise(t *testing.T) {
+	N := 3
 	d, pk := NewTestDirectory(t, true)
-
-	cc := NewCC(d.LatestSTR(), true, pk)
+	cc := newTestVerifier(d.LatestSTR(), pk)
 
 	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != ReqSuccess || e2 != CheckPassed {
 		t.Error(e1)
 		t.Error(e2)
 	}
-	if e1, e2 := registerAndVerify(d, cc, bob, key); e1 != ReqSuccess || e2 != CheckPassed {
-		t.Error(e1)
-		t.Error(e2)
-	}
 
-	if len(cc.TBs) != 2 {
+	if len(cc.TBs) != 1 {
 		t.Fatal("Expect the directory to return signed promises")
 	}
 
-	d.Update()
-
-	for i := 0; i < 2; i++ {
-		if e1, e2 := lookupAndVerify(d, cc, alice, key); e1 != ReqSuccess || e2 != CheckPassed {
-			t.Error(e1)
-			t.Error(e2)
-		}
+	for i := 0; i < N; i++ {
+		d.Update()
 	}
 
-	// should contain the TBs of bob
-	if len(cc.TBs) != 1 || cc.TBs[bob] == nil {
-		t.Error("Expect the directory to insert the binding as promised")
-	}
-
-	if e1, e2 := lookupAndVerify(d, cc, bob, key); e1 != ReqSuccess || e2 != CheckPassed {
+	if e1, e2 := monitorAndVerify(d, cc, alice, key, cc.SavedSTR.Epoch+1, d.LatestSTR().Epoch); e1 != ReqSuccess || e2 != CheckPassed {
 		t.Error(e1)
 		t.Error(e2)
 	}
+
 	if len(cc.TBs) != 0 {
 		t.Error("Expect the directory to insert the binding as promised")
 	}
@@ -168,8 +172,7 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 
 func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
-
-	cc := NewCC(d.LatestSTR(), true, pk)
+	cc := newTestVerifier(d.LatestSTR(), pk)
 
 	// do lookup first
 	if e1, e2 := lookupAndVerify(d, cc, alice, key); e1 != ReqNameNotFound || e2 != CheckPassed {
@@ -223,5 +226,102 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	if e1, e2 := lookupAndVerify(d, cc, bob, key); e1 != ReqNameNotFound || e2 != CheckPassed {
 		t.Error(e1)
 		t.Error(e2)
+	}
+}
+
+func TestVerifyMonitoring(t *testing.T) {
+	N := 5
+	d, pk := NewTestDirectory(t, true)
+	cc := newTestVerifier(d.LatestSTR(), pk)
+
+	registerAndVerify(d, cc, alice, key)
+
+	// monitor binding was inserted
+	d.Update()
+
+	if e1, e2 := monitorAndVerify(d, cc, alice, key, cc.SavedSTR.Epoch+1, d.LatestSTR().Epoch); e1 != ReqSuccess || e2 != CheckPassed {
+		t.Error(e1)
+		t.Error(e2)
+	}
+	for i := 0; i < N; i++ {
+		d.Update()
+	}
+	if e1, e2 := monitorAndVerify(d, cc, alice, key, cc.SavedSTR.Epoch+1, d.LatestSTR().Epoch); e1 != ReqSuccess || e2 != CheckPassed {
+		t.Error(e1)
+		t.Error(e2)
+	}
+}
+
+// Expect the ConsistencyChecks to return CheckUnexpectedMonitoringEpoch:
+// - If: StartEpoch > SavedEpoch + 1
+func TestVerifyMonitoringBadEpoch(t *testing.T) {
+	N := 5
+	d, pk := NewTestDirectory(t, true)
+	cc := newTestVerifier(d.LatestSTR(), pk)
+
+	registerAndVerify(d, cc, alice, key)
+
+	for i := 0; i < N; i++ {
+		d.Update()
+	}
+
+	if e1, e2 := monitorAndVerify(d, cc, alice, nil, cc.SavedSTR.Epoch+2, d.LatestSTR().Epoch); e1 != ReqSuccess || e2 != CheckUnexpectedMonitoringEpoch {
+		t.Error(e1)
+		t.Error(e2)
+	}
+}
+
+func TestMalformedMonitoringResponse(t *testing.T) {
+	d, pk := NewTestDirectory(t, true)
+	cc := newTestVerifier(d.LatestSTR(), pk)
+
+	// len(AP) == 0
+	malformedResponse := &Response{
+		Error: ReqSuccess,
+		DirectoryResponse: &DirectoryProofs{
+			AP:  nil,
+			STR: append([]*DirSTR{}, &DirSTR{}),
+		},
+	}
+	if err := cc.HandleResponse(MonitoringType, malformedResponse, alice, key); err != ErrMalformedDirectoryMessage {
+		t.Error(err)
+	}
+
+	// len(AP) != len(STR)
+	str2 := append([]*DirSTR{}, &DirSTR{})
+	str2 = append(str2, &DirSTR{})
+	malformedResponse = &Response{
+		Error: ReqSuccess,
+		DirectoryResponse: &DirectoryProofs{
+			AP:  append([]*merkletree.AuthenticationPath{}, &merkletree.AuthenticationPath{}),
+			STR: str2,
+		},
+	}
+	if err := cc.HandleResponse(MonitoringType, malformedResponse, alice, key); err != ErrMalformedDirectoryMessage {
+		t.Error(err)
+	}
+
+	// len(STR) == 0
+	malformedResponse = &Response{
+		Error: ReqSuccess,
+		DirectoryResponse: &DirectoryProofs{
+			AP:  append([]*merkletree.AuthenticationPath{}, &merkletree.AuthenticationPath{}),
+			STR: nil,
+		},
+	}
+	if err := cc.HandleResponse(MonitoringType, malformedResponse, alice, key); err != ErrMalformedDirectoryMessage {
+		t.Error(err)
+	}
+
+	// Error != ReqSuccess
+	malformedResponse = &Response{
+		Error: ReqNameNotFound,
+		DirectoryResponse: &DirectoryProofs{
+			AP:  append([]*merkletree.AuthenticationPath{}, &merkletree.AuthenticationPath{}),
+			STR: nil,
+		},
+	}
+	if err := cc.HandleResponse(MonitoringType, malformedResponse, alice, key); err != ErrMalformedDirectoryMessage {
+		t.Error(err)
 	}
 }
