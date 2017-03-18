@@ -19,10 +19,10 @@ var registrationMsg = `
 {
     "type": 0,
     "request": {
-        "username": "alice@twitter",
-        "key": [0,1,2],
-        "allow_unsigned_key_change": true,
-        "allow_public_lookup": true
+        "Username": "alice@twitter",
+        "Key": [0,1,2],
+        "AllowUnsignedKeychange": true,
+        "AllowPublicLookup": true
     }
 }
 `
@@ -31,7 +31,7 @@ var keylookupMsg = `
 {
     "type": 1,
     "request": {
-        "username": "alice@twitter"
+        "Username": "alice@twitter"
     }
 }
 `
@@ -451,9 +451,8 @@ func TestKeyLookupInEpoch(t *testing.T) {
 {
     "type": 2,
     "request": {
-        "username": "alice@twitter",
-        "epoch": 1,
-        "limit": 4
+        "Username": "alice@twitter",
+        "Epoch": 1
     }
 }
 `
@@ -498,9 +497,9 @@ func TestMonitoring(t *testing.T) {
 {
     "type": 3,
     "request": {
-        "username": "alice@twitter",
-        "start_epoch": 1,
-        "end_epoch": 5
+        "Username": "alice@twitter",
+        "StartEpoch": 1,
+        "EndEpoch": 5
     }
 }
 `

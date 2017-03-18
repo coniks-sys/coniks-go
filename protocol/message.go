@@ -31,10 +31,10 @@ type Request struct {
 // The response to a successful request is a DirectoryProof with a TB for
 // the requested username and public key.
 type RegistrationRequest struct {
-	Username               string `json:"username"`
-	Key                    []byte `json:"key"`
-	AllowUnsignedKeychange bool   `json:"allow_unsigned_key_change,omitempty"`
-	AllowPublicLookup      bool   `json:"allow_public_lookup,omitempty"`
+	Username               string
+	Key                    []byte
+	AllowUnsignedKeychange bool `json:",omitempty"`
+	AllowPublicLookup      bool `json:",omitempty"`
 }
 
 // A KeyLookupRequest is a message with a username as a string
@@ -47,7 +47,7 @@ type RegistrationRequest struct {
 // the requested username was registered during the latest epoch (i.e.
 // the new binding hasn't been committed to the directory).
 type KeyLookupRequest struct {
-	Username string `json:"username"`
+	Username string
 }
 
 // A KeyLookupInEpochRequest is a message with a username as a string and
@@ -61,8 +61,8 @@ type KeyLookupRequest struct {
 // of length 1 containing the auth path for the requested Epoch, and a list
 // of STRs covering the epoch range [Epoch, d.LatestSTR().Epoch].
 type KeyLookupInEpochRequest struct {
-	Username string `json:"username"`
-	Epoch    uint64 `json:"epoch"`
+	Username string
+	Epoch    uint64
 }
 
 // A MonitoringRequest is a message with a username as a string and the
@@ -85,9 +85,9 @@ type KeyLookupInEpochRequest struct {
 // which can be used to verify the inclusion of the binding after
 // registration.
 type MonitoringRequest struct {
-	Username   string `json:"username"`
-	StartEpoch uint64 `json:"start_epoch"`
-	EndEpoch   uint64 `json:"end_epoch"`
+	Username   string
+	StartEpoch uint64
+	EndEpoch   uint64
 }
 
 // A Response message indicates the result of a CONIKS client request
