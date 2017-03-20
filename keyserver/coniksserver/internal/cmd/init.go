@@ -101,12 +101,12 @@ func mkVrfKey(dir string) {
 		log.Print(err)
 		return
 	}
-	pk, _ := sk.Public()
-	if err := utils.WriteFile(path.Join(dir, "vrf.priv"), sk, 0600); err != nil {
+	pk := sk.Public()
+	if err := utils.WriteFile(path.Join(dir, "vrf.priv"), sk[:], 0600); err != nil {
 		log.Println(err)
 		return
 	}
-	if err := utils.WriteFile(path.Join(dir, "vrf.pub"), pk, 0600); err != nil {
+	if err := utils.WriteFile(path.Join(dir, "vrf.pub"), pk[:], 0600); err != nil {
 		log.Println(err)
 		return
 	}

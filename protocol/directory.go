@@ -45,10 +45,7 @@ func NewDirectory(epDeadline Timestamp, vrfKey vrf.PrivateKey,
 		panic("Currently the server is forced to use TBs")
 	}
 	d := new(ConiksDirectory)
-	vrfPublicKey, ok := vrfKey.Public()
-	if !ok {
-		panic(vrf.ErrGetPubKey)
-	}
+	vrfPublicKey := vrfKey.Public()
 	d.policies = NewPolicies(epDeadline, vrfPublicKey)
 	pad, err := merkletree.NewPAD(d.policies, signKey, vrfKey, dirSize)
 	if err != nil {
