@@ -87,7 +87,7 @@ func TestUpdateUnknownHistory(t *testing.T) {
 	}
 }
 
-func TestGetObservedSTR(t *testing.T) {
+func TestGetLatestObservedSTR(t *testing.T) {
 	// let's just create basic test directory and an empty audit log
 	d, pk := NewTestDirectory(t, true)
 	aud := NewAuditLog()
@@ -96,17 +96,18 @@ func TestGetObservedSTR(t *testing.T) {
 		t.Fatal("Error inserting new server history")
 	}
 
-	res, err := aud.GetObservedSTR(&AuditingRequest{
-		DirectoryAddr: "test-server"})
+	res, err := aud.GetObservedSTRs(&AuditingRequest{
+		DirectoryAddr: "test-server",
+		Epoch: uint64(d.LatestSTR().Epoch)})
 	if err != ReqSuccess {
 		t.Fatal("Unable to get latest observed STR")
 	}
 
-	obs := res.DirectoryResponse.(*ObservedSTR)
-	if obs.STR == nil {
+	obs := res.DirectoryResponse.(*STRList)
+	if len(obs.STR) != 1 {
 		t.Fatal("Expect returned STR to be not nil")
 	}
-	if obs.STR.Epoch != d.LatestSTR().Epoch {
+	if obs.STR[0].Epoch != d.LatestSTR().Epoch {
 		t.Fatal("Unexpected epoch for returned STR")
 	}
 }
@@ -129,15 +130,16 @@ func TestGetObservedSTRInEpoch(t *testing.T) {
 		t.Fatal("Error inserting new server history with prior STRs")
 	}
 
-	res, err := aud.GetObservedSTRInEpoch(&AuditingInEpochRequest{
+	res, err := aud.GetObservedSTRs(&AuditingRequest{
 		DirectoryAddr: "test-server",
-		Epoch:         uint64(6)})
+		Epoch: uint64(6)})
+
 	if err != ReqSuccess {
 		t.Fatal("Unable to get latest range of STRs")
 	}
 
-	obs := res.DirectoryResponse.(*ObservedSTRs)
-	if obs.STR == nil || len(obs.STR) < 1 {
+	obs := res.DirectoryResponse.(*STRList)
+	if len(obs.STR) == 0 {
 		t.Fatal("Expect returned STR to be not nil")
 	}
 	if len(obs.STR) != 5 {
@@ -166,13 +168,14 @@ func TestGetObservedSTRUnknown(t *testing.T) {
 		t.Fatal("Error inserting new server history with prior STRs")
 	}
 
-	_, err = aud.GetObservedSTR(&AuditingRequest{
-		DirectoryAddr: "unknown"})
+	_, err = aud.GetObservedSTRs(&AuditingRequest{
+		DirectoryAddr: "unknown",
+		Epoch: uint64(d.LatestSTR().Epoch)})
 	if err != ReqUnknownDirectory {
 		t.Fatal("Expect ReqUnknownDirectory for latest STR")
 	}
 
-	_, err = aud.GetObservedSTRInEpoch(&AuditingInEpochRequest{
+	_, err = aud.GetObservedSTRs(&AuditingRequest{
 		DirectoryAddr: "unknown",
 		Epoch:         uint64(6)})
 	if err != ReqUnknownDirectory {
@@ -199,13 +202,14 @@ func TestGetObservedSTRMalformed(t *testing.T) {
 		t.Fatal("Error inserting new server history with prior STRs")
 	}
 
-	_, err = aud.GetObservedSTR(&AuditingRequest{
-		DirectoryAddr: ""})
+	_, err = aud.GetObservedSTRs(&AuditingRequest{
+		DirectoryAddr: "",
+		Epoch: uint64(d.LatestSTR().Epoch)})
 	if err != ErrMalformedClientMessage {
 		t.Fatal("Expect ErrMalFormedClientMessage for latest STR")
 	}
 
-	_, err = aud.GetObservedSTRInEpoch(&AuditingInEpochRequest{
+	_, err = aud.GetObservedSTRs(&AuditingRequest{
 		DirectoryAddr: "",
 		Epoch:         uint64(6)})
 	if err != ErrMalformedClientMessage {
@@ -213,7 +217,7 @@ func TestGetObservedSTRMalformed(t *testing.T) {
 	}
 
 	// also test the epoch range
-	_, err = aud.GetObservedSTRInEpoch(&AuditingInEpochRequest{
+	_, err = aud.GetObservedSTRs(&AuditingRequest{
 		DirectoryAddr: "",
 		Epoch:         uint64(20)})
 	if err != ErrMalformedClientMessage {

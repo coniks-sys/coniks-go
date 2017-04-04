@@ -101,51 +101,6 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 	return CheckPassed
 }
 
-// HandleDirectorySTRs is supposed to be used by CONIKS clients to
-// handle auditor responses, and by CONIKS auditors to handle directory
-// responses.
-func HandleDirectorySTRs(requestType int, msg *Response, signKey sign.PublicKey,
-	savedSTR *DirSTR, e error, isClient bool) error {
-	var str *DirSTR
-	if err := msg.validate(); err != nil {
-		return e
-	}
-
-	switch requestType {
-	case AuditType:
-		if _, ok := msg.DirectoryResponse.(*ObservedSTR); !ok {
-			return e
-		}
-		str = msg.DirectoryResponse.(*ObservedSTR).STR
-		// TODO: compare the STR with the saved one on the client
-		// if the auditor has returned a more recent STR, should the
-		// client update its savedSTR? Should this force a new round of
-		// monitoring?
-	case AuditInEpochType:
-		// this is the default request type for an auditor
-		// since the auditor conservatively assumes it may
-		// have missed epochs
-
-		// FIXME
-		//if _, ok := msg.DirectoryResponse.(*ObservedSTRs); !ok {
-		//	return e
-		//}
-		//str = msg.DirectoryResponse.(*ObservedSTRs).STR
-	default:
-		panic("[coniks] Unknown auditing request type")
-	}
-	// we assume the requestType is AuditInEpochType if we're here
-
-	// verify the timeliness of the STR if we're the auditor
-	// check the consistency of the newly received STRs
-	// FIXME: use `XXInEpoch` version of verifySTRConsistency
-	if err := verifySTRConsistency(signKey, savedSTR, str); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	var str *DirSTR
 	switch requestType {
@@ -191,10 +146,8 @@ func (cc *ConsistencyChecks) verifySTR(str *DirSTR) error {
 // verifySTRConsistency checks the consistency between 2 snapshots.
 // It uses the signing key signKey to verify the STR's signature.
 // The signKey param either comes from a client's
-// pinned signing key in cc, or an auditor's pinned signing key
+// pinned signing key, or an auditor's pinned signing key
 // in its history.
-// In the case of a client-side consistency check, verifySTRConsistency()
-// should not verify the hash chain using the STR stored in cc.
 func verifySTRConsistency(signKey sign.PublicKey, savedSTR, str *DirSTR) error {
 	// verify STR's signature
 	if !signKey.Verify(str.Serialize(), str.Signature) {
