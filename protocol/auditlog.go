@@ -135,7 +135,7 @@ func (l *ConiksAuditLog) Update(addr string, newSTR *DirSTR) error {
 // the latest observed epoch of this directory is considered malformed,
 // and causes GetObservedSTRs() to return a
 // message.NewErrorResponse(ErrMalformedClientMessage) tuple.
-// GetObservedSTRs() returns a message.NewSTRList(strs) tuple.
+// GetObservedSTRs() returns a message.NewSTRHistoryRange(strs) tuple.
 // strs is a list of STRs for the epoch range [ep,
 // l.histories[req.DirectoryAddr].latestSTR.Epoch], where ep is the epoch for
 // which the client has requested the observed STR; i.e. if ep == the latest epoch,
@@ -172,7 +172,7 @@ func (l *ConiksAuditLog) GetObservedSTRs(req *AuditingRequest) (*Response,
 		// don't forget to append the latest STR
 		strs = append(strs, h.latestSTR)
 
-		return NewSTRList(strs)
+		return NewSTRHistoryRange(strs)
 	}
 
 	return NewErrorResponse(ReqUnknownDirectory), ReqUnknownDirectory

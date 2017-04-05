@@ -98,12 +98,12 @@ func TestGetLatestObservedSTR(t *testing.T) {
 
 	res, err := aud.GetObservedSTRs(&AuditingRequest{
 		DirectoryAddr: "test-server",
-		Epoch: uint64(d.LatestSTR().Epoch)})
+		Epoch:         uint64(d.LatestSTR().Epoch)})
 	if err != ReqSuccess {
 		t.Fatal("Unable to get latest observed STR")
 	}
 
-	obs := res.DirectoryResponse.(*STRList)
+	obs := res.DirectoryResponse.(*STRHistoryRange)
 	if len(obs.STR) != 1 {
 		t.Fatal("Expect returned STR to be not nil")
 	}
@@ -132,13 +132,13 @@ func TestGetObservedSTRInEpoch(t *testing.T) {
 
 	res, err := aud.GetObservedSTRs(&AuditingRequest{
 		DirectoryAddr: "test-server",
-		Epoch: uint64(6)})
+		Epoch:         uint64(6)})
 
 	if err != ReqSuccess {
 		t.Fatal("Unable to get latest range of STRs")
 	}
 
-	obs := res.DirectoryResponse.(*STRList)
+	obs := res.DirectoryResponse.(*STRHistoryRange)
 	if len(obs.STR) == 0 {
 		t.Fatal("Expect returned STR to be not nil")
 	}
@@ -170,7 +170,7 @@ func TestGetObservedSTRUnknown(t *testing.T) {
 
 	_, err = aud.GetObservedSTRs(&AuditingRequest{
 		DirectoryAddr: "unknown",
-		Epoch: uint64(d.LatestSTR().Epoch)})
+		Epoch:         uint64(d.LatestSTR().Epoch)})
 	if err != ReqUnknownDirectory {
 		t.Fatal("Expect ReqUnknownDirectory for latest STR")
 	}
@@ -204,7 +204,7 @@ func TestGetObservedSTRMalformed(t *testing.T) {
 
 	_, err = aud.GetObservedSTRs(&AuditingRequest{
 		DirectoryAddr: "",
-		Epoch: uint64(d.LatestSTR().Epoch)})
+		Epoch:         uint64(d.LatestSTR().Epoch)})
 	if err != ErrMalformedClientMessage {
 		t.Fatal("Expect ErrMalFormedClientMessage for latest STR")
 	}
