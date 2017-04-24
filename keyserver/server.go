@@ -1,10 +1,12 @@
 package keyserver
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
@@ -93,6 +95,7 @@ type ConiksServer struct {
 	configFilePath string
 	reloadChan     chan os.Signal
 	epochTimer     *time.Timer
+	httpServer     *http.Server
 }
 
 // LoadServerConfig loads the ServerConfig for the server from the
@@ -171,22 +174,42 @@ func (server *ConiksServer) Run(addrs []*Address) {
 		server.epochUpdate()
 		server.waitStop.Done()
 	}()
-
 	hasRegistrationPerm := false
 	for i := 0; i < len(addrs); i++ {
 		addr := addrs[i]
+		perms := updatePerms(addr)
 		hasRegistrationPerm = hasRegistrationPerm || addr.AllowRegistration
-		ln, tlsConfig, perms := resolveAndListen(addr)
-		server.waitStop.Add(1)
-		go func() {
-			verb := "Listening"
-			if addr.AllowRegistration {
-				verb = "Accepting registrations"
+		u, err := url.Parse(addr.Address)
+		if err != nil {
+			panic(err)
+		}
+		switch u.Scheme {
+		case "https":
+			mux := http.NewServeMux()
+			mux.HandleFunc("/", server.makeHTTPSHandler(perms))
+			ln, tlsConfig := resolveAndListen(addr)
+			httpSrv := &http.Server{
+				Addr:      u.Host,
+				Handler:   mux,
+				TLSConfig: tlsConfig,
 			}
-			server.logger.Info(verb, "address", addr.Address)
-			server.handleRequests(ln, tlsConfig, server.makeHandler(perms))
-			server.waitStop.Done()
-		}()
+			server.httpServer = httpSrv
+			go func() {
+				httpSrv.Serve(ln)
+			}()
+		case "tcp", "unix":
+			ln, tlsConfig := resolveAndListen(addr)
+			server.waitStop.Add(1)
+			go func() {
+				server.handleRequests(ln, tlsConfig, server.makeHandler(perms))
+				server.waitStop.Done()
+			}()
+		}
+		verb := "Listening"
+		if addr.AllowRegistration {
+			verb = "Accepting registrations"
+		}
+		server.logger.Info(verb, "address", addr.Address)
 	}
 
 	if !hasRegistrationPerm {
@@ -236,20 +259,23 @@ func (server *ConiksServer) updatePolicies() {
 	}
 }
 
-func resolveAndListen(addr *Address) (ln net.Listener,
-	tlsConfig *tls.Config,
-	perms map[int]bool) {
-	perms = make(map[int]bool)
-	perms[protocol.KeyLookupType] = true
-	perms[protocol.KeyLookupInEpochType] = true
-	perms[protocol.MonitoringType] = true
-	perms[protocol.RegistrationType] = addr.AllowRegistration
-
+func resolveAndListen(addr *Address) (ln net.Listener, tlsConfig *tls.Config) {
 	u, err := url.Parse(addr.Address)
 	if err != nil {
 		panic(err)
 	}
 	switch u.Scheme {
+	case "https":
+		cer, err := tls.LoadX509KeyPair(addr.TLSCertPath, addr.TLSKeyPath)
+		if err != nil {
+			panic(err)
+		}
+		tlsConfig = &tls.Config{Certificates: []tls.Certificate{cer}}
+		ln, err = tls.Listen("tcp", u.Host, tlsConfig)
+		if err != nil {
+			panic(err)
+		}
+		return
 	case "tcp":
 		// force to use TLS
 		cer, err := tls.LoadX509KeyPair(addr.TLSCertPath, addr.TLSKeyPath)
@@ -281,9 +307,23 @@ func resolveAndListen(addr *Address) (ln net.Listener,
 	}
 }
 
+func updatePerms(addr *Address) map[int]bool {
+	perms := make(map[int]bool)
+	perms[protocol.KeyLookupType] = true
+	perms[protocol.KeyLookupInEpochType] = true
+	perms[protocol.MonitoringType] = true
+	perms[protocol.RegistrationType] = addr.AllowRegistration
+	return perms
+}
+
 // Shutdown closes all of the server's connections and shuts down the server.
 func (server *ConiksServer) Shutdown() error {
 	close(server.stop)
+	if server.httpServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		server.httpServer.Shutdown(ctx)
+	}
 	server.waitStop.Wait()
 	return nil
 }

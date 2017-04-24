@@ -4,11 +4,21 @@ import (
 	"bytes"
 	"crypto/tls"
 	"io"
+	"io/ioutil"
 	"net"
+	"net/http"
 	"time"
 
 	. "github.com/coniks-sys/coniks-go/protocol"
 )
+
+func (server *ConiksServer) makeHTTPSHandler(acceptableTypes map[int]bool) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, _ := ioutil.ReadAll(r.Body)
+		res, _ := server.makeHandler(acceptableTypes)(body)
+		w.Write(res)
+	}
+}
 
 func (server *ConiksServer) handleRequests(ln net.Listener, tlsConfig *tls.Config,
 	handler func(msg []byte) ([]byte, error)) {

@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -37,6 +38,8 @@ const (
 	TestDir = "coniksServerTest"
 	// PublicConnection is the default address for TCP connections
 	PublicConnection = "tcp://127.0.0.1:3000"
+	// PublicHTTPSConnection is the default address for HTTPS connections
+	PublicHTTPSConnection = "https://127.0.0.1:4430"
 	// LocalConnection is the default address for Unix socket connections
 	LocalConnection = "unix:///tmp/conikstest.sock"
 )
@@ -151,7 +154,6 @@ func NewTCPClient(msg []byte, address string) ([]byte, error) {
 	defer conn.Close()
 
 	tlsConn := tls.Client(conn, conf)
-
 	_, err = tlsConn.Write([]byte(msg))
 	if err != nil {
 		return nil, err
@@ -176,6 +178,36 @@ func NewTCPClient(msg []byte, address string) ([]byte, error) {
 // address.
 func NewTCPClientDefault(msg []byte) ([]byte, error) {
 	return NewTCPClient(msg, PublicConnection)
+}
+
+// NewHTTPSClient creates a basic test client that sends a given
+// request msg to the server listening at the given address
+// via an HTTPS connection.
+func NewHTTPSClient(msg []byte, address string) ([]byte, error) {
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	req, err := http.NewRequest("GET", address, bytes.NewBuffer(msg))
+	if err != nil {
+		return nil, err
+	}
+	req.Close = true
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := ioutil.ReadAll(resp.Body)
+	return body, nil
+}
+
+// NewHTTPSClientDefault creates a basic test client that sends a given
+// request msg to a server listening at the default PublicConnection
+// address.
+func NewHTTPSClientDefault(msg []byte) ([]byte, error) {
+	return NewHTTPSClient(msg, PublicHTTPSConnection)
 }
 
 // NewUnixClient creates a basic test client that sends a given
