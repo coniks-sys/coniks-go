@@ -95,7 +95,6 @@ type ConiksServer struct {
 	configFilePath string
 	reloadChan     chan os.Signal
 	epochTimer     *time.Timer
-	httpServer     *http.Server
 }
 
 // LoadServerConfig loads the ServerConfig for the server from the
@@ -193,9 +192,14 @@ func (server *ConiksServer) Run(addrs []*Address) {
 				Handler:   mux,
 				TLSConfig: tlsConfig,
 			}
-			server.httpServer = httpSrv
 			go func() {
 				httpSrv.Serve(ln)
+			}()
+			go func() {
+				<-server.stop
+				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+				defer cancel()
+				httpSrv.Shutdown(ctx)
 			}()
 		case "tcp", "unix":
 			ln, tlsConfig := resolveAndListen(addr)
@@ -319,11 +323,6 @@ func updatePerms(addr *Address) map[int]bool {
 // Shutdown closes all of the server's connections and shuts down the server.
 func (server *ConiksServer) Shutdown() error {
 	close(server.stop)
-	if server.httpServer != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		server.httpServer.Shutdown(ctx)
-	}
 	server.waitStop.Wait()
 	return nil
 }
