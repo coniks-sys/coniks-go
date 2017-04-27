@@ -195,11 +195,13 @@ func (server *ConiksServer) Run(addrs []*Address) {
 			go func() {
 				httpSrv.Serve(ln)
 			}()
+			server.waitStop.Add(1)
 			go func() {
 				<-server.stop
 				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 				defer cancel()
 				httpSrv.Shutdown(ctx)
+				server.waitStop.Done()
 			}()
 		case "tcp", "unix":
 			ln, tlsConfig := resolveAndListen(addr)
