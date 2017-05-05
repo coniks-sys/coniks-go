@@ -188,12 +188,7 @@ func NewHTTPSClient(msg []byte, address string) ([]byte, error) {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	client := &http.Client{Transport: tr}
-	req, err := http.NewRequest("GET", address, bytes.NewBuffer(msg))
-	if err != nil {
-		return nil, err
-	}
-	req.Close = true
-	resp, err := client.Do(req)
+	resp, err := client.Post(address, "application/json", bytes.NewBuffer(msg))
 	if err != nil {
 		panic(err)
 	}
