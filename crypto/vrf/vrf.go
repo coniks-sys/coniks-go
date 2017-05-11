@@ -120,8 +120,8 @@ func hashToCurve(m []byte) *edwards25519.ExtendedGroupElement {
 // same as returned by Compute(m).
 func (sk PrivateKey) Prove(m []byte) (vrf, proof []byte) {
 	x, skhr := sk.expandSecret()
-	var cH, rH [64]byte
-	var r, c, minusC, t, grB, hrB, iiB [32]byte
+	var sH, rH [64]byte
+	var r, s, minusS, t, grB, hrB, iiB [32]byte
 	var ii, gr, hr edwards25519.ExtendedGroupElement
 
 	hm := hashToCurve(m)
@@ -144,15 +144,15 @@ func (sk PrivateKey) Prove(m []byte) (vrf, proof []byte) {
 	hash.Write(grB[:])
 	hash.Write(hrB[:])
 	hash.Write(m)
-	hash.Read(cH[:])
+	hash.Read(sH[:])
 	hash.Reset()
-	edwards25519.ScReduce(&c, &cH)
+	edwards25519.ScReduce(&s, &sH)
 
-	edwards25519.ScNeg(&minusC, &c)
-	edwards25519.ScMulAdd(&t, x, &minusC, &r)
+	edwards25519.ScNeg(&minusS, &s)
+	edwards25519.ScMulAdd(&t, x, &minusS, &r)
 
 	proof = make([]byte, ProofSize)
-	copy(proof[:32], c[:])
+	copy(proof[:32], s[:])
 	copy(proof[32:64], t[:])
 	copy(proof[64:96], iiB[:])
 
@@ -169,10 +169,10 @@ func (pkBytes PublicKey) Verify(m, vrfBytes, proof []byte) bool {
 	if len(proof) != ProofSize || len(vrfBytes) != Size || len(pkBytes) != PublicKeySize {
 		return false
 	}
-	var pk, c, cRef, t, vrf, iiB, ABytes, BBytes [32]byte
+	var pk, s, sRef, t, vrf, iiB, ABytes, BBytes [32]byte
 	copy(vrf[:], vrfBytes)
 	copy(pk[:], pkBytes[:])
-	copy(c[:32], proof[:32])
+	copy(s[:32], proof[:32])
 	copy(t[:32], proof[32:64])
 	copy(iiB[:], proof[64:96])
 
@@ -194,22 +194,22 @@ func (pkBytes PublicKey) Verify(m, vrfBytes, proof []byte) bool {
 	if !ii.FromBytesBaseGroup(&iiB) {
 		return false
 	}
-	edwards25519.GeDoubleScalarMultVartime(&A, &c, &P, &t)
+	edwards25519.GeDoubleScalarMultVartime(&A, &s, &P, &t)
 	A.ToBytes(&ABytes)
 
 	hm := hashToCurve(m)
 	edwards25519.GeDoubleScalarMultVartime(&hmtP, &t, hm, &[32]byte{})
-	edwards25519.GeDoubleScalarMultVartime(&iicP, &c, &ii, &[32]byte{})
+	edwards25519.GeDoubleScalarMultVartime(&iicP, &s, &ii, &[32]byte{})
 	iicP.ToExtended(&iic)
 	hmtP.ToExtended(&B)
 	edwards25519.GeAdd(&B, &B, &iic)
 	B.ToBytes(&BBytes)
 
-	var cH [64]byte
+	var sH [64]byte
 	hash.Write(ABytes[:]) // const length
 	hash.Write(BBytes[:]) // const length
 	hash.Write(m)
-	hash.Read(cH[:])
-	edwards25519.ScReduce(&cRef, &cH)
-	return cRef == c
+	hash.Read(sH[:])
+	edwards25519.ScReduce(&sRef, &sH)
+	return sRef == s
 }
