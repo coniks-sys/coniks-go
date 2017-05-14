@@ -121,13 +121,15 @@ func hashToCurve(m []byte) *edwards25519.ExtendedGroupElement {
 func (sk PrivateKey) Prove(m []byte) (vrf, proof []byte) {
 	x, skhr := sk.expandSecret()
 	var sH, rH [64]byte
-	var r, s, minusS, t, grB, hrB, iiB [32]byte
+	var r, s, minusS, t, gB, grB, hrB, hxB, hB [32]byte
 	var ii, gr, hr edwards25519.ExtendedGroupElement
 
-	hm := hashToCurve(m)
-	edwards25519.GeScalarMult(&ii, x, hm)
-	ii.ToBytes(&iiB)
+	h := hashToCurve(m)
+	h.ToBytes(&hB)
+	edwards25519.GeScalarMult(&ii, x, h)
+	ii.ToBytes(&hxB)
 
+	// use hash of private-, public-key and msg as randomness source:
 	hash := sha3.NewShake256()
 	hash.Write(skhr[:])
 	hash.Write(sk[32:]) // public key, as in ed25519
@@ -137,10 +139,16 @@ func (sk PrivateKey) Prove(m []byte) (vrf, proof []byte) {
 	edwards25519.ScReduce(&r, &rH)
 
 	edwards25519.GeScalarMultBase(&gr, &r)
-	edwards25519.GeScalarMult(&hr, &r, hm)
+	edwards25519.GeScalarMult(&hr, &r, h)
 	gr.ToBytes(&grB)
 	hr.ToBytes(&hrB)
+	gB = edwards25519.BaseBytes
 
+	// H2(g, h, g^x, h^x, g^r, h^r, m)
+	hash.Write(gB[:])
+	hash.Write(hB[:])
+	hash.Write(sk[32:]) // ed25519 public-key
+	hash.Write(hxB[:])
 	hash.Write(grB[:])
 	hash.Write(hrB[:])
 	hash.Write(m)
@@ -154,9 +162,9 @@ func (sk PrivateKey) Prove(m []byte) (vrf, proof []byte) {
 	proof = make([]byte, ProofSize)
 	copy(proof[:32], s[:])
 	copy(proof[32:64], t[:])
-	copy(proof[64:96], iiB[:])
+	copy(proof[64:96], hxB[:])
 
-	hash.Write(iiB[:]) // const length: Size
+	hash.Write(hxB[:])
 	hash.Write(m)
 	vrf = make([]byte, Size)
 	hash.Read(vrf[:])
@@ -169,15 +177,15 @@ func (pkBytes PublicKey) Verify(m, vrfBytes, proof []byte) bool {
 	if len(proof) != ProofSize || len(vrfBytes) != Size || len(pkBytes) != PublicKeySize {
 		return false
 	}
-	var pk, s, sRef, t, vrf, iiB, ABytes, BBytes [32]byte
+	var pk, s, sRef, t, vrf, hxB, hB, gB, ABytes, BBytes [32]byte
 	copy(vrf[:], vrfBytes)
 	copy(pk[:], pkBytes[:])
 	copy(s[:32], proof[:32])
 	copy(t[:32], proof[32:64])
-	copy(iiB[:], proof[64:96])
+	copy(hxB[:], proof[64:96])
 
 	hash := sha3.NewShake256()
-	hash.Write(iiB[:]) // const length
+	hash.Write(hxB[:]) // const length
 	hash.Write(m)
 	var hCheck [Size]byte
 	hash.Read(hCheck[:])
@@ -191,14 +199,16 @@ func (pkBytes PublicKey) Verify(m, vrfBytes, proof []byte) bool {
 	if !P.FromBytesBaseGroup(&pk) {
 		return false
 	}
-	if !ii.FromBytesBaseGroup(&iiB) {
+	if !ii.FromBytesBaseGroup(&hxB) {
 		return false
 	}
 	edwards25519.GeDoubleScalarMultVartime(&A, &s, &P, &t)
 	A.ToBytes(&ABytes)
+	gB = edwards25519.BaseBytes
 
-	hm := hashToCurve(m)
-	edwards25519.GeDoubleScalarMultVartime(&hmtP, &t, hm, &[32]byte{})
+	h := hashToCurve(m) // h = H1(m)
+	h.ToBytes(&hB)
+	edwards25519.GeDoubleScalarMultVartime(&hmtP, &t, h, &[32]byte{})
 	edwards25519.GeDoubleScalarMultVartime(&iicP, &s, &ii, &[32]byte{})
 	iicP.ToExtended(&iic)
 	hmtP.ToExtended(&B)
@@ -206,10 +216,16 @@ func (pkBytes PublicKey) Verify(m, vrfBytes, proof []byte) bool {
 	B.ToBytes(&BBytes)
 
 	var sH [64]byte
-	hash.Write(ABytes[:]) // const length
-	hash.Write(BBytes[:]) // const length
+	// sRef = H2(g, h, g^x, v, g^t·G^s,H1(m)^t·v^s, m), with v=H1(m)^x=h^x
+	hash.Write(gB[:])
+	hash.Write(hB[:])
+	hash.Write(pkBytes)
+	hash.Write(hxB[:])
+	hash.Write(ABytes[:]) // const length (g^t*G^s)
+	hash.Write(BBytes[:]) // const length (H1(m)^t*v^s)
 	hash.Write(m)
 	hash.Read(sH[:])
+
 	edwards25519.ScReduce(&sRef, &sH)
 	return sRef == s
 }
