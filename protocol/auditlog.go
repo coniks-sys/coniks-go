@@ -152,28 +152,29 @@ func (l *ConiksAuditLog) GetObservedSTRs(req *AuditingRequest) (*Response,
 			ErrMalformedClientMessage
 	}
 
-	if h := l.histories[req.DirectoryAddr]; h != nil {
+	h := l.histories[req.DirectoryAddr]
 
-		// also make sure the epoch is well-formed
-		if req.Epoch > h.latestSTR.Epoch {
-			return NewErrorResponse(ErrMalformedClientMessage),
-				ErrMalformedClientMessage
-		}
-
-		var strs []*DirSTR
-		startEp := req.Epoch
-		endEp := h.latestSTR.Epoch
-
-		for ep := startEp; ep < endEp; ep++ {
-			str := h.snapshots[ep]
-			strs = append(strs, str)
-		}
-
-		// don't forget to append the latest STR
-		strs = append(strs, h.latestSTR)
-
-		return NewSTRHistoryRange(strs)
+	if h == nil {
+		return NewErrorResponse(ReqUnknownDirectory), ReqUnknownDirectory
 	}
 
-	return NewErrorResponse(ReqUnknownDirectory), ReqUnknownDirectory
+	// also make sure the epoch is well-formed
+	if req.Epoch > h.latestSTR.Epoch {
+		return NewErrorResponse(ErrMalformedClientMessage),
+			ErrMalformedClientMessage
+	}
+
+	var strs []*DirSTR
+	startEp := req.Epoch
+	endEp := h.latestSTR.Epoch
+
+	for ep := startEp; ep < endEp; ep++ {
+		str := h.snapshots[ep]
+		strs = append(strs, str)
+	}
+
+	// don't forget to append the latest STR
+	strs = append(strs, h.latestSTR)
+
+	return NewSTRHistoryRange(strs)
 }
