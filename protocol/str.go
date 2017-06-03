@@ -19,7 +19,7 @@ func NewDirSTR(str *merkletree.SignedTreeRoot) *DirSTR {
 
 // Serialize overrides merkletree.SignedTreeRoot.Serialize
 func (str *DirSTR) Serialize() []byte {
-	return append(str.SignedTreeRoot.SerializeInternal(), str.Policies.Serialize()...)
+	return append(str.SerializeInternal(), str.Policies.Serialize()...)
 }
 
 // VerifyHashChain wraps merkletree.SignedTreeRoot.VerifyHashChain
