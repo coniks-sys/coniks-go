@@ -44,17 +44,9 @@ const (
 type ExpectingDirProofResponse struct {
 	Error             protocol.ErrorCode
 	DirectoryResponse struct {
-		AP  json.RawMessage
-		STR json.RawMessage
-		TB  json.RawMessage
-	}
-}
-
-type ExpectingDirProofsResponse struct {
-	Error             protocol.ErrorCode
-	DirectoryResponse struct {
 		AP  []json.RawMessage
 		STR []json.RawMessage
+		TB  json.RawMessage
 	}
 }
 
