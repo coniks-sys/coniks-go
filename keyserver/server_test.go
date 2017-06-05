@@ -334,7 +334,7 @@ func TestRegisterAndLookupInTheSameEpoch(t *testing.T) {
 	}
 
 	var str testutil.ExpectingSTR
-	err = json.Unmarshal(response.DirectoryResponse.STR, &str)
+	err = json.Unmarshal(response.DirectoryResponse.STR[0], &str)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -377,7 +377,7 @@ func TestRegisterAndLookup(t *testing.T) {
 	}
 
 	var str testutil.ExpectingSTR
-	err = json.Unmarshal(res.DirectoryResponse.STR, &str)
+	err = json.Unmarshal(res.DirectoryResponse.STR[0], &str)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -420,7 +420,7 @@ func TestKeyLookup(t *testing.T) {
 	}
 
 	var str testutil.ExpectingSTR
-	err = json.Unmarshal(response.DirectoryResponse.STR, &str)
+	err = json.Unmarshal(response.DirectoryResponse.STR[0], &str)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -461,7 +461,7 @@ func TestKeyLookupInEpoch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var response testutil.ExpectingDirProofsResponse
+	var response testutil.ExpectingDirProofResponse
 	err = json.Unmarshal(rev, &response)
 	if err != nil {
 		t.Fatal(err)
@@ -508,7 +508,7 @@ func TestMonitoring(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var response testutil.ExpectingDirProofsResponse
+	var response testutil.ExpectingDirProofResponse
 	err = json.Unmarshal(rev, &response)
 	if err != nil {
 		t.Fatal(err)

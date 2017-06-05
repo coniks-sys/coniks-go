@@ -121,25 +121,14 @@ type Response struct {
 // to a CONIKS client.
 type DirectoryResponse interface{}
 
-// A DirectoryProof response includes an authentication path AP for a
-// given username-to-key binding in the directory, a signed tree root
-// STR, and optionally a temporary binding for the given binding for a
-// single epoch. A CONIKS directory returns this DirectoryResponse
-// type upon a RegistrationRequest or a KeyLookupRequest.
-type DirectoryProof struct {
-	AP  *m.AuthenticationPath
-	STR *DirSTR
-	TB  *TemporaryBinding `json:",omitempty"`
-}
-
-// A DirectoryProofs response includes a list of authentication paths
+// A DirectoryProof response includes a list of authentication paths
 // AP for a given username-to-key binding in the directory and a list of
-// signed tree roots STR for a range of epochs. A CONIKS directory returns
-// this DirectoryResponse type upon a KeyLookupInEpochRequest or a
-// MonitoringRequest.
-type DirectoryProofs struct {
+// signed tree roots STR for a range of epochs, and optionally
+// a temporary binding for the given binding for a single epoch.
+type DirectoryProof struct {
 	AP  []*m.AuthenticationPath
 	STR []*DirSTR
+	TB  *TemporaryBinding `json:",omitempty"`
 }
 
 // An STRHistoryRange response includes a list of signed tree roots
@@ -159,12 +148,12 @@ func NewErrorResponse(e ErrorCode) *Response {
 }
 
 var _ DirectoryResponse = (*DirectoryProof)(nil)
-var _ DirectoryResponse = (*DirectoryProofs)(nil)
 var _ DirectoryResponse = (*STRHistoryRange)(nil)
 
 // NewRegistrationProof creates the response message a CONIKS directory
 // sends to a client upon a RegistrationRequest,
 // and returns a Response containing a DirectoryProof struct.
+// The length of `AP` and `STR` must to be equal to 1.
 // directory.Register() passes an authentication path ap, temporary binding
 // tb and error code e according to the result of the registration, and
 // the signed tree root for the latest epoch str.
@@ -176,8 +165,8 @@ func NewRegistrationProof(ap *m.AuthenticationPath, str *DirSTR,
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProof{
-			AP:  ap,
-			STR: str,
+			AP:  append([]*m.AuthenticationPath{}, ap),
+			STR: append([]*DirSTR{}, str),
 			TB:  tb,
 		},
 	}, e
@@ -186,6 +175,7 @@ func NewRegistrationProof(ap *m.AuthenticationPath, str *DirSTR,
 // NewKeyLookupProof creates the response message a CONIKS directory
 // sends to a client upon a KeyLookupRequest,
 // and returns a Response containing a DirectoryProof struct.
+// The length of `AP` and `STR` must to be equal to 1.
 // directory.KeyLookup() passes an authentication path ap, temporary binding
 // tb and error code e according to the result of the key lookup, and the
 // signed tree root for the latest epoch str.
@@ -197,8 +187,8 @@ func NewKeyLookupProof(ap *m.AuthenticationPath, str *DirSTR,
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProof{
-			AP:  ap,
-			STR: str,
+			AP:  append([]*m.AuthenticationPath{}, ap),
+			STR: append([]*DirSTR{}, str),
 			TB:  tb,
 		},
 	}, e
@@ -218,7 +208,7 @@ func NewKeyLookupInEpochProof(ap *m.AuthenticationPath,
 	aps := append([]*m.AuthenticationPath{}, ap)
 	return &Response{
 		Error: e,
-		DirectoryResponse: &DirectoryProofs{
+		DirectoryResponse: &DirectoryProof{
 			AP:  aps,
 			STR: str,
 		},
@@ -237,7 +227,7 @@ func NewMonitoringProof(ap []*m.AuthenticationPath,
 	str []*DirSTR) (*Response, ErrorCode) {
 	return &Response{
 		Error: ReqSuccess,
-		DirectoryResponse: &DirectoryProofs{
+		DirectoryResponse: &DirectoryProof{
 			AP:  ap,
 			STR: str,
 		},
@@ -267,12 +257,9 @@ func (msg *Response) validate() error {
 	}
 	switch df := msg.DirectoryResponse.(type) {
 	case *DirectoryProof:
-		if df.AP == nil || df.STR == nil {
+		if len(df.STR) == 0 || len(df.AP) == 0 {
 			return ErrMalformedDirectoryMessage
 		}
-		return nil
-	case *DirectoryProofs:
-		// TODO: also do above assertions here
 		return nil
 	case *STRHistoryRange:
 		// treat the STRHistoryRange as an auditor response
@@ -296,22 +283,7 @@ func (msg *Response) validate() error {
 // If the response contains a range of authentication paths,
 // the key is obtained from the authentication path corresponding
 // to the most recent signed tree root.
+// FIXME: remove this obsolete function
 func (msg *Response) GetKey() ([]byte, error) {
-	if err := msg.validate(); err != nil {
-		return nil, err
-	}
-	switch df := msg.DirectoryResponse.(type) {
-	case *DirectoryProof:
-		if df.AP.ProofType() == m.ProofOfAbsence {
-			if df.TB != nil { // FIXME: this check could be eliminated when we force to use TB?
-				return df.TB.Value, nil
-			}
-			return nil, nil
-		}
-		return df.AP.Leaf.Value, nil
-	case *DirectoryProofs:
-		return df.AP[len(df.AP)-1].Leaf.Value, nil
-	default:
-		panic("[coniks] Malformed response")
-	}
+	return nil, nil
 }
