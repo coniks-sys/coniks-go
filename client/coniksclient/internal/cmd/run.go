@@ -46,7 +46,7 @@ func init() {
 func run(cmd *cobra.Command) {
 	isDebugging, _ := strconv.ParseBool(cmd.Flag("debug").Value.String())
 	conf := loadConfigOrExit(cmd)
-	cc := p.NewCC(nil, true, conf.SigningPubKey)
+	cc := p.NewCC(nil, conf.SigningPubKey, nil, true, nil)
 
 	state, err := terminal.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
