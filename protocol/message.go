@@ -6,7 +6,7 @@ package protocol
 
 import (
 	"github.com/coniks-sys/coniks-go/crypto"
-	m "github.com/coniks-sys/coniks-go/merkletree"
+	"github.com/coniks-sys/coniks-go/merkletree"
 )
 
 // The types of requests CONIKS clients send during the CONIKS protocols.
@@ -140,7 +140,7 @@ type DirectoryResponse interface{}
 // signed tree roots STR for a range of epochs, and optionally
 // a temporary binding for the given binding for a single epoch.
 type DirectoryProof struct {
-	AP  []*m.AuthenticationPath
+	AP  []*merkletree.AuthenticationPath
 	STR []*DirSTR
 	TB  *TemporaryBinding `json:",omitempty"`
 }
@@ -175,12 +175,12 @@ var _ DirectoryResponse = (*STRHistoryRange)(nil)
 //
 // See directory.Register() for details on the contents of the created
 // DirectoryProof.
-func NewRegistrationProof(ap *m.AuthenticationPath, str *DirSTR,
+func NewRegistrationProof(ap *merkletree.AuthenticationPath, str *DirSTR,
 	tb *TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProof{
-			AP:  append([]*m.AuthenticationPath{}, ap),
+			AP:  append([]*merkletree.AuthenticationPath{}, ap),
 			STR: append([]*DirSTR{}, str),
 			TB:  tb,
 		},
@@ -197,12 +197,12 @@ func NewRegistrationProof(ap *m.AuthenticationPath, str *DirSTR,
 //
 // See directory.KeyLookup() for details on the contents of the created
 // DirectoryProof.
-func NewKeyLookupProof(ap *m.AuthenticationPath, str *DirSTR,
+func NewKeyLookupProof(ap *merkletree.AuthenticationPath, str *DirSTR,
 	tb *TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProof{
-			AP:  append([]*m.AuthenticationPath{}, ap),
+			AP:  append([]*merkletree.AuthenticationPath{}, ap),
 			STR: append([]*DirSTR{}, str),
 			TB:  tb,
 		},
@@ -218,9 +218,9 @@ func NewKeyLookupProof(ap *m.AuthenticationPath, str *DirSTR,
 //
 // See directory.KeyLookupInEpoch() for details on the contents of the
 // created DirectoryProofs.
-func NewKeyLookupInEpochProof(ap *m.AuthenticationPath,
+func NewKeyLookupInEpochProof(ap *merkletree.AuthenticationPath,
 	str []*DirSTR, e ErrorCode) (*Response, ErrorCode) {
-	aps := append([]*m.AuthenticationPath{}, ap)
+	aps := append([]*merkletree.AuthenticationPath{}, ap)
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProof{
@@ -238,7 +238,7 @@ func NewKeyLookupInEpochProof(ap *m.AuthenticationPath,
 //
 // See directory.Monitor() for details on the contents of the created
 // DirectoryProofs.
-func NewMonitoringProof(ap []*m.AuthenticationPath,
+func NewMonitoringProof(ap []*merkletree.AuthenticationPath,
 	str []*DirSTR) (*Response, ErrorCode) {
 	return &Response{
 		Error: ReqSuccess,
@@ -266,7 +266,9 @@ func NewSTRHistoryRange(str []*DirSTR) (*Response, ErrorCode) {
 	}, ReqSuccess
 }
 
-func (msg *Response) validate() error {
+// Validate returns immediately if the message includes an error code.
+// Otherwise, it verifies whether the message has proper format.
+func (msg *Response) Validate() error {
 	if Errors[msg.Error] {
 		return msg.Error
 	}
