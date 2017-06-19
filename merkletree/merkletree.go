@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/coniks-sys/coniks-go/crypto"
+	"github.com/coniks-sys/coniks-go/crypto/hasher"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
@@ -12,16 +13,6 @@ var (
 	// ErrInvalidTree indicates a panic due to
 	// a malformed operation on the tree.
 	ErrInvalidTree = errors.New("[merkletree] Invalid tree")
-)
-
-const (
-	// EmptyBranchIdentifier is the domain separation prefix for
-	// empty node hashes.
-	EmptyBranchIdentifier = 'E'
-
-	// LeafIdentifier is the domain separation prefix for user
-	// leaf node hashes.
-	LeafIdentifier = 'L'
 )
 
 // MerkleTree represents the Merkle prefix tree data structure,
@@ -72,7 +63,7 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 			break
 		}
 		direction := lookupIndexBits[depth]
-		var hashArr [crypto.HashSizeByte]byte
+		var hashArr hasher.Hash
 		if direction {
 			copy(hashArr[:], nodePointer.(*interiorNode).leftHash)
 			nodePointer = nodePointer.(*interiorNode).rightChild
