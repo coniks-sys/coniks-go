@@ -3,7 +3,7 @@ package merkletree
 import (
 	"bytes"
 
-	conikshasher "github.com/coniks-sys/coniks-go/crypto/hasher/coniks"
+	chasher "github.com/coniks-sys/coniks-go/crypto/hashers/coniks"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/utils"
 )
@@ -79,7 +79,7 @@ func (str *SignedTreeRoot) SerializeInternal() []byte {
 // in the issued STR. The hash chain is valid if
 // these two hash values are equal and consecutive.
 func (str *SignedTreeRoot) VerifyHashChain(savedSTR *SignedTreeRoot) bool {
-	hash := conikshasher.New().Digest(savedSTR.Signature)
+	hash := chasher.New().Digest(savedSTR.Signature)
 	return str.PreviousEpoch == savedSTR.Epoch &&
 		str.Epoch == savedSTR.Epoch+1 &&
 		bytes.Equal(hash, str.PreviousSTRHash)

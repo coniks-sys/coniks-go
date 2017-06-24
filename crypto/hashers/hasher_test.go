@@ -1,4 +1,4 @@
-package hasher
+package hashers
 
 import (
 	"testing"
@@ -25,7 +25,7 @@ func TestGetHasher(t *testing.T) {
 		RegisterHasher(fakeHasherID, fakeHasher)
 	}
 
-	_, err := Hasher(fakeHasherID)
+	_, err := NewPADHasher(fakeHasherID)
 	if err != nil {
 		t.Error("Expect a hasher.")
 	}

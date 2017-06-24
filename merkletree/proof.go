@@ -5,8 +5,8 @@ import (
 	"errors"
 
 	"github.com/coniks-sys/coniks-go/crypto"
-	"github.com/coniks-sys/coniks-go/crypto/hasher"
-	conikshasher "github.com/coniks-sys/coniks-go/crypto/hasher/coniks"
+	"github.com/coniks-sys/coniks-go/crypto/hashers"
+	chasher "github.com/coniks-sys/coniks-go/crypto/hashers/coniks"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
@@ -41,13 +41,13 @@ type ProofNode struct {
 func (n *ProofNode) hash(treeNonce []byte) []byte {
 	if n.IsEmpty {
 		// empty leaf node
-		return conikshasher.New().HashEmpty(
+		return chasher.New().HashEmpty(
 			treeNonce,
 			n.Index,
 			n.Level,
 		)
 	} else {
-		return conikshasher.New().HashLeaf(
+		return chasher.New().HashLeaf(
 			treeNonce,
 			n.Index,
 			n.Level,
@@ -74,7 +74,7 @@ const (
 // equals the lookup index.
 type AuthenticationPath struct {
 	TreeNonce   []byte
-	PrunedTree  []hasher.Hash
+	PrunedTree  []hashers.Hash
 	LookupIndex []byte
 	VrfProof    []byte
 	Leaf        *ProofNode
@@ -88,9 +88,9 @@ func (ap *AuthenticationPath) authPathHash() []byte {
 	for depth > 0 {
 		depth -= 1
 		if indexBits[depth] { // right child
-			hash = conikshasher.New().Digest(ap.PrunedTree[depth][:], hash)
+			hash = chasher.New().Digest(ap.PrunedTree[depth][:], hash)
 		} else {
-			hash = conikshasher.New().Digest(hash, ap.PrunedTree[depth][:])
+			hash = chasher.New().Digest(hash, ap.PrunedTree[depth][:])
 		}
 	}
 	return hash

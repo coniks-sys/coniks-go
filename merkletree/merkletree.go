@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/coniks-sys/coniks-go/crypto"
-	"github.com/coniks-sys/coniks-go/crypto/hasher"
+	"github.com/coniks-sys/coniks-go/crypto/hashers"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
@@ -63,7 +63,7 @@ func (m *MerkleTree) Get(lookupIndex []byte) *AuthenticationPath {
 			break
 		}
 		direction := lookupIndexBits[depth]
-		var hashArr hasher.Hash
+		var hashArr hashers.Hash
 		if direction {
 			copy(hashArr[:], nodePointer.(*interiorNode).leftHash)
 			nodePointer = nodePointer.(*interiorNode).rightChild
