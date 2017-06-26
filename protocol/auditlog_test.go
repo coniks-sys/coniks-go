@@ -98,7 +98,8 @@ func TestGetLatestObservedSTR(t *testing.T) {
 
 	res, err := aud.GetObservedSTRs(&AuditingRequest{
 		DirectoryAddr: "test-server",
-		Epoch:         uint64(d.LatestSTR().Epoch)})
+		StartEpoch:    uint64(d.LatestSTR().Epoch),
+		EndEpoch:      uint64(d.LatestSTR().Epoch)})
 	if err != ReqSuccess {
 		t.Fatal("Unable to get latest observed STR")
 	}
@@ -132,7 +133,8 @@ func TestGetObservedSTRInEpoch(t *testing.T) {
 
 	res, err := aud.GetObservedSTRs(&AuditingRequest{
 		DirectoryAddr: "test-server",
-		Epoch:         uint64(6)})
+		StartEpoch:    uint64(6),
+		EndEpoch:      uint64(8)})
 
 	if err != ReqSuccess {
 		t.Fatal("Unable to get latest range of STRs")
@@ -142,10 +144,10 @@ func TestGetObservedSTRInEpoch(t *testing.T) {
 	if len(obs.STR) == 0 {
 		t.Fatal("Expect returned STR to be not nil")
 	}
-	if len(obs.STR) != 5 {
-		t.Fatal("Expect 5 returned STRs")
+	if len(obs.STR) != 3 {
+		t.Fatal("Expect 3 returned STRs")
 	}
-	if obs.STR[0].Epoch != 6 || obs.STR[4].Epoch != d.LatestSTR().Epoch {
+	if obs.STR[0].Epoch != 6 || obs.STR[2].Epoch != 8 {
 		t.Fatal("Unexpected epoch for returned STRs")
 	}
 }
@@ -170,14 +172,16 @@ func TestGetObservedSTRUnknown(t *testing.T) {
 
 	_, err = aud.GetObservedSTRs(&AuditingRequest{
 		DirectoryAddr: "unknown",
-		Epoch:         uint64(d.LatestSTR().Epoch)})
+		StartEpoch:    uint64(0),
+		EndEpoch:      uint64(d.LatestSTR().Epoch)})
 	if err != ReqUnknownDirectory {
 		t.Fatal("Expect ReqUnknownDirectory for latest STR")
 	}
 
 	_, err = aud.GetObservedSTRs(&AuditingRequest{
 		DirectoryAddr: "unknown",
-		Epoch:         uint64(6)})
+		StartEpoch:    uint64(6),
+		EndEpoch:      uint64(8)})
 	if err != ReqUnknownDirectory {
 		t.Fatal("Expect ReqUnknownDirectory for older STR")
 	}
@@ -204,24 +208,40 @@ func TestGetObservedSTRMalformed(t *testing.T) {
 
 	_, err = aud.GetObservedSTRs(&AuditingRequest{
 		DirectoryAddr: "",
-		Epoch:         uint64(d.LatestSTR().Epoch)})
+		StartEpoch:    uint64(0),
+		EndEpoch:      uint64(d.LatestSTR().Epoch)})
 	if err != ErrMalformedClientMessage {
 		t.Fatal("Expect ErrMalFormedClientMessage for latest STR")
 	}
 
 	_, err = aud.GetObservedSTRs(&AuditingRequest{
 		DirectoryAddr: "",
-		Epoch:         uint64(6)})
+		StartEpoch:    uint64(4),
+		EndEpoch:      uint64(6)})
 	if err != ErrMalformedClientMessage {
 		t.Fatal("Expect ErrMalformedClientMessage for older STR")
 	}
 
 	// also test the epoch range
 	_, err = aud.GetObservedSTRs(&AuditingRequest{
-		DirectoryAddr: "",
-		Epoch:         uint64(20)})
+		DirectoryAddr: "test-server",
+		StartEpoch:    uint64(6),
+		EndEpoch:      uint64(4)})
 	if err != ErrMalformedClientMessage {
-		t.Fatal("Expect ErrMalformedClientMessage for older STR")
+		t.Fatal("Expect ErrMalformedClientMessage for bad end epoch")
 	}
-
+	_, err = aud.GetObservedSTRs(&AuditingRequest{
+		DirectoryAddr: "test-server",
+		StartEpoch:    uint64(11),
+		EndEpoch:      uint64(11)})
+	if err != ErrMalformedClientMessage {
+		t.Fatal("Expect ErrMalformedClientMessage for bad start epoch")
+	}
+	_, err = aud.GetObservedSTRs(&AuditingRequest{
+		DirectoryAddr: "test-server",
+		StartEpoch:    uint64(6),
+		EndEpoch:      uint64(11)})
+	if err != ErrMalformedClientMessage {
+		t.Fatal("Expect ErrMalformedClientMessage for out-of-bounds epoch range")
+	}
 }

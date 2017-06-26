@@ -75,6 +75,12 @@ func (l *ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 		return ErrAuditLog
 	}
 
+	// make sure we have oldEpochs unless we're inserting right
+	// at the start of a directory's history
+	if oldSTRs == nil && latestSTR.Epoch > 0 {
+		return ErrMalformedDirectoryMessage
+	}
+
 	// create the new directory history
 	h := newDirectoryHistory(signKey, latestSTR)
 
@@ -82,6 +88,9 @@ func (l *ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 	endEp := latestSTR.Epoch
 
 	// add each old STR into the history
+	// This loop automatically catches if oldSTRs is malformed
+	// (i.e. oldSTRs starts at epoch 0 and
+	// len(oldSTRs) != latestSTR.Epoch-1)
 	for ep := startEp; ep < endEp; ep++ {
 		str := oldSTRs[ep]
 		if str == nil {
@@ -89,6 +98,9 @@ func (l *ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 		}
 		h.snapshots[ep] = str
 	}
+
+	// don't forget to add the latest STR
+	h.snapshots[endEp] = latestSTR
 
 	l.histories[addr] = h
 
@@ -123,23 +135,21 @@ func (l *ConiksAuditLog) Update(addr string, newSTR *DirSTR) error {
 	return nil
 }
 
-// GetObservedSTRs gets the observed STR for the CONIKS directory
-// address for a directory history entry indicated in the
-// AuditingRequest req received from a CONIKS client,
-// and returns a tuple of the form (response, error).
-// The response (which also includes the error code) is supposed to
-// be sent back to the client. The returned error is used by the auditor
+// GetObservedSTRs gets a range of observed STRs for the CONIKS directory
+// address indicated in the AuditingRequest req received from a
+// CONIKS client, and returns a tuple of the form (response, error).
+// The response (which also includes the error code) is sent back to
+// the client. The returned error is used by the auditor
 // for logging purposes.
 //
-// A request without a directory address or with an epoch greater than
-// the latest observed epoch of this directory is considered malformed,
-// and causes GetObservedSTRs() to return a
+// A request without a directory address, with a StartEpoch or EndEpoch
+// greater than the latest observed epoch of this directory, or with
+// at StartEpoch > EndEpoch is considered
+// malformed and causes GetObservedSTRs() to return a
 // message.NewErrorResponse(ErrMalformedClientMessage) tuple.
 // GetObservedSTRs() returns a message.NewSTRHistoryRange(strs) tuple.
-// strs is a list of STRs for the epoch range [ep,
-// l.histories[req.DirectoryAddr].latestSTR.Epoch], where ep is the epoch for
-// which the client has requested the observed STR; i.e. if ep == the latest epoch,
-// the list returned is of length 1.
+// strs is a list of STRs for the epoch range [StartEpoch, EndEpoch];
+// if StartEpoch == EndEpoch, the list returned is of length 1.
 // If the auditor doesn't have any history entries for the requested CONIKS
 // directory, GetObservedSTRs() returns a
 // message.NewErrorResponse(ReqUnknownDirectory) tuple.
@@ -147,7 +157,7 @@ func (l *ConiksAuditLog) GetObservedSTRs(req *AuditingRequest) (*Response,
 	ErrorCode) {
 
 	// make sure the request is well-formed
-	if len(req.DirectoryAddr) <= 0 {
+	if len(req.DirectoryAddr) <= 0 || req.StartEpoch > req.EndEpoch {
 		return NewErrorResponse(ErrMalformedClientMessage),
 			ErrMalformedClientMessage
 	}
@@ -158,23 +168,20 @@ func (l *ConiksAuditLog) GetObservedSTRs(req *AuditingRequest) (*Response,
 		return NewErrorResponse(ReqUnknownDirectory), ReqUnknownDirectory
 	}
 
-	// also make sure the epoch is well-formed
-	if req.Epoch > h.latestSTR.Epoch {
+	// also make sure the epoch range is well-formed
+	if req.StartEpoch > h.latestSTR.Epoch || req.EndEpoch > h.latestSTR.Epoch {
 		return NewErrorResponse(ErrMalformedClientMessage),
 			ErrMalformedClientMessage
 	}
 
 	var strs []*DirSTR
-	startEp := req.Epoch
-	endEp := h.latestSTR.Epoch
-
-	for ep := startEp; ep < endEp; ep++ {
+	for ep := req.StartEpoch; ep < req.EndEpoch; ep++ {
 		str := h.snapshots[ep]
 		strs = append(strs, str)
 	}
 
-	// don't forget to append the latest STR
-	strs = append(strs, h.latestSTR)
+	// don't forget to append the STR for EndEpoch
+	strs = append(strs, h.snapshots[req.EndEpoch])
 
 	return NewSTRHistoryRange(strs)
 }

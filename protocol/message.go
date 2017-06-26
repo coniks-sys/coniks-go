@@ -92,15 +92,17 @@ type MonitoringRequest struct {
 }
 
 // An AuditingRequest is a message with a CONIKS key directory's address
-// as a string and an epoch as a uint64 that a CONIKS client sends to
-// a CONIKS auditor to request the given directory's STR at the given
-// epoch.
+// as a string, and a StartEpoch and an EndEpoch as uint64's that a CONIKS
+// client sends to a CONIKS auditor to request the given directory's
+// STRs for the given epoch range. To obtain a single STR, the client
+// must set StartEpoch = EndEpoch in the request.
 //
 // The response to a successful request is an STRHistoryRange with
-// a list of STRs covering the epoch range [Epoch, d.LatestSTR().Epoch].
+// a list of STRs covering the epoch range [StartEpoch, EndEpoch].
 type AuditingRequest struct {
 	DirectoryAddr string
-	Epoch         uint64
+	StartEpoch    uint64
+	EndEpoch      uint64
 }
 
 // A Response message indicates the result of a CONIKS client request
