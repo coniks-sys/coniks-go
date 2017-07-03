@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"github.com/coniks-sys/coniks-go/crypto"
 	"testing"
 )
 
@@ -26,8 +27,9 @@ func TestUpdateHistory(t *testing.T) {
 	}
 
 	// update the directory so we can update the audit log
+	dirInitHash := computeInitSTRHash(d.LatestSTR())
 	d.Update()
-	err = aud.Update("test-server", d.LatestSTR())
+	err = aud.Update(dirInitHash, d.LatestSTR())
 
 	if err != nil {
 		t.Fatal("Error updating the server history")
@@ -81,7 +83,8 @@ func TestUpdateUnknownHistory(t *testing.T) {
 
 	// let's make sure that we can't re-insert a new server
 	// history into our log
-	err = aud.Update("unknown", d.LatestSTR())
+	var unknown [crypto.HashSizeByte]byte
+	err = aud.Update(unknown, d.LatestSTR())
 	if err != ErrAuditLog {
 		t.Fatal("Expected an ErrAuditLog when updating an unknown server history")
 	}
@@ -96,10 +99,13 @@ func TestGetLatestObservedSTR(t *testing.T) {
 		t.Fatal("Error inserting new server history")
 	}
 
+	// compute the hash of the initial STR for later lookups
+	dirInitHash := computeInitSTRHash(d.LatestSTR())
+
 	res, err := aud.GetObservedSTRs(&AuditingRequest{
-		DirectoryAddr: "test-server",
-		StartEpoch:    uint64(d.LatestSTR().Epoch),
-		EndEpoch:      uint64(d.LatestSTR().Epoch)})
+		DirInitSTRHash: dirInitHash,
+		StartEpoch:     uint64(d.LatestSTR().Epoch),
+		EndEpoch:       uint64(d.LatestSTR().Epoch)})
 	if err != ReqSuccess {
 		t.Fatal("Unable to get latest observed STR")
 	}
@@ -125,6 +131,9 @@ func TestGetObservedSTRInEpoch(t *testing.T) {
 		d.Update()
 	}
 
+	// compute the hash of the initial STR for later lookups
+	dirInitHash := computeInitSTRHash(priorSTRs[0])
+
 	// now insert into the log
 	err := aud.Insert("test-server", pk, priorSTRs, d.LatestSTR())
 	if err != nil {
@@ -132,9 +141,9 @@ func TestGetObservedSTRInEpoch(t *testing.T) {
 	}
 
 	res, err := aud.GetObservedSTRs(&AuditingRequest{
-		DirectoryAddr: "test-server",
-		StartEpoch:    uint64(6),
-		EndEpoch:      uint64(8)})
+		DirInitSTRHash: dirInitHash,
+		StartEpoch:     uint64(6),
+		EndEpoch:       uint64(8)})
 
 	if err != ReqSuccess {
 		t.Fatal("Unable to get latest range of STRs")
@@ -170,18 +179,19 @@ func TestGetObservedSTRUnknown(t *testing.T) {
 		t.Fatal("Error inserting new server history with prior STRs")
 	}
 
+	var unknown [crypto.HashSizeByte]byte
 	_, err = aud.GetObservedSTRs(&AuditingRequest{
-		DirectoryAddr: "unknown",
-		StartEpoch:    uint64(0),
-		EndEpoch:      uint64(d.LatestSTR().Epoch)})
+		DirInitSTRHash: unknown,
+		StartEpoch:     uint64(d.LatestSTR().Epoch),
+		EndEpoch:       uint64(d.LatestSTR().Epoch)})
 	if err != ReqUnknownDirectory {
 		t.Fatal("Expect ReqUnknownDirectory for latest STR")
 	}
 
 	_, err = aud.GetObservedSTRs(&AuditingRequest{
-		DirectoryAddr: "unknown",
-		StartEpoch:    uint64(6),
-		EndEpoch:      uint64(8)})
+		DirInitSTRHash: unknown,
+		StartEpoch:     uint64(6),
+		EndEpoch:       uint64(8)})
 	if err != ReqUnknownDirectory {
 		t.Fatal("Expect ReqUnknownDirectory for older STR")
 	}
@@ -200,47 +210,27 @@ func TestGetObservedSTRMalformed(t *testing.T) {
 		d.Update()
 	}
 
+	// compute the hash of the initial STR for later lookups
+	dirInitHash := computeInitSTRHash(priorSTRs[0])
+
 	// now insert into the log
 	err := aud.Insert("test-server", pk, priorSTRs, d.LatestSTR())
 	if err != nil {
 		t.Fatal("Error inserting new server history with prior STRs")
 	}
 
-	_, err = aud.GetObservedSTRs(&AuditingRequest{
-		DirectoryAddr: "",
-		StartEpoch:    uint64(0),
-		EndEpoch:      uint64(d.LatestSTR().Epoch)})
-	if err != ErrMalformedClientMessage {
-		t.Fatal("Expect ErrMalFormedClientMessage for latest STR")
-	}
-
-	_, err = aud.GetObservedSTRs(&AuditingRequest{
-		DirectoryAddr: "",
-		StartEpoch:    uint64(4),
-		EndEpoch:      uint64(6)})
-	if err != ErrMalformedClientMessage {
-		t.Fatal("Expect ErrMalformedClientMessage for older STR")
-	}
-
 	// also test the epoch range
 	_, err = aud.GetObservedSTRs(&AuditingRequest{
-		DirectoryAddr: "test-server",
-		StartEpoch:    uint64(6),
-		EndEpoch:      uint64(4)})
+		DirInitSTRHash: dirInitHash,
+		StartEpoch:     uint64(6),
+		EndEpoch:       uint64(4)})
 	if err != ErrMalformedClientMessage {
 		t.Fatal("Expect ErrMalformedClientMessage for bad end epoch")
 	}
 	_, err = aud.GetObservedSTRs(&AuditingRequest{
-		DirectoryAddr: "test-server",
-		StartEpoch:    uint64(11),
-		EndEpoch:      uint64(11)})
-	if err != ErrMalformedClientMessage {
-		t.Fatal("Expect ErrMalformedClientMessage for bad start epoch")
-	}
-	_, err = aud.GetObservedSTRs(&AuditingRequest{
-		DirectoryAddr: "test-server",
-		StartEpoch:    uint64(6),
-		EndEpoch:      uint64(11)})
+		DirInitSTRHash: dirInitHash,
+		StartEpoch:     uint64(6),
+		EndEpoch:       uint64(11)})
 	if err != ErrMalformedClientMessage {
 		t.Fatal("Expect ErrMalformedClientMessage for out-of-bounds epoch range")
 	}

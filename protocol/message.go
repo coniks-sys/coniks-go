@@ -4,7 +4,10 @@
 
 package protocol
 
-import m "github.com/coniks-sys/coniks-go/merkletree"
+import (
+	"github.com/coniks-sys/coniks-go/crypto"
+	m "github.com/coniks-sys/coniks-go/merkletree"
+)
 
 // The types of requests CONIKS clients send during the CONIKS protocols.
 const (
@@ -100,9 +103,9 @@ type MonitoringRequest struct {
 // The response to a successful request is an STRHistoryRange with
 // a list of STRs covering the epoch range [StartEpoch, EndEpoch].
 type AuditingRequest struct {
-	DirectoryAddr string
-	StartEpoch    uint64
-	EndEpoch      uint64
+	DirInitSTRHash [crypto.HashSizeByte]byte
+	StartEpoch     uint64
+	EndEpoch       uint64
 }
 
 // A Response message indicates the result of a CONIKS client request

@@ -6,26 +6,44 @@
 package protocol
 
 import (
+	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 )
 
 type directoryHistory struct {
+	dirName   string
 	signKey   sign.PublicKey
 	snapshots map[uint64]*DirSTR
 	latestSTR *DirSTR
 }
 
 // A ConiksAuditLog maintains the histories
-// of all CONIKS directories known to a CONIKS auditor.
-// Each history includes the directory's public signing key
-// enabling the auditor to verify the corresponding signed
-// tree roots.
+// of all CONIKS directories known to a CONIKS auditor,
+// indexing the histories by the hash of a directory's initial
+// STR.
+// Each history includes the directory's domain name as a string, its
+// public signing key enabling the auditor to verify the corresponding
+// signed tree roots, and a list with all observed snapshots in
+// chronological order.
 type ConiksAuditLog struct {
-	histories map[string]*directoryHistory
+	histories map[[crypto.HashSizeByte]byte]*directoryHistory
 }
 
-func newDirectoryHistory(signKey sign.PublicKey, str *DirSTR) *directoryHistory {
+// computeInitSTRHash is a wrapper for the digest function;
+// returns nil if the STR isn't an initial STR (i.e. str.Epoch != 0)
+func computeInitSTRHash(initSTR *DirSTR) [crypto.HashSizeByte]byte {
+	var initSTRHash [crypto.HashSizeByte]byte
+
+	if initSTR.Epoch == 0 {
+		// ugh HACK: need to call copy to convert slice into the array
+		copy(initSTRHash[:], crypto.Digest(initSTR.Serialize()))
+	}
+	return initSTRHash
+}
+
+func newDirectoryHistory(dirName string, signKey sign.PublicKey, str *DirSTR) *directoryHistory {
 	h := new(directoryHistory)
+	h.dirName = dirName
 	h.signKey = signKey
 	h.snapshots = make(map[uint64]*DirSTR)
 	h.latestSTR = str
@@ -37,16 +55,17 @@ func newDirectoryHistory(signKey sign.PublicKey, str *DirSTR) *directoryHistory 
 // the first time it observes an STR for that directory.
 func NewAuditLog() *ConiksAuditLog {
 	l := new(ConiksAuditLog)
-	l.histories = make(map[string]*directoryHistory)
+	l.histories = make(map[[crypto.HashSizeByte]byte]*directoryHistory)
 	return l
 }
 
 // IsKnownDirectory checks to see if an entry for the directory
-// address addr exists in the audit log l. IsKnownDirectory() does not
+// (indexed by the hash of its initial STR dirInitHash) exists
+// in the audit log l. IsKnownDirectory() does not
 // validate the entries themselves. It returns true if an entry exists,
 // and false otherwise.
-func (l *ConiksAuditLog) IsKnownDirectory(addr string) bool {
-	h := l.histories[addr]
+func (l *ConiksAuditLog) IsKnownDirectory(dirInitHash [crypto.HashSizeByte]byte) bool {
+	h := l.histories[dirInitHash]
 	if h != nil {
 		return true
 	}
@@ -70,19 +89,26 @@ func (l *ConiksAuditLog) IsKnownDirectory(addr string) bool {
 func (l *ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 	oldSTRs map[uint64]*DirSTR, latestSTR *DirSTR) error {
 
-	// error if we want to create a new entry for an addr we already know
-	if l.IsKnownDirectory(addr) {
-		return ErrAuditLog
-	}
-
 	// make sure we have oldEpochs unless we're inserting right
 	// at the start of a directory's history
 	if oldSTRs == nil && latestSTR.Epoch > 0 {
 		return ErrMalformedDirectoryMessage
 	}
 
+	// compute the hash of the initial STR
+	dirInitHash := computeInitSTRHash(latestSTR)
+	if oldSTRs != nil {
+		dirInitHash = computeInitSTRHash(oldSTRs[0])
+	}
+
+	// error if we want to create a new entry for a directory
+	// we already know
+	if l.IsKnownDirectory(dirInitHash) {
+		return ErrAuditLog
+	}
+
 	// create the new directory history
-	h := newDirectoryHistory(signKey, latestSTR)
+	h := newDirectoryHistory(addr, signKey, latestSTR)
 
 	startEp := uint64(0)
 	endEp := latestSTR.Epoch
@@ -101,8 +127,7 @@ func (l *ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 
 	// don't forget to add the latest STR
 	h.snapshots[endEp] = latestSTR
-
-	l.histories[addr] = h
+	l.histories[dirInitHash] = h
 
 	// FIXME: verify the consistency of each new STR
 	return nil
@@ -116,14 +141,14 @@ func (l *ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 // addr prior to its first call and thereby expects that an entry for addr
 // exists in the audit log l.
 // FIXME: pass Response message as param
-func (l *ConiksAuditLog) Update(addr string, newSTR *DirSTR) error {
+func (l *ConiksAuditLog) Update(dirInitHash [crypto.HashSizeByte]byte, newSTR *DirSTR) error {
 
 	// error if we want to update the entry for an addr we don't know
-	if !l.IsKnownDirectory(addr) {
+	if !l.IsKnownDirectory(dirInitHash) {
 		return ErrAuditLog
 	}
 
-	h := l.histories[addr]
+	h := l.histories[dirInitHash]
 
 	if err := verifySTRConsistency(h.signKey, h.latestSTR, newSTR); err != nil {
 		return err
@@ -156,20 +181,15 @@ func (l *ConiksAuditLog) Update(addr string, newSTR *DirSTR) error {
 func (l *ConiksAuditLog) GetObservedSTRs(req *AuditingRequest) (*Response,
 	ErrorCode) {
 
-	// make sure the request is well-formed
-	if len(req.DirectoryAddr) <= 0 || req.StartEpoch > req.EndEpoch {
-		return NewErrorResponse(ErrMalformedClientMessage),
-			ErrMalformedClientMessage
-	}
-
-	h := l.histories[req.DirectoryAddr]
-
-	if h == nil {
+	// make sure we have a history for the requested directory in the log
+	if !l.IsKnownDirectory(req.DirInitSTRHash) {
 		return NewErrorResponse(ReqUnknownDirectory), ReqUnknownDirectory
 	}
 
-	// also make sure the epoch range is well-formed
-	if req.StartEpoch > h.latestSTR.Epoch || req.EndEpoch > h.latestSTR.Epoch {
+	h := l.histories[req.DirInitSTRHash]
+
+	// make sure the request is well-formed
+	if req.EndEpoch > h.latestSTR.Epoch || req.StartEpoch > req.EndEpoch {
 		return NewErrorResponse(ErrMalformedClientMessage),
 			ErrMalformedClientMessage
 	}
