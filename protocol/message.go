@@ -4,10 +4,7 @@
 
 package protocol
 
-import (
-	"github.com/coniks-sys/coniks-go/crypto"
-	m "github.com/coniks-sys/coniks-go/merkletree"
-)
+import m "github.com/coniks-sys/coniks-go/merkletree"
 
 // The types of requests CONIKS clients send during the CONIKS protocols.
 const (
@@ -94,16 +91,17 @@ type MonitoringRequest struct {
 	EndEpoch   uint64
 }
 
-// An AuditingRequest is a message with a CONIKS key directory's address
-// as a string, and a StartEpoch and an EndEpoch as uint64's that a CONIKS
-// client sends to a CONIKS auditor to request the given directory's
-// STRs for the given epoch range. To obtain a single STR, the client
-// must set StartEpoch = EndEpoch in the request.
+// An AuditingRequest is a message with a CONIKS key directory's initial
+// STR hash as a string, and a StartEpoch and an EndEpoch as uint64's
+// that a CONIKS client sends to a CONIKS auditor to request the given
+// directory's STRs for the given epoch range. To obtain a single STR,
+// the client must set StartEpoch = EndEpoch in the request.
 //
 // The response to a successful request is an STRHistoryRange with
-// a list of STRs covering the epoch range [StartEpoch, EndEpoch].
+// a list of STRs covering the epoch range [StartEpoch, EndEpoch],
+// inclusively.
 type AuditingRequest struct {
-	DirInitSTRHash [crypto.HashSizeByte]byte
+	DirInitSTRHash string
 	StartEpoch     uint64
 	EndEpoch       uint64
 }
