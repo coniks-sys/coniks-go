@@ -120,13 +120,14 @@ func TestGetObservedSTRInEpoch(t *testing.T) {
 	}
 }
 
-func TestGetEntireObservedSTRHist(t *testing.T) {
+func TestGetObservedSTRMultipleEpochs(t *testing.T) {
 	// create basic test directory and audit log with 2 STRs
 	d, aud, hist := NewTestAuditLog(t, 1)
 
 	// compute the hash of the initial STR for later lookups
 	dirInitHash := computeInitSTRHash(hist[0])
 
+	// first AuditingRequest
 	res, err := aud.GetObservedSTRs(&AuditingRequest{
 		DirInitSTRHash: dirInitHash,
 		StartEpoch:     uint64(0),
@@ -146,6 +147,32 @@ func TestGetEntireObservedSTRHist(t *testing.T) {
 	if obs.STR[1].Epoch != d.LatestSTR().Epoch {
 		t.Fatal("Unexpected latest STR epoch for returned STR")
 	}
+
+	// go to next epoch
+	d.Update()
+	err1 := aud.Update(dirInitHash, d.LatestSTR())
+	if err1 != nil {
+		t.Fatal("Error occurred updating audit log after auditing request")
+	}
+
+	// request the new latest STR
+	res, err = aud.GetObservedSTRs(&AuditingRequest{
+		DirInitSTRHash: dirInitHash,
+		StartEpoch:     d.LatestSTR().Epoch,
+		EndEpoch:       d.LatestSTR().Epoch})
+
+	if err != ReqSuccess {
+		t.Fatal("Unable to get new latest STRs")
+	}
+
+	obs = res.DirectoryResponse.(*STRHistoryRange)
+	if len(obs.STR) != 1 {
+		t.Fatal("Unexpected number of new latest STRs")
+	}
+	if obs.STR[0].Epoch != d.LatestSTR().Epoch {
+		t.Fatal("Unexpected new latest STR epoch")
+	}
+
 }
 
 func TestGetObservedSTRUnknown(t *testing.T) {
