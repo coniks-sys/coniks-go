@@ -49,7 +49,7 @@ func NewTestAuditLog(t *testing.T, numEpochs int) (*ConiksDirectory, ConiksAudit
 
 	err := aud.Insert("test-server", pk, hist)
 	if err != nil {
-		t.Fatal("Error inserting a new history with %d epochs", numEpochs)
+		t.Fatalf("Error inserting a new history with %d STRs", numEpochs+1)
 	}
 
 	return d, aud, hist
