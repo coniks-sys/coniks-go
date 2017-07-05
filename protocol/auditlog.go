@@ -6,14 +6,11 @@
 package protocol
 
 import (
-	"encoding/hex"
-
-	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 )
 
 type directoryHistory struct {
-	dirName   string
+	name      string
 	signKey   sign.PublicKey
 	snapshots map[uint64]*DirSTR
 	latestSTR *DirSTR
@@ -29,15 +26,6 @@ type directoryHistory struct {
 // epoch.
 type ConiksAuditLog map[string]*directoryHistory
 
-// computeInitSTRHash is a wrapper for the digest function;
-// returns empty string if the STR isn't an initial STR (i.e. str.Epoch != 0)
-func computeInitSTRHash(initSTR *DirSTR) string {
-	if initSTR.Epoch != 0 {
-		return ""
-	}
-	return hex.EncodeToString(crypto.Digest(initSTR.Signature))
-}
-
 // updateLatestSTR inserts a new STR into a directory history;
 // assumes the STR has been validated by the caller
 func (h *directoryHistory) updateLatestSTR(newLatest *DirSTR) {
@@ -46,9 +34,9 @@ func (h *directoryHistory) updateLatestSTR(newLatest *DirSTR) {
 }
 
 // caller validates that initSTR is for epoch 0
-func newDirectoryHistory(dirName string, signKey sign.PublicKey, initSTR *DirSTR) *directoryHistory {
+func newDirectoryHistory(name string, signKey sign.PublicKey, initSTR *DirSTR) *directoryHistory {
 	h := new(directoryHistory)
-	h.dirName = dirName
+	h.name = name
 	h.signKey = signKey
 	h.snapshots = make(map[uint64]*DirSTR)
 	h.updateLatestSTR(initSTR)
@@ -100,7 +88,7 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 	}
 
 	// compute the hash of the initial STR
-	dirInitHash := computeInitSTRHash(hist[0])
+	dirInitHash := ComputeDirectoryIdentity(hist[0])
 
 	// error if we want to create a new entry for a directory
 	// we already know

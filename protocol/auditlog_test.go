@@ -12,7 +12,7 @@ func TestUpdateHistory(t *testing.T) {
 	d, aud, hist := NewTestAuditLog(t, 0)
 
 	// update the directory so we can update the audit log
-	dirInitHash := computeInitSTRHash(hist[0])
+	dirInitHash := ComputeDirectoryIdentity(hist[0])
 	d.Update()
 	err := aud.Update(dirInitHash, d.LatestSTR())
 
@@ -55,7 +55,7 @@ func TestUpdateBadNewSTR(t *testing.T) {
 	d, aud, hist := NewTestAuditLog(t, 10)
 
 	// compute the hash of the initial STR for later lookups
-	dirInitHash := computeInitSTRHash(hist[0])
+	dirInitHash := ComputeDirectoryIdentity(hist[0])
 
 	// update the directory a few more times and then try
 	// to update
@@ -73,7 +73,7 @@ func TestGetLatestObservedSTR(t *testing.T) {
 	d, aud, hist := NewTestAuditLog(t, 0)
 
 	// compute the hash of the initial STR for later lookups
-	dirInitHash := computeInitSTRHash(hist[0])
+	dirInitHash := ComputeDirectoryIdentity(hist[0])
 
 	res, err := aud.GetObservedSTRs(&AuditingRequest{
 		DirInitSTRHash: dirInitHash,
@@ -97,7 +97,7 @@ func TestGetObservedSTRInEpoch(t *testing.T) {
 	_, aud, hist := NewTestAuditLog(t, 10)
 
 	// compute the hash of the initial STR for later lookups
-	dirInitHash := computeInitSTRHash(hist[0])
+	dirInitHash := ComputeDirectoryIdentity(hist[0])
 
 	res, err := aud.GetObservedSTRs(&AuditingRequest{
 		DirInitSTRHash: dirInitHash,
@@ -125,7 +125,7 @@ func TestGetObservedSTRMultipleEpochs(t *testing.T) {
 	d, aud, hist := NewTestAuditLog(t, 1)
 
 	// compute the hash of the initial STR for later lookups
-	dirInitHash := computeInitSTRHash(hist[0])
+	dirInitHash := ComputeDirectoryIdentity(hist[0])
 
 	// first AuditingRequest
 	res, err := aud.GetObservedSTRs(&AuditingRequest{
@@ -202,7 +202,7 @@ func TestGetObservedSTRMalformed(t *testing.T) {
 	_, aud, hist := NewTestAuditLog(t, 10)
 
 	// compute the hash of the initial STR for later lookups
-	dirInitHash := computeInitSTRHash(hist[0])
+	dirInitHash := ComputeDirectoryIdentity(hist[0])
 
 	// also test the epoch range
 	_, err := aud.GetObservedSTRs(&AuditingRequest{
