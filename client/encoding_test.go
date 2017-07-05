@@ -1,9 +1,11 @@
 package client
 
 import (
+	"bytes"
 	"encoding/json"
 	"testing"
 
+	"github.com/coniks-sys/coniks-go/keyserver"
 	"github.com/coniks-sys/coniks-go/protocol"
 )
 
@@ -30,5 +32,18 @@ func TestUnmarshalMalformedErrorResponse(t *testing.T) {
 	if res.Error != protocol.ErrMalformedDirectoryMessage {
 		t.Error("Expect error", protocol.ErrMalformedDirectoryMessage,
 			"got", res.Error)
+	}
+}
+
+func TestUnmarshalSampleMessage(t *testing.T) {
+	d, _ := protocol.NewTestDirectory(t, true)
+	res, _ := d.Register(&protocol.RegistrationRequest{
+		Username: "alice",
+		Key:      []byte("key")})
+	msg, _ := keyserver.MarshalResponse(res)
+	response := UnmarshalResponse(protocol.RegistrationType, []byte(msg))
+	str := response.DirectoryResponse.(*protocol.DirectoryProof).STR
+	if !bytes.Equal(d.LatestSTR().Serialize(), str.Serialize()) {
+		t.Error("Cannot unmarshal Associate Data properly")
 	}
 }

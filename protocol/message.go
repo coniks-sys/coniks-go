@@ -13,7 +13,6 @@ const (
 	KeyLookupInEpochType
 	MonitoringType
 	AuditType
-	AuditInEpochType
 )
 
 // A Request message defines the data a CONIKS client must send to a CONIKS
@@ -33,10 +32,10 @@ type Request struct {
 // The response to a successful request is a DirectoryProof with a TB for
 // the requested username and public key.
 type RegistrationRequest struct {
-	Username               string `json:"username"`
-	Key                    []byte `json:"key"`
-	AllowUnsignedKeychange bool   `json:"allow_unsigned_key_change,omitempty"`
-	AllowPublicLookup      bool   `json:"allow_public_lookup,omitempty"`
+	Username               string
+	Key                    []byte
+	AllowUnsignedKeychange bool `json:",omitempty"`
+	AllowPublicLookup      bool `json:",omitempty"`
 }
 
 // A KeyLookupRequest is a message with a username as a string
@@ -49,7 +48,7 @@ type RegistrationRequest struct {
 // the requested username was registered during the latest epoch (i.e.
 // the new binding hasn't been committed to the directory).
 type KeyLookupRequest struct {
-	Username string `json:"username"`
+	Username string
 }
 
 // A KeyLookupInEpochRequest is a message with a username as a string and
@@ -63,8 +62,8 @@ type KeyLookupRequest struct {
 // of length 1 containing the auth path for the requested Epoch, and a list
 // of STRs covering the epoch range [Epoch, d.LatestSTR().Epoch].
 type KeyLookupInEpochRequest struct {
-	Username string `json:"username"`
-	Epoch    uint64 `json:"epoch"`
+	Username string
+	Epoch    uint64
 }
 
 // A MonitoringRequest is a message with a username as a string and the
@@ -87,9 +86,24 @@ type KeyLookupInEpochRequest struct {
 // which can be used to verify the inclusion of the binding after
 // registration.
 type MonitoringRequest struct {
-	Username   string `json:"username"`
-	StartEpoch uint64 `json:"start_epoch"`
-	EndEpoch   uint64 `json:"end_epoch"`
+	Username   string
+	StartEpoch uint64
+	EndEpoch   uint64
+}
+
+// An AuditingRequest is a message with a CONIKS key directory's initial
+// STR hash as a string, and a StartEpoch and an EndEpoch as uint64's
+// that a CONIKS client sends to a CONIKS auditor to request the given
+// directory's STRs for the given epoch range. To obtain a single STR,
+// the client must set StartEpoch = EndEpoch in the request.
+//
+// The response to a successful request is an STRHistoryRange with
+// a list of STRs covering the epoch range [StartEpoch, EndEpoch],
+// inclusively.
+type AuditingRequest struct {
+	DirInitSTRHash string
+	StartEpoch     uint64
+	EndEpoch       uint64
 }
 
 // An AuditingRequest is a message with a CONIKS key directory's address
@@ -140,7 +154,7 @@ type DirectoryResponse interface{}
 // type upon a RegistrationRequest or a KeyLookupRequest.
 type DirectoryProof struct {
 	AP  *m.AuthenticationPath
-	STR *m.SignedTreeRoot
+	STR *DirSTR
 	TB  *TemporaryBinding `json:",omitempty"`
 }
 
@@ -151,7 +165,16 @@ type DirectoryProof struct {
 // MonitoringRequest.
 type DirectoryProofs struct {
 	AP  []*m.AuthenticationPath
-	STR []*m.SignedTreeRoot
+	STR []*DirSTR
+}
+
+// An STRHistoryRange response includes a list of signed tree roots
+// STR representing a range of the STR hash chain. If the range only
+// covers the latest epoch, the list only contains a single STR.
+// A CONIKS auditor returns this DirectoryResponse type upon an
+// AudutingRequest.
+type STRHistoryRange struct {
+	STR []*DirSTR
 }
 
 // An ObservedSTR response includes a single signed tree root
@@ -177,8 +200,7 @@ func NewErrorResponse(e ErrorCode) *Response {
 
 var _ DirectoryResponse = (*DirectoryProof)(nil)
 var _ DirectoryResponse = (*DirectoryProofs)(nil)
-var _ DirectoryResponse = (*ObservedSTR)(nil)
-var _ DirectoryResponse = (*ObservedSTRs)(nil)
+var _ DirectoryResponse = (*STRHistoryRange)(nil)
 
 // NewRegistrationProof creates the response message a CONIKS directory
 // sends to a client upon a RegistrationRequest,
@@ -189,7 +211,7 @@ var _ DirectoryResponse = (*ObservedSTRs)(nil)
 //
 // See directory.Register() for details on the contents of the created
 // DirectoryProof.
-func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
+func NewRegistrationProof(ap *m.AuthenticationPath, str *DirSTR,
 	tb *TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
 	return &Response{
 		Error: e,
@@ -210,7 +232,7 @@ func NewRegistrationProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 //
 // See directory.KeyLookup() for details on the contents of the created
 // DirectoryProof.
-func NewKeyLookupProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
+func NewKeyLookupProof(ap *m.AuthenticationPath, str *DirSTR,
 	tb *TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
 	return &Response{
 		Error: e,
@@ -232,7 +254,7 @@ func NewKeyLookupProof(ap *m.AuthenticationPath, str *m.SignedTreeRoot,
 // See directory.KeyLookupInEpoch() for details on the contents of the
 // created DirectoryProofs.
 func NewKeyLookupInEpochProof(ap *m.AuthenticationPath,
-	str []*m.SignedTreeRoot, e ErrorCode) (*Response, ErrorCode) {
+	str []*DirSTR, e ErrorCode) (*Response, ErrorCode) {
 	aps := append([]*m.AuthenticationPath{}, ap)
 	return &Response{
 		Error: e,
@@ -252,7 +274,7 @@ func NewKeyLookupInEpochProof(ap *m.AuthenticationPath,
 // See directory.Monitor() for details on the contents of the created
 // DirectoryProofs.
 func NewMonitoringProof(ap []*m.AuthenticationPath,
-	str []*m.SignedTreeRoot) (*Response, ErrorCode) {
+	str []*DirSTR) (*Response, ErrorCode) {
 	return &Response{
 		Error: ReqSuccess,
 		DirectoryResponse: &DirectoryProofs{
@@ -262,35 +284,18 @@ func NewMonitoringProof(ap []*m.AuthenticationPath,
 	}, ReqSuccess
 }
 
-// NewObservedSTR creates the response message a CONIKS auditor
-// sends to a client, or a CONIKS directory sends to an auditor,
-// upon an AuditingRequest, and returns a Response containing an ObservedSTR struct.
-// auditlog.GetObservedSTR(), or directory.GetLatestSTR(), passes the signed
-// tree root for the directory's latest str.
-//
-// See auditlog.Audit() for details on the contents of the created
-// ObservedSTR.
-func NewObservedSTR(str *m.SignedTreeRoot) (*Response, ErrorCode) {
-	return &Response{
-		Error: ReqSuccess,
-		DirectoryResponse: &ObservedSTR{
-			STR: str,
-		},
-	}, ReqSuccess
-}
-
-// NewObservedSTRs creates the response message a CONIKS auditor
-// sends to a client upon an AuditingInEpochRequest,
-// and returns a Response containing an ObservedSTRs struct.
-// auditlog.AuditInEpoch() passes a list of signed tree roots
+// NewSTRHistoryRange creates the response message a CONIKS auditor
+// sends to a client upon an AuditingRequest,
+// and returns a Response containing an STRHistoryRange struct.
+// auditlog.GetObservedSTRs() passes a list of one or more signed tree roots
 // that the auditor observed for the requested range of epochs str.
 //
-// See auditlog.AuditInEpoch() for details on the contents of the created
-// ObservedSTRs.
-func NewObservedSTRs(str []*m.SignedTreeRoot) (*Response, ErrorCode) {
+// See auditlog.GetObservedSTRs() for details on the contents of the created
+// STRHistoryRange.
+func NewSTRHistoryRange(str []*DirSTR) (*Response, ErrorCode) {
 	return &Response{
 		Error: ReqSuccess,
-		DirectoryResponse: &ObservedSTRs{
+		DirectoryResponse: &STRHistoryRange{
 			STR: str,
 		},
 	}, ReqSuccess
@@ -309,13 +314,10 @@ func (msg *Response) validate() error {
 	case *DirectoryProofs:
 		// TODO: also do above assertions here
 		return nil
-	case *ObservedSTR:
-		if df.STR == nil {
-			return ErrMalformedAuditorMessage
-		}
-		return nil
-	case *ObservedSTRs:
-		if df.STR == nil || len(df.STR) < 1 {
+	case *STRHistoryRange:
+		// treat the STRHistoryRange as an auditor response
+		// bc validate is only called by a client
+		if len(df.STR) == 0 {
 			return ErrMalformedAuditorMessage
 		}
 		return nil

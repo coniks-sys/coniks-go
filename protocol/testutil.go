@@ -28,3 +28,29 @@ func NewTestDirectory(t *testing.T, useTBs bool) (
 	d := NewDirectory(1, vrfKey, signKey, 10, useTBs)
 	return d, pk
 }
+
+// NewTestAuditLog creates a ConiksAuditLog and corresponding
+// ConiksDirectory used for testing auditor-side CONIKS operations.
+// The new audit log can be initialized with the number of epochs
+// indicating the length of the directory history with which to
+// initialize the log; if numEpochs > 0, the history contains numEpochs+1
+// STRs as it always includes the STR after the last directory update
+func NewTestAuditLog(t *testing.T, numEpochs int) (*ConiksDirectory, ConiksAuditLog, map[uint64]*DirSTR) {
+	d, pk := NewTestDirectory(t, true)
+	aud := NewAuditLog()
+
+	hist := make(map[uint64]*DirSTR)
+	for ep := 0; ep < numEpochs; ep++ {
+		hist[d.LatestSTR().Epoch] = d.LatestSTR()
+		d.Update()
+	}
+	// always include the actual latest STR
+	hist[d.LatestSTR().Epoch] = d.LatestSTR()
+
+	err := aud.Insert("test-server", pk, hist)
+	if err != nil {
+		t.Fatalf("Error inserting a new history with %d STRs", numEpochs+1)
+	}
+
+	return d, aud, hist
+}

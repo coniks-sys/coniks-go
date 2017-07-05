@@ -60,6 +60,11 @@ func mkConfig(dir string) {
 			VRFKeyPath:    "vrf.priv",
 			SignKeyPath:   "sign.priv",
 		},
+		Logger: &utils.LoggerConfig{
+			EnableStacktrace: true,
+			Environment:      "development",
+			Path:             "coniksserver.log",
+		},
 	}
 
 	var confBuf bytes.Buffer

@@ -328,12 +328,32 @@ func benchPADUpdate(b *testing.B, entries uint64) {
 	valuePrefix := []byte("value")
 	snapLen := uint64(10)
 	noUpdate := uint64(entries + 1)
+	// This takes a lot of time for a large number of entries:
 	pad, err := createPad(uint64(entries), keyPrefix, valuePrefix, snapLen, noUpdate)
 	if err != nil {
 		b.Fatal(err)
 	}
+	// build the tree once:
+	pad.Update(nil)
+
+	// Insert 1000 additional entries (as described in section 5.3):
+	var i uint64
+	for i = 0; i < 1000; i++ {
+		key := keyPrefix + string(i+entries)
+		value := append(valuePrefix, byte(i+entries))
+		if err := pad.Set(key, value); err != nil {
+			b.Fatal(err)
+		}
+	}
+	// clone current PAD's state:
+	orgTree := pad.tree.Clone()
 	b.ResetTimer()
+
+	// now benchmark re-hashing the tree:
 	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		pad.tree = orgTree.Clone()
+		b.StartTimer()
 		pad.Update(nil)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/coniks-sys/coniks-go/client"
@@ -17,9 +18,13 @@ const help = "- register [name] [key]:\r\n" +
 	"	Register a new name-to-key binding on the CONIKS-server.\r\n" +
 	"- lookup [name]:\r\n" +
 	"	Lookup the key of some known contact or your own bindings.\r\n" +
+	"- enable timestamp:\r\n" +
+	"	Print timestamp of format <15:04:05.999999999> along with the result.\r\n" +
+	"- disable timestamp:\r\n" +
+	"	Disable timestamp printing.\r\n" +
 	"- help:\r\n" +
 	"	Display this message.\r\n" +
-	"- exit:\r\n" +
+	"- exit, q:\r\n" +
 	"	Close the REPL and exit the client."
 
 var runCmd = &cobra.Command{
@@ -35,9 +40,11 @@ func init() {
 	RootCmd.AddCommand(runCmd)
 	runCmd.Flags().StringP("config", "c", "config.toml",
 		"Config file for the client (contains the server's initial public key etc).")
+	runCmd.Flags().BoolP("debug", "d", false, "Turn on debugging mode")
 }
 
 func run(cmd *cobra.Command) {
+	isDebugging, _ := strconv.ParseBool(cmd.Flag("debug").Value.String())
 	conf := loadConfigOrExit(cmd)
 	cc := p.NewCC(nil, true, conf.SigningPubKey)
 
@@ -50,41 +57,54 @@ func run(cmd *cobra.Command) {
 	for {
 		line, err := term.ReadLine()
 		if err != nil {
-			writeLineInRawMode(term, err.Error())
+			writeLineInRawMode(term, err.Error(), isDebugging)
 			return
 		}
 
 		args := strings.Fields(line)
 		if len(args) < 1 {
-			writeLineInRawMode(term, `[!] Type "help" for more information.`)
+			writeLineInRawMode(term, `[!] Type "help" for more information.`, isDebugging)
 			continue
 		}
 		cmd := args[0]
 
 		switch cmd {
-		case "exit":
-			writeLineInRawMode(term, "[+] See ya.")
+		case "exit", "q":
+			writeLineInRawMode(term, "[+] See ya.", isDebugging)
 			return
 		case "help":
-			writeLineInRawMode(term, help)
-			continue
+			writeLineInRawMode(term, help, false) // turn off debugging mode for this command
+		case "enable", "disable":
+			if len(args) != 2 {
+				writeLineInRawMode(term, "[!] Unrecognized command: "+line, isDebugging)
+				continue
+			}
+			switch args[1] {
+			case "timestamp":
+				if cmd == "enable" {
+					isDebugging = true
+				} else {
+					isDebugging = false
+				}
+			default:
+				writeLineInRawMode(term, "[!] Unrecognized command: "+line, isDebugging)
+			}
 		case "register":
 			if len(args) != 3 {
-				writeLineInRawMode(term, "[!] Incorrect number of args to register.")
+				writeLineInRawMode(term, "[!] Incorrect number of args to register.", isDebugging)
 				continue
 			}
 			msg := register(cc, conf, args[1], args[2])
-			writeLineInRawMode(term, "[+] "+msg)
+			writeLineInRawMode(term, "[+] "+msg, isDebugging)
 		case "lookup":
 			if len(args) != 2 {
-				writeLineInRawMode(term, "[!] Incorrect number of args to lookup.")
+				writeLineInRawMode(term, "[!] Incorrect number of args to lookup.", isDebugging)
 				continue
 			}
 			msg := keyLookup(cc, conf, args[1])
-			writeLineInRawMode(term, "[+] "+msg)
+			writeLineInRawMode(term, "[+] "+msg, isDebugging)
 		default:
-			writeLineInRawMode(term, "[!] Unrecognized command: "+cmd)
-			continue
+			writeLineInRawMode(term, "[!] Unrecognized command: "+cmd, isDebugging)
 		}
 	}
 }
@@ -170,7 +190,7 @@ func keyLookup(cc *p.ConsistencyChecks, conf *client.Config, name string) string
 		return ("Invalid config!")
 	}
 
-	response := client.UnmarshalResponse(p.RegistrationType, res)
+	response := client.UnmarshalResponse(p.KeyLookupType, res)
 	if key, ok := cc.Bindings[name]; ok {
 		err = cc.HandleResponse(p.KeyLookupType, response, name, []byte(key))
 	} else {

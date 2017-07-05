@@ -39,7 +39,7 @@ type ConsistencyChecks struct {
 // NewCC creates an instance of ConsistencyChecks using
 // a CONIKS directory's pinned STR at epoch 0, or
 // the consistency state read from persistent storage.
-func NewCC(savedSTR *m.SignedTreeRoot, useTBs bool, signKey sign.PublicKey) *ConsistencyChecks {
+func NewCC(savedSTR *DirSTR, useTBs bool, signKey sign.PublicKey) *ConsistencyChecks {
 	// TODO: see #110
 	if !useTBs {
 		panic("[coniks] Currently the server is forced to use TBs")
@@ -100,7 +100,7 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 }
 
 func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
-	var str *m.SignedTreeRoot
+	var str *DirSTR
 	switch requestType {
 	case RegistrationType, KeyLookupType:
 		str = msg.DirectoryResponse.(*DirectoryProof).STR
@@ -185,12 +185,9 @@ func (cc *ConsistencyChecks) verifyKeyLookup(msg *Response,
 	return CheckPassed
 }
 
-func verifyAuthPath(uname string, key []byte,
-	ap *m.AuthenticationPath,
-	str *m.SignedTreeRoot) error {
-
+func verifyAuthPath(uname string, key []byte, ap *m.AuthenticationPath, str *DirSTR) error {
 	// verify VRF Index
-	vrfKey := GetPolicies(str).VrfPublicKey
+	vrfKey := str.Policies.VrfPublicKey
 	if !vrfKey.Verify([]byte(uname), ap.LookupIndex, ap.VrfProof) {
 		return CheckBadVRFProof
 	}
@@ -260,8 +257,7 @@ func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
 
 // verifyFulfilledPromise verifies issued TBs were inserted
 // in the directory as promised.
-func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string,
-	str *m.SignedTreeRoot,
+func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string, str *DirSTR,
 	ap *m.AuthenticationPath) error {
 	// FIXME: Which epoch did this lookup happen in?
 	if tb, ok := cc.TBs[uname]; ok {
