@@ -14,7 +14,7 @@ type auditorState struct {
 }
 
 func newAuditorState(signKey sign.PublicKey, initSTR *DirSTR) *auditorState {
-	a := new (auditorState)
+	a := new(auditorState)
 	a.signKey = signKey
 	a.latestSTR = initSTR
 	return a

@@ -186,7 +186,7 @@ func TestGetObservedSTRUnknown(t *testing.T) {
 	if err != ReqUnknownDirectory {
 		t.Fatal("Expect ReqUnknownDirectory for latest STR")
 	}
-  
+
 	_, err = aud.GetObservedSTRs(&AuditingRequest{
 		DirInitSTRHash: "unknown",
 		StartEpoch:     uint64(6),

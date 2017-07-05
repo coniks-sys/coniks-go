@@ -11,7 +11,7 @@ import (
 
 type directoryHistory struct {
 	*auditorState
-	name string
+	name      string
 	snapshots map[uint64]*DirSTR
 }
 
@@ -194,7 +194,7 @@ func (l ConiksAuditLog) GetObservedSTRs(req *AuditingRequest) (*Response,
 		return NewErrorResponse(ErrMalformedClientMessage),
 			ErrMalformedClientMessage
 	}
-  
+
 	var strs []*DirSTR
 	for ep := req.StartEpoch; ep <= req.EndEpoch; ep++ {
 		str := h.snapshots[ep]
