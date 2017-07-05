@@ -6,81 +6,23 @@ package protocol
 
 import (
 	"github.com/coniks-sys/coniks-go/crypto/sign"
-	m "github.com/coniks-sys/coniks-go/merkletree"
 )
 
 type auditorState struct {
 	signKey   sign.PublicKey
-	latestSTR *m.SignedTreeRoot
+	latestSTR *DirSTR
 }
 
-func newAuditorState(signKey sign.PublicKey, latest *m.SignedTreeRoot) *auditorState {
-	a := &auditorState{
-		signKey: signKey,
-		latestSTR: latest,
-	}
+func newAuditorState(signKey sign.PublicKey, initSTR *DirSTR) *auditorState {
+	a := new (auditorState)
+	a.signKey = signKey
+	a.latestSTR = initSTR
 	return a
 }
 
-// handleDirectorySTRs is supposed to be used by CONIKS clients to
-// handle auditor responses, and by CONIKS auditors to handle directory
-// responses.
-func (a *auditorState) HandleDirectorySTRs(requestType int, msg *Response,
-	e error, isClient bool) error {
-	if err := msg.validate(); err != nil {
-		return e
-	}
-
-	switch requestType {
-	case AuditType:
-		if _, ok := msg.DirectoryResponse.(*ObservedSTR); !ok {
-			return e
-		}
-	case AuditInEpochType:
-		// this is the default request type for an auditor
-		// since the auditor conservatively assumes it may
-		// have missed epochs
-
-		if _, ok := msg.DirectoryResponse.(*ObservedSTRs); !ok {
-			return e
-		}
-	default:
-		panic("[coniks] Unknown auditing request type")
-	}
-
-	// clients only care about comparing the STR with the savedSTR
-	// TODO: if the auditor has returned a more recent STR,
-	// should the client update its savedSTR? Should this
-	// force a new round of monitoring?
-	if isClient {
-		a.compareSavedSTR(requestType, msg)
-	}
-
-	// we assume the requestType is AuditInEpochType if we're here
-
-	// verify the timeliness of the STR if we're the auditor
-	// check the consistency of the newly received STRs
-	if err := a.verifySTRConsistencyRange(strs); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// verifySTR checks whether the received STR is the same with
-// the saved STR in the audit state using reflect.DeepEqual().
-// FIXME: check whether the STR was issued on time and whatnot.
-// Maybe it has something to do w/ #81 and client transitioning between epochs.
-// Try to verify w/ what's been saved
-func (a *auditorState) verifySTR(str *m.SignedTreeRoot) error {
-	return a.compareSavedSTR(str)
-}
-
-func (a *auditorState) compareSavedSTR(str *m.SignedTreeRoot) error {
-	if reflect.DeepEqual(a.latestSTR, str) {
-		return nil
-	}
-	return CheckBadSTR
+type auditor interface {
+	updateLatestSTR(*DirSTR)
+	HandleSTRResponse(int, *Response, string) ErrorCode
 }
 
 // verifySTRConsistency checks the consistency between 2 snapshots.
@@ -90,12 +32,12 @@ func (a *auditorState) compareSavedSTR(str *m.SignedTreeRoot) error {
 // in its history.
 // In the case of a client-side consistency check, verifySTRConsistency()
 // should not verify the hash chain using the STR stored in cc.
-func (a *auditorState) verifySTRConsistency(str *m.SignedTreeRoot) error {
+func (a *auditorState) verifySTRConsistency(prevSTR, str *DirSTR) error {
 	// verify STR's signature
 	if !a.signKey.Verify(str.Serialize(), str.Signature) {
 		return CheckBadSignature
 	}
-	if str.VerifyHashChain(a.latestSTR) {
+	if str.VerifyHashChain(prevSTR) {
 		return nil
 	}
 
@@ -103,6 +45,21 @@ func (a *auditorState) verifySTRConsistency(str *m.SignedTreeRoot) error {
 	return CheckBadSTR
 }
 
-func (a *auditorState) verifySTRConsistencyRange(strs []*m.SignedTreeRoot) error {
-	// FIXME: implement me
+func (a *auditorState) verifySTRConsistencyRange(strs []*DirSTR) error {
+
+	prev := a.latestSTR
+	for i := 0; i < len(strs); i++ {
+		str := strs[i]
+
+		// verify the consistency of each STR in the range
+		err := a.verifySTRConsistency(prev, str)
+
+		if err != nil {
+			return err
+		}
+
+		prev = str
+	}
+
+	return nil
 }

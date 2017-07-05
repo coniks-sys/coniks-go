@@ -26,15 +26,17 @@ import (
 // subsequent responses from the ConiksDirectory to any
 // client request.
 type ConsistencyChecks struct {
-	// auditState stores the latest verified signed tree root
+	// the auditor state stores the latest verified signed tree root
 	// as well as the server's signing key
-	auditState *auditorState
+	*auditorState
 	Bindings map[string][]byte
 
 	// extensions settings
 	useTBs bool
 	TBs    map[string]*TemporaryBinding
 }
+
+var _ auditor = (*ConsistencyChecks)(nil)
 
 // NewCC creates an instance of ConsistencyChecks using
 // a CONIKS directory's pinned STR at epoch 0, or
@@ -44,15 +46,59 @@ func NewCC(savedSTR *DirSTR, useTBs bool, signKey sign.PublicKey) *ConsistencyCh
 	if !useTBs {
 		panic("[coniks] Currently the server is forced to use TBs")
 	}
+	a := newAuditorState(signKey, savedSTR)
 	cc := &ConsistencyChecks{
-		auditState: newAuditorState(signKey, savedSTR),
-		Bindings: make(map[string][]byte),
-		useTBs:   useTBs,
+		a,
+		make(map[string][]byte),
+		useTBs,
+		nil,
 	}
 	if useTBs {
 		cc.TBs = make(map[string]*TemporaryBinding)
 	}
 	return cc
+}
+
+func (cc *ConsistencyChecks) updateLatestSTR(newLatest *DirSTR) {
+	cc.latestSTR = newLatest
+}
+
+// HandleSTRResponse verifies an auditor's response for an  AuditingRequest.
+func (cc *ConsistencyChecks) HandleSTRResponse(requestType int, msg *Response, name string) ErrorCode {
+	if err := msg.validate(); err != nil {
+		return err.(ErrorCode)
+	}
+
+	switch requestType {
+	case AuditType:
+		if _, ok := msg.DirectoryResponse.(*STRHistoryRange); !ok {
+			return ErrMalformedAuditorMessage
+		}
+	default:
+		panic("[coniks] Unknown auditing request type")
+	}
+
+	// check the consistency for each
+
+	// first compare to the saved STR
+
+	// clients only care about comparing the STR with the savedSTR
+	// TODO: if the auditor has returned a more recent STR,
+	// should the client update its savedSTR? Should this
+	// force a new round of monitoring?
+	//if isClient {
+	//	a.compareSavedSTR(requestType, msg)
+	//}
+
+	// we assume the requestType is AuditInEpochType if we're here
+
+	// verify the timeliness of the STR if we're the auditor
+	// check the consistency of the newly received STRs
+	// if err := cc.verifySTRConsistencyRange(strs); err != nil {
+	//	return err
+	//}
+
+	return CheckPassed
 }
 
 // HandleResponse verifies the directory's response for a request.
@@ -105,15 +151,16 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	case RegistrationType, KeyLookupType:
 		str = msg.DirectoryResponse.(*DirectoryProof).STR
 		// First response
-		if cc.auditState.latestSTR == nil {
-			cc.auditState.latestSTR = str
+		// FIXME: the initial STR is pinned in the client
+		if cc.latestSTR == nil {
+			cc.updateLatestSTR(str)
 			return nil
 		}
-		if err := cc.auditState.verfySTR(str); err == nil {
+		if err := cc.verifySTR(str); err == nil {
 			return nil
 		}
 		// Otherwise, expect that we've entered a new epoch
-		if err := cc.auditState.verifySTRConsistency(str); err != nil {
+		if err := cc.verifySTRConsistency(cc.latestSTR, str); err != nil {
 			return err
 		}
 
@@ -122,8 +169,20 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	}
 
 	// And update the saved STR
-	cc.auditState.latestSTR = str
+	cc.updateLatestSTR(str)
 	return nil
+}
+
+// verifySTR checks whether the received STR is the same with
+// the saved STR in the audit state using reflect.DeepEqual().
+// FIXME: check whether the STR was issued on time and whatnot.
+// Maybe it has something to do w/ #81 and client transitioning between epochs.
+// Try to verify w/ what's been saved
+func (cc *ConsistencyChecks) verifySTR(str *DirSTR) error {
+	if reflect.DeepEqual(cc.latestSTR, str) {
+		return nil
+	}
+	return CheckBadSTR
 }
 
 func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *Response,
@@ -290,7 +349,7 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(df *DirectoryProof,
 	}
 
 	// verify TB's Signature
-	if !cc.auditState.signKey.Verify(tb.Serialize(str.Signature), tb.Signature) {
+	if !cc.signKey.Verify(tb.Serialize(str.Signature), tb.Signature) {
 		return CheckBadSignature
 	}
 

@@ -106,34 +106,6 @@ type AuditingRequest struct {
 	EndEpoch       uint64
 }
 
-// An AuditingRequest is a message with a CONIKS key directory's address
-// as a string that a CONIKS client sends to a CONIKS auditor, or a CONIKS auditor
-// sends to a CONIKS directory, to request the given directory's latest STR.
-// If the client/auditor needs to request a directory's STR for a prior epoch, it
-// must send an AuditingInEpochRequest.
-//
-// The response to a successful request is an ObservedSTR.
-type AuditingRequest struct {
-	DirectoryAddr string `json:"directory_addr"`
-}
-
-// An AuditingInEpochRequest is a message with a key directory's address
-// as a string and an epoch as a uint64 that a CONIKS client sends to
-// a CONIKS auditor, or a CONIKS auditor sends to a CONIKS directory,
-// to retrieve the STR for the directory in
-// the given epoch. The client/auditor sends this request type when it needs to
-// audit a directory's STR for a prior epoch (i.e. as part of a
-// key lookup in epoch check, a monitoring check, or an auditor update).
-// The client/auditor can send an AuditingRequest if it needs to audit a
-// directory's STR for its latest epoch.
-//
-// The response to a successful request is an ObservedSTRs with
-// a list of STRs covering the epoch range [Epoch, d.LatestSTR().Epoch].
-type AuditingInEpochRequest struct {
-	DirectoryAddr string `json:"directory_addr"`
-	Epoch         uint64 `json:"epoch"`
-}
-
 // A Response message indicates the result of a CONIKS client request
 // with an appropriate error code, and defines the set of cryptographic
 // proofs a CONIKS directory must return as part of its response.
@@ -175,20 +147,6 @@ type DirectoryProofs struct {
 // AudutingRequest.
 type STRHistoryRange struct {
 	STR []*DirSTR
-}
-
-// An ObservedSTR response includes a single signed tree root
-// STR. A CONIKS auditor returns this DirectoryResponse type upon an
-// AuditingRequest.
-type ObservedSTR struct {
-	STR *m.SignedTreeRoot
-}
-
-// An ObservedSTRs response includes a list of signed tree roots
-// STR. A CONIKS auditor returns this DirectoryResponse type upon an
-// AuditingInEpochRequest.
-type ObservedSTRs struct {
-	STR []*m.SignedTreeRoot
 }
 
 // NewErrorResponse creates a new response message indicating the error

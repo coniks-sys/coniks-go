@@ -10,11 +10,12 @@ import (
 )
 
 type directoryHistory struct {
-	name      string
-	signKey   sign.PublicKey
+	*auditorState
+	name string
 	snapshots map[uint64]*DirSTR
-	latestSTR *DirSTR
 }
+
+var _ auditor = (*directoryHistory)(nil)
 
 // A ConiksAuditLog maintains the histories
 // of all CONIKS directories known to a CONIKS auditor,
@@ -26,21 +27,23 @@ type directoryHistory struct {
 // epoch.
 type ConiksAuditLog map[string]*directoryHistory
 
+// caller validates that initSTR is for epoch 0
+func newDirectoryHistory(name string, signKey sign.PublicKey, initSTR *DirSTR) *directoryHistory {
+	a := newAuditorState(signKey, initSTR)
+	h := &directoryHistory{
+		a,
+		name,
+		make(map[uint64]*DirSTR),
+	}
+	h.updateLatestSTR(initSTR)
+	return h
+}
+
 // updateLatestSTR inserts a new STR into a directory history;
 // assumes the STR has been validated by the caller
 func (h *directoryHistory) updateLatestSTR(newLatest *DirSTR) {
 	h.snapshots[newLatest.Epoch] = newLatest
 	h.latestSTR = newLatest
-}
-
-// caller validates that initSTR is for epoch 0
-func newDirectoryHistory(name string, signKey sign.PublicKey, initSTR *DirSTR) *directoryHistory {
-	h := new(directoryHistory)
-	h.name = name
-	h.signKey = signKey
-	h.snapshots = make(map[uint64]*DirSTR)
-	h.updateLatestSTR(initSTR)
-	return h
 }
 
 // NewAuditLog constructs a new ConiksAuditLog. It creates an empty
@@ -105,7 +108,7 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 	endEp := uint64(len(hist))
 
 	// This loop automatically catches if hist is malformed
-	// (i.e. hist is missing an epoch between 0 and the latest given)
+	// (i.e. hist is missing an epoch between 1 and the latest given)
 	for ep := startEp; ep < endEp; ep++ {
 		str := hist[ep]
 		if str == nil {
@@ -114,7 +117,7 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 
 		// verify the consistency of each new STR before inserting
 		// into the audit log
-		err := verifySTRConsistency(signKey, h.snapshots[ep-1], str)
+		err := h.verifySTRConsistency(h.snapshots[ep-1], str)
 
 		if err != nil {
 			return err
@@ -149,7 +152,7 @@ func (l ConiksAuditLog) Update(dirInitHash string, newSTR *DirSTR) error {
 
 	h := l[dirInitHash]
 
-	if err := verifySTRConsistency(h.signKey, h.latestSTR, newSTR); err != nil {
+	if err := h.verifySTRConsistency(h.latestSTR, newSTR); err != nil {
 		return err
 	}
 
@@ -199,4 +202,9 @@ func (l ConiksAuditLog) GetObservedSTRs(req *AuditingRequest) (*Response,
 	}
 
 	return NewSTRHistoryRange(strs)
+}
+
+func (h *directoryHistory) HandleSTRResponse(requestType int, msg *Response, name string) ErrorCode {
+	// FIXME: to be implemented when server-auditor protocol is implemented
+	return CheckPassed
 }
