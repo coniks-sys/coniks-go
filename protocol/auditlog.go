@@ -10,7 +10,7 @@ import (
 )
 
 type directoryHistory struct {
-	name      string
+	dirName   string
 	signKey   sign.PublicKey
 	snapshots map[uint64]*DirSTR
 	latestSTR *DirSTR
@@ -20,7 +20,7 @@ type directoryHistory struct {
 // of all CONIKS directories known to a CONIKS auditor,
 // indexing the histories by the hash of a directory's initial
 // STR (specifically, the hash of the STR's signature as a string).
-// Each history includes the directory's domain name as a string, its
+// Each history includes the directory's domain dirName as a string, its
 // public signing key enabling the auditor to verify the corresponding
 // signed tree roots, and a map with the snapshots for each observed
 // epoch.
@@ -34,9 +34,9 @@ func (h *directoryHistory) updateLatestSTR(newLatest *DirSTR) {
 }
 
 // caller validates that initSTR is for epoch 0
-func newDirectoryHistory(name string, signKey sign.PublicKey, initSTR *DirSTR) *directoryHistory {
+func newDirectoryHistory(dirName string, signKey sign.PublicKey, initSTR *DirSTR) *directoryHistory {
 	h := new(directoryHistory)
-	h.name = name
+	h.dirName = dirName
 	h.signKey = signKey
 	h.snapshots = make(map[uint64]*DirSTR)
 	h.updateLatestSTR(initSTR)
@@ -47,29 +47,28 @@ func newDirectoryHistory(name string, signKey sign.PublicKey, initSTR *DirSTR) *
 // log; the auditor will add an entry for each CONIKS directory
 // the first time it observes an STR for that directory.
 func NewAuditLog() ConiksAuditLog {
-	l := make(map[string]*directoryHistory)
-	return l
+	return make(map[string]*directoryHistory)
 }
 
-// IsKnownDirectory checks to see if an entry for the directory
-// (indexed by the hash of its initial STR dirInitHash) exists
-// in the audit log l. IsKnownDirectory() does not
-// validate the entries themselves. It returns true if an entry exists,
-// and false otherwise.
-func (l ConiksAuditLog) IsKnownDirectory(dirInitHash string) bool {
-	h := l[dirInitHash]
-	if h != nil {
-		return true
-	}
-	return false
+// Set associates the given directoryHistory with the dirInitHash in the
+// ConiksAuditLog.
+func (l ConiksAuditLog) Set(dirInitHash string, dirHistory *directoryHistory) {
+	l[dirInitHash] = dirHistory
+}
+
+// Get retrieves the directory history for the given dirInitHash
+// from the ConiksAuditLog.
+func (l ConiksAuditLog) Get(dirInitHash string) (*directoryHistory, bool) {
+	h, ok := l[dirInitHash]
+	return h, ok
 }
 
 // Insert creates a new directory history for the key directory addr,
 // verifies the consistency of the STR history so far, and inserts it
 // into the audit log l if the checks pass.
 // The directory history is initialized with the key directory's
-// signing key signKey, and a list of STRs representing the
-// directory's STR history so far (as a map of epochs to STRs).
+// signing key signKey, and a list of snapshots snaps representing the
+// directory's STR history so far, in chronological order.
 // Insert() returns an ErrAuditLog if the auditor attempts to create
 // a new history for a known directory, an ErrMalformedDirectoryMessage
 // if oldSTRs is malformed, a CheckBadSignature or CheckBadSTR if there
@@ -80,54 +79,49 @@ func (l ConiksAuditLog) IsKnownDirectory(dirInitHash string) bool {
 // masomel: will probably want to write a more generic function
 // for "catching up" on a history in case an auditor misses epochs
 func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
-	hist map[uint64]*DirSTR) error {
+	snaps []*DirSTR) error {
 
 	// make sure we're getting an initial STR at the very least
-	if len(hist) < 1 && hist[0].Epoch != 0 {
+	if len(snaps) < 1 && snaps[0].Epoch != 0 {
 		return ErrMalformedDirectoryMessage
 	}
 
 	// compute the hash of the initial STR
-	dirInitHash := ComputeDirectoryIdentity(hist[0])
+	dirInitHash := ComputeDirectoryIdentity(snaps[0])
 
 	// error if we want to create a new entry for a directory
 	// we already know
-	if l.IsKnownDirectory(dirInitHash) {
+	h, ok := l.Get(dirInitHash)
+	if ok {
 		return ErrAuditLog
 	}
 
 	// create the new directory history
-	h := newDirectoryHistory(addr, signKey, hist[0])
+	h = newDirectoryHistory(addr, signKey, snaps[0])
 
 	// add each STR into the history
 	// start at 1 since we've inserted the initial STR above
-	startEp := uint64(1)
-	endEp := uint64(len(hist))
-
-	// This loop automatically catches if hist is malformed
-	// (i.e. hist is missing an epoch between 0 and the latest given)
-	for ep := startEp; ep < endEp; ep++ {
-		str := hist[ep]
-		if str == nil {
+	// This loop automatically catches if snaps is malformed
+	// (i.e. snaps is missing an epoch between 0 and the latest given)
+	for i := 1; i < len(snaps); i++ {
+		str := snaps[i]
+		if str == nil || str.Epoch != uint64(i) {
 			return ErrMalformedDirectoryMessage
 		}
 
 		// verify the consistency of each new STR before inserting
 		// into the audit log
-		err := verifySTRConsistency(signKey, h.snapshots[ep-1], str)
+		err := verifySTRConsistency(signKey, h.latestSTR, str)
 
 		if err != nil {
 			return err
 		}
 
-		h.snapshots[ep] = str
+		h.updateLatestSTR(snaps[i])
 	}
 
-	// Make sure to update the latestSTR
-	// in this particular call, the latestSTR has already been
-	// inserted into the snapshots map in the loop above
-	h.updateLatestSTR(hist[endEp-1])
-	l[dirInitHash] = h
+	// Finally, add the new history to the log
+	l.Set(dirInitHash, h)
 
 	return nil
 }
@@ -143,11 +137,10 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 func (l ConiksAuditLog) Update(dirInitHash string, newSTR *DirSTR) error {
 
 	// error if we want to update the entry for an addr we don't know
-	if !l.IsKnownDirectory(dirInitHash) {
+	h, ok := l.Get(dirInitHash)
+	if !ok {
 		return ErrAuditLog
 	}
-
-	h := l[dirInitHash]
 
 	if err := verifySTRConsistency(h.signKey, h.latestSTR, newSTR); err != nil {
 		return err
@@ -180,11 +173,10 @@ func (l ConiksAuditLog) GetObservedSTRs(req *AuditingRequest) (*Response,
 	ErrorCode) {
 
 	// make sure we have a history for the requested directory in the log
-	if !l.IsKnownDirectory(req.DirInitSTRHash) {
+	h, ok := l.Get(req.DirInitSTRHash)
+	if !ok {
 		return NewErrorResponse(ReqUnknownDirectory), ReqUnknownDirectory
 	}
-
-	h := l[req.DirInitSTRHash]
 
 	// make sure the request is well-formed
 	if req.EndEpoch > h.latestSTR.Epoch || req.StartEpoch > req.EndEpoch {
