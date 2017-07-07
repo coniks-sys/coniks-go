@@ -22,9 +22,9 @@ type directoryHistory struct {
 // STR (specifically, the hash of the STR's signature as a string).
 // Each history includes the directory's domain addr as a string, its
 // public signing key enabling the auditor to verify the corresponding
-// signed tree roots, and a map with the snapshots for each observed
-// epoch.
-type ConiksAuditLog map[string]*directoryHistory
+// signed tree roots, and a list with all observed snapshots in
+// chronological order.
+type ConiksAuditLog map[[crypto.HashSizeByte]byte]*directoryHistory
 
 // updateLatestSTR inserts a new STR into a directory history;
 // assumes the STR has been validated by the caller
@@ -39,7 +39,7 @@ func newDirectoryHistory(addr string, signKey sign.PublicKey, initSTR *DirSTR) *
 	h.addr = addr
 	h.signKey = signKey
 	h.snapshots = make(map[uint64]*DirSTR)
-	h.updateLatestSTR(initSTR)
+	h.latestSTR = nil
 	return h
 }
 
@@ -47,7 +47,7 @@ func newDirectoryHistory(addr string, signKey sign.PublicKey, initSTR *DirSTR) *
 // log; the auditor will add an entry for each CONIKS directory
 // the first time it observes an STR for that directory.
 func NewAuditLog() ConiksAuditLog {
-	return make(map[string]*directoryHistory)
+	return make(map[[crypto.HashSizeByte]byte]*directoryHistory)
 }
 
 // set associates the given directoryHistory with the directory identifier
@@ -65,16 +65,21 @@ func (l ConiksAuditLog) get(dirInitHash string) (*directoryHistory, bool) {
 	return h, ok
 }
 
-// Insert creates a new directory history for the key directory addr,
-// verifies the consistency of the STR history so far, and inserts it
-// into the audit log l if the checks pass.
+// updateLatestSTR inserts a new STR into a directory history;
+// assumes the STR has been validated by the caller
+func (h *directoryHistory) updateLatestSTR(newLatest *DirSTR) {
+	h.snapshots[newLatest.Epoch] = newLatest
+	h.latestSTR = newLatest
+}
+
+// Insert creates a new directory history for the key directory addr
+// and inserts it into the audit log l.
 // The directory history is initialized with the key directory's
 // signing key signKey, and a list of snapshots snaps representing the
 // directory's STR history so far, in chronological order.
 // Insert() returns an ErrAuditLog if the auditor attempts to create
 // a new history for a known directory, an ErrMalformedDirectoryMessage
-// if oldSTRs is malformed, a CheckBadSignature or CheckBadSTR if there
-// is an inconsistency in the history given in hist, and nil otherwise.
+// if oldSTRs is malformed, and nil otherwise.
 // Insert() only creates the initial entry in the log for addr. Use Update()
 // to insert newly observed STRs for addr in subsequent epochs.
 // FIXME: pass Response message as param
@@ -134,7 +139,7 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 // addr prior to its first call and thereby expects that an entry for addr
 // exists in the audit log l.
 // FIXME: pass Response message as param
-func (l ConiksAuditLog) Update(dirInitHash string, newSTR *DirSTR) error {
+func (l ConiksAuditLog) Update(dirInitHash [crypto.HashSizeByte]byte, newSTR *DirSTR) error {
 
 	// error if we want to update the entry for an addr we don't know
 	h, ok := l.get(dirInitHash)

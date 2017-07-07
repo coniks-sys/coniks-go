@@ -1,6 +1,9 @@
 package protocol
 
-import "testing"
+import (
+	"github.com/coniks-sys/coniks-go/crypto"
+	"testing"
+)
 
 func TestInsertEmptyHistory(t *testing.T) {
 	// create basic test directory and audit log with 1 STR
@@ -44,7 +47,8 @@ func TestUpdateUnknownHistory(t *testing.T) {
 
 	// let's make sure that we can't update a history for an unknown
 	// directory in our log
-	err := aud.Update("unknown", d.LatestSTR())
+	var unknown [crypto.HashSizeByte]byte
+	err := aud.Update(unknown, d.LatestSTR())
 	if err != ErrAuditLog {
 		t.Fatal("Expected an ErrAuditLog when updating an unknown server history")
 	}
@@ -179,8 +183,9 @@ func TestGetObservedSTRUnknown(t *testing.T) {
 	// create basic test directory and audit log with 11 STRs
 	d, aud, _ := NewTestAuditLog(t, 10)
 
+	var unknown [crypto.HashSizeByte]byte
 	_, err := aud.GetObservedSTRs(&AuditingRequest{
-		DirInitSTRHash: "unknown",
+		DirInitSTRHash: unknown,
 		StartEpoch:     uint64(d.LatestSTR().Epoch),
 		EndEpoch:       uint64(d.LatestSTR().Epoch)})
 	if err != ReqUnknownDirectory {
@@ -188,7 +193,7 @@ func TestGetObservedSTRUnknown(t *testing.T) {
 	}
 
 	_, err = aud.GetObservedSTRs(&AuditingRequest{
-		DirInitSTRHash: "unknown",
+		DirInitSTRHash: unknown,
 		StartEpoch:     uint64(6),
 		EndEpoch:       uint64(8)})
 	if err != ReqUnknownDirectory {
