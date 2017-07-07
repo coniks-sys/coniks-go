@@ -10,7 +10,7 @@ import (
 )
 
 type directoryHistory struct {
-	dirName   string
+	addr      string
 	signKey   sign.PublicKey
 	snapshots map[uint64]*DirSTR
 	latestSTR *DirSTR
@@ -20,7 +20,7 @@ type directoryHistory struct {
 // of all CONIKS directories known to a CONIKS auditor,
 // indexing the histories by the hash of a directory's initial
 // STR (specifically, the hash of the STR's signature as a string).
-// Each history includes the directory's domain dirName as a string, its
+// Each history includes the directory's domain addr as a string, its
 // public signing key enabling the auditor to verify the corresponding
 // signed tree roots, and a map with the snapshots for each observed
 // epoch.
@@ -34,9 +34,9 @@ func (h *directoryHistory) updateLatestSTR(newLatest *DirSTR) {
 }
 
 // caller validates that initSTR is for epoch 0
-func newDirectoryHistory(dirName string, signKey sign.PublicKey, initSTR *DirSTR) *directoryHistory {
+func newDirectoryHistory(addr string, signKey sign.PublicKey, initSTR *DirSTR) *directoryHistory {
 	h := new(directoryHistory)
-	h.dirName = dirName
+	h.addr = addr
 	h.signKey = signKey
 	h.snapshots = make(map[uint64]*DirSTR)
 	h.updateLatestSTR(initSTR)
@@ -50,14 +50,16 @@ func NewAuditLog() ConiksAuditLog {
 	return make(map[string]*directoryHistory)
 }
 
-// Set associates the given directoryHistory with the dirInitHash in the
-// ConiksAuditLog.
+// Set associates the given directoryHistory with the directory identifier
+// (i.e. the hash of the initial STR) dirInitHash in the ConiksAuditLog.
 func (l ConiksAuditLog) Set(dirInitHash string, dirHistory *directoryHistory) {
 	l[dirInitHash] = dirHistory
 }
 
-// Get retrieves the directory history for the given dirInitHash
-// from the ConiksAuditLog.
+// Get retrieves the directory history for the given directory identifier
+// dirInitHash from the ConiksAuditLog.
+// Get() also returns a boolean indicating whether the requested dirInitHash
+// is present in the log.
 func (l ConiksAuditLog) Get(dirInitHash string) (*directoryHistory, bool) {
 	h, ok := l[dirInitHash]
 	return h, ok
