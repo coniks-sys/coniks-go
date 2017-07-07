@@ -2,6 +2,7 @@
 // on data received from a CONIKS directory.
 // These include data binding proof verification,
 // and non-equivocation checks.
+// TODO: move all STR-verifying functionality to a separate module
 
 package protocol
 
@@ -110,14 +111,11 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 			cc.SavedSTR = str
 			return nil
 		}
-		// FIXME: check whether the STR was issued on time and whatnot.
-		// Maybe it has something to do w/ #81 and client transitioning between epochs.
-		// Try to verify w/ what's been saved
 		if err := cc.verifySTR(str); err == nil {
 			return nil
 		}
 		// Otherwise, expect that we've entered a new epoch
-		if err := cc.verifySTRConsistency(cc.SavedSTR, str); err != nil {
+		if err := verifySTRConsistency(cc.signKey, cc.SavedSTR, str); err != nil {
 			return err
 		}
 
@@ -132,6 +130,12 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 
 // verifySTR checks whether the received STR is the same with
 // the SavedSTR using reflect.DeepEqual().
+// FIXME: check whether the STR was issued on time and whatnot.
+// Maybe it has something to do w/ #81 and client transitioning between epochs.
+// Try to verify w/ what's been saved
+// FIXME: make this generic so the auditor can also verify the timeliness of the
+// STR etc. Might make sense to separate the comparison, which is only done on the client,
+// from the rest.
 func (cc *ConsistencyChecks) verifySTR(str *DirSTR) error {
 	if reflect.DeepEqual(cc.SavedSTR, str) {
 		return nil
@@ -140,12 +144,13 @@ func (cc *ConsistencyChecks) verifySTR(str *DirSTR) error {
 }
 
 // verifySTRConsistency checks the consistency between 2 snapshots.
-// It uses the pinned signing key in cc
-// to verify the STR's signature and should not verify
-// the hash chain using the STR stored in cc.
-func (cc *ConsistencyChecks) verifySTRConsistency(savedSTR, str *DirSTR) error {
+// It uses the signing key signKey to verify the STR's signature.
+// The signKey param either comes from a client's
+// pinned signing key, or an auditor's pinned signing key
+// in its history.
+func verifySTRConsistency(signKey sign.PublicKey, savedSTR, str *DirSTR) error {
 	// verify STR's signature
-	if !cc.signKey.Verify(str.Serialize(), str.Signature) {
+	if !signKey.Verify(str.Serialize(), str.Signature) {
 		return CheckBadSignature
 	}
 	if str.VerifyHashChain(savedSTR) {

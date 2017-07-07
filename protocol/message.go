@@ -4,7 +4,10 @@
 
 package protocol
 
-import m "github.com/coniks-sys/coniks-go/merkletree"
+import (
+	"github.com/coniks-sys/coniks-go/crypto"
+	m "github.com/coniks-sys/coniks-go/merkletree"
+)
 
 // The types of requests CONIKS clients send during the CONIKS protocols.
 const (
@@ -12,6 +15,7 @@ const (
 	KeyLookupType
 	KeyLookupInEpochType
 	MonitoringType
+	AuditType
 )
 
 // A Request message defines the data a CONIKS client must send to a CONIKS
@@ -90,6 +94,20 @@ type MonitoringRequest struct {
 	EndEpoch   uint64
 }
 
+// An AuditingRequest is a message with a CONIKS key directory's address
+// as a string, and a StartEpoch and an EndEpoch as uint64's that a CONIKS
+// client sends to a CONIKS auditor to request the given directory's
+// STRs for the given epoch range. To obtain a single STR, the client
+// must set StartEpoch = EndEpoch in the request.
+//
+// The response to a successful request is an STRHistoryRange with
+// a list of STRs covering the epoch range [StartEpoch, EndEpoch].
+type AuditingRequest struct {
+	DirInitSTRHash [crypto.HashSizeByte]byte
+	StartEpoch     uint64
+	EndEpoch       uint64
+}
+
 // A Response message indicates the result of a CONIKS client request
 // with an appropriate error code, and defines the set of cryptographic
 // proofs a CONIKS directory must return as part of its response.
@@ -99,7 +117,7 @@ type Response struct {
 }
 
 // A DirectoryResponse is a message that includes cryptographic proofs
-// about the key directory that a CONIKS key directory returns
+// about the key directory that a CONIKS key directory or auditor returns
 // to a CONIKS client.
 type DirectoryResponse interface{}
 
@@ -124,8 +142,17 @@ type DirectoryProofs struct {
 	STR []*DirSTR
 }
 
+// An STRHistoryRange response includes a list of signed tree roots
+// STR representing a range of the STR hash chain. If the range only
+// covers the latest epoch, the list only contains a single STR.
+// A CONIKS auditor returns this DirectoryResponse type upon an
+// AudutingRequest.
+type STRHistoryRange struct {
+	STR []*DirSTR
+}
+
 // NewErrorResponse creates a new response message indicating the error
-// that occurred while a CONIKS directory was
+// that occurred while a CONIKS directory or a CONIKS auditor was
 // processing a client request.
 func NewErrorResponse(e ErrorCode) *Response {
 	return &Response{Error: e}
@@ -133,6 +160,7 @@ func NewErrorResponse(e ErrorCode) *Response {
 
 var _ DirectoryResponse = (*DirectoryProof)(nil)
 var _ DirectoryResponse = (*DirectoryProofs)(nil)
+var _ DirectoryResponse = (*STRHistoryRange)(nil)
 
 // NewRegistrationProof creates the response message a CONIKS directory
 // sends to a client upon a RegistrationRequest,
@@ -216,6 +244,23 @@ func NewMonitoringProof(ap []*m.AuthenticationPath,
 	}, ReqSuccess
 }
 
+// NewSTRHistoryRange creates the response message a CONIKS auditor
+// sends to a client upon an AuditingRequest,
+// and returns a Response containing an STRHistoryRange struct.
+// auditlog.GetObservedSTRs() passes a list of one or more signed tree roots
+// that the auditor observed for the requested range of epochs str.
+//
+// See auditlog.GetObservedSTRs() for details on the contents of the created
+// STRHistoryRange.
+func NewSTRHistoryRange(str []*DirSTR) (*Response, ErrorCode) {
+	return &Response{
+		Error: ReqSuccess,
+		DirectoryResponse: &STRHistoryRange{
+			STR: str,
+		},
+	}, ReqSuccess
+}
+
 func (msg *Response) validate() error {
 	if Errors[msg.Error] {
 		return msg.Error
@@ -228,6 +273,13 @@ func (msg *Response) validate() error {
 		return nil
 	case *DirectoryProofs:
 		// TODO: also do above assertions here
+		return nil
+	case *STRHistoryRange:
+		// treat the STRHistoryRange as an auditor response
+		// bc validate is only called by a client
+		if len(df.STR) == 0 {
+			return ErrMalformedAuditorMessage
+		}
 		return nil
 	default:
 		panic("[coniks] Malformed response")
