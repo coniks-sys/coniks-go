@@ -50,17 +50,17 @@ func NewAuditLog() ConiksAuditLog {
 	return make(map[string]*directoryHistory)
 }
 
-// Set associates the given directoryHistory with the directory identifier
+// set associates the given directoryHistory with the directory identifier
 // (i.e. the hash of the initial STR) dirInitHash in the ConiksAuditLog.
-func (l ConiksAuditLog) Set(dirInitHash string, dirHistory *directoryHistory) {
+func (l ConiksAuditLog) set(dirInitHash string, dirHistory *directoryHistory) {
 	l[dirInitHash] = dirHistory
 }
 
-// Get retrieves the directory history for the given directory identifier
+// get retrieves the directory history for the given directory identifier
 // dirInitHash from the ConiksAuditLog.
 // Get() also returns a boolean indicating whether the requested dirInitHash
 // is present in the log.
-func (l ConiksAuditLog) Get(dirInitHash string) (*directoryHistory, bool) {
+func (l ConiksAuditLog) get(dirInitHash string) (*directoryHistory, bool) {
 	h, ok := l[dirInitHash]
 	return h, ok
 }
@@ -84,7 +84,7 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 	snaps []*DirSTR) error {
 
 	// make sure we're getting an initial STR at the very least
-	if len(snaps) < 1 && snaps[0].Epoch != 0 {
+	if len(snaps) < 1 || snaps[0].Epoch != 0 {
 		return ErrMalformedDirectoryMessage
 	}
 
@@ -93,7 +93,7 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 
 	// error if we want to create a new entry for a directory
 	// we already know
-	h, ok := l.Get(dirInitHash)
+	h, ok := l.get(dirInitHash)
 	if ok {
 		return ErrAuditLog
 	}
@@ -113,9 +113,7 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 
 		// verify the consistency of each new STR before inserting
 		// into the audit log
-		err := verifySTRConsistency(signKey, h.latestSTR, str)
-
-		if err != nil {
+		if err := verifySTRConsistency(signKey, h.latestSTR, str); err != nil {
 			return err
 		}
 
@@ -123,7 +121,7 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 	}
 
 	// Finally, add the new history to the log
-	l.Set(dirInitHash, h)
+	l.set(dirInitHash, h)
 
 	return nil
 }
@@ -139,7 +137,7 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 func (l ConiksAuditLog) Update(dirInitHash string, newSTR *DirSTR) error {
 
 	// error if we want to update the entry for an addr we don't know
-	h, ok := l.Get(dirInitHash)
+	h, ok := l.get(dirInitHash)
 	if !ok {
 		return ErrAuditLog
 	}
@@ -175,7 +173,7 @@ func (l ConiksAuditLog) GetObservedSTRs(req *AuditingRequest) (*Response,
 	ErrorCode) {
 
 	// make sure we have a history for the requested directory in the log
-	h, ok := l.Get(req.DirInitSTRHash)
+	h, ok := l.get(req.DirInitSTRHash)
 	if !ok {
 		return NewErrorResponse(ReqUnknownDirectory), ReqUnknownDirectory
 	}
