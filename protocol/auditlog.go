@@ -6,6 +6,7 @@
 package protocol
 
 import (
+	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 )
 
@@ -19,7 +20,7 @@ type directoryHistory struct {
 // A ConiksAuditLog maintains the histories
 // of all CONIKS directories known to a CONIKS auditor,
 // indexing the histories by the hash of a directory's initial
-// STR (specifically, the hash of the STR's signature as a string).
+// STR (specifically, the hash of the STR's signature).
 // Each history includes the directory's domain addr as a string, its
 // public signing key enabling the auditor to verify the corresponding
 // signed tree roots, and a list with all observed snapshots in
@@ -39,7 +40,7 @@ func newDirectoryHistory(addr string, signKey sign.PublicKey, initSTR *DirSTR) *
 	h.addr = addr
 	h.signKey = signKey
 	h.snapshots = make(map[uint64]*DirSTR)
-	h.latestSTR = nil
+	h.updateLatestSTR(initSTR)
 	return h
 }
 
@@ -52,7 +53,7 @@ func NewAuditLog() ConiksAuditLog {
 
 // set associates the given directoryHistory with the directory identifier
 // (i.e. the hash of the initial STR) dirInitHash in the ConiksAuditLog.
-func (l ConiksAuditLog) set(dirInitHash string, dirHistory *directoryHistory) {
+func (l ConiksAuditLog) set(dirInitHash [crypto.HashSizeByte]byte, dirHistory *directoryHistory) {
 	l[dirInitHash] = dirHistory
 }
 
@@ -60,16 +61,9 @@ func (l ConiksAuditLog) set(dirInitHash string, dirHistory *directoryHistory) {
 // dirInitHash from the ConiksAuditLog.
 // Get() also returns a boolean indicating whether the requested dirInitHash
 // is present in the log.
-func (l ConiksAuditLog) get(dirInitHash string) (*directoryHistory, bool) {
+func (l ConiksAuditLog) get(dirInitHash [crypto.HashSizeByte]byte) (*directoryHistory, bool) {
 	h, ok := l[dirInitHash]
 	return h, ok
-}
-
-// updateLatestSTR inserts a new STR into a directory history;
-// assumes the STR has been validated by the caller
-func (h *directoryHistory) updateLatestSTR(newLatest *DirSTR) {
-	h.snapshots[newLatest.Epoch] = newLatest
-	h.latestSTR = newLatest
 }
 
 // Insert creates a new directory history for the key directory addr
@@ -112,7 +106,7 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 	// (i.e. snaps is missing an epoch between 0 and the latest given)
 	for i := 1; i < len(snaps); i++ {
 		str := snaps[i]
-		if str == nil || str.Epoch != uint64(i) {
+		if str == nil {
 			return ErrMalformedDirectoryMessage
 		}
 

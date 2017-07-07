@@ -2,24 +2,26 @@ package protocol
 
 import (
 	"testing"
+
+	"github.com/coniks-sys/coniks-go/crypto"
 )
 
 func TestComputeDirectoryIdentity(t *testing.T) {
-	// FIXME: NewTestDirectory should use a fixed VRF and Signing keys.
 	d, _ := NewTestDirectory(t, true)
 	// str0 := d.LatestSTR()
 	d.Update()
 	str1 := d.LatestSTR()
+	var unknown [crypto.HashSizeByte]byte
 	type args struct {
 		str *DirSTR
 	}
 	tests := []struct {
 		name string
 		args args
-		want string
+		want [crypto.HashSizeByte]byte
 	}{
 		// {"normal", args{str0}, ""},
-		{"panic", args{str1}, ""},
+		{"panic", args{str1}, unknown},
 	}
 	for _, tt := range tests {
 		// FIXME: Refactor testing. See #18.

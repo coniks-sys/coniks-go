@@ -14,6 +14,7 @@ import (
 func NewTestDirectory(t *testing.T, useTBs bool) (
 	*ConiksDirectory, sign.PublicKey) {
 
+	// FIXME: NewTestDirectory should use a fixed VRF and Signing keys.
 	vrfKey, err := vrf.GenerateKey(nil)
 	if err != nil {
 		t.Fatal(err)
