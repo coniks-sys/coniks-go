@@ -8,7 +8,6 @@ package protocol
 
 import (
 	"bytes"
-	"reflect"
 
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	m "github.com/coniks-sys/coniks-go/merkletree"
@@ -28,7 +27,7 @@ import (
 type ConsistencyChecks struct {
 	// the auditor state stores the latest verified signed tree root
 	// as well as the server's signing key
-	*auditorState
+	*AudState
 	Bindings map[string][]byte
 
 	// extensions settings
@@ -36,7 +35,7 @@ type ConsistencyChecks struct {
 	TBs    map[string]*TemporaryBinding
 }
 
-var _ auditor = (*ConsistencyChecks)(nil)
+var _ Auditor = (*ConsistencyChecks)(nil)
 
 // NewCC creates an instance of ConsistencyChecks using
 // a CONIKS directory's pinned STR at epoch 0, or
@@ -46,9 +45,9 @@ func NewCC(savedSTR *DirSTR, useTBs bool, signKey sign.PublicKey) *ConsistencyCh
 	if !useTBs {
 		panic("[coniks] Currently the server is forced to use TBs")
 	}
-	a := newAuditorState(signKey, savedSTR)
+	aud := NewAuditor(signKey, savedSTR)
 	cc := &ConsistencyChecks{
-		a,
+		aud,
 		make(map[string][]byte),
 		useTBs,
 		nil,
@@ -59,46 +58,33 @@ func NewCC(savedSTR *DirSTR, useTBs bool, signKey sign.PublicKey) *ConsistencyCh
 	return cc
 }
 
-func (cc *ConsistencyChecks) updateLatestSTR(newLatest *DirSTR) {
-	cc.latestSTR = newLatest
-}
-
-// HandleSTRResponse verifies an auditor's response for an  AuditingRequest.
-func (cc *ConsistencyChecks) HandleSTRResponse(requestType int, msg *Response, name string) ErrorCode {
+// Audit checks for possible equivocation between
+// an auditors' observed STRs and the client's own view.
+// Audit() first verifies the STR range received
+// in msg if msg contains more than 1 STR, and
+// then checks the most recent STR in msg against
+// the cc.verifiedSTR.
+// Audit() is called when a client receives a response to a
+// message.AuditingRequest from an auditor
+func (cc *ConsistencyChecks) Audit(msg *Response) error {
 	if err := msg.validate(); err != nil {
 		return err.(ErrorCode)
 	}
 
-	switch requestType {
-	case AuditType:
-		if _, ok := msg.DirectoryResponse.(*STRHistoryRange); !ok {
-			return ErrMalformedAuditorMessage
+	strs := msg.DirectoryResponse.(*STRHistoryRange)
+
+	// verify the hashchain of the received STRs
+	// if we get more than 1 in our range
+	if len(strs.STR) > 1 {
+		if err := cc.VerifySTRHistory(strs.STR[0], strs.STR[1:]); err != nil {
+			return err
 		}
-	default:
-		panic("[coniks] Unknown auditing request type")
 	}
 
-	// check the consistency for each
-
-	// first compare to the saved STR
-
-	// clients only care about comparing the STR with the savedSTR
 	// TODO: if the auditor has returned a more recent STR,
 	// should the client update its savedSTR? Should this
 	// force a new round of monitoring?
-	//if isClient {
-	//	a.compareSavedSTR(requestType, msg)
-	//}
-
-	// we assume the requestType is AuditInEpochType if we're here
-
-	// verify the timeliness of the STR if we're the auditor
-	// check the consistency of the newly received STRs
-	// if err := cc.verifySTRConsistencyRange(strs); err != nil {
-	//	return err
-	//}
-
-	return CheckPassed
+	return cc.CheckSTRAgainstVerified(strs.STR[len(strs.STR)-1])
 }
 
 // HandleResponse verifies the directory's response for a request.
@@ -150,17 +136,9 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	switch requestType {
 	case RegistrationType, KeyLookupType:
 		str = msg.DirectoryResponse.(*DirectoryProof).STR
-		// First response
-		// FIXME: the initial STR is pinned in the client
-		if cc.latestSTR == nil {
-			cc.updateLatestSTR(str)
-			return nil
-		}
-		if err := cc.verifySTR(str); err == nil {
-			return nil
-		}
-		// Otherwise, expect that we've entered a new epoch
-		if err := cc.verifySTRConsistency(cc.latestSTR, str); err != nil {
+		// The initial STR is pinned in the client
+		// so cc.verifiedSTR should never be nil
+		if err := cc.CheckSTRAgainstVerified(str); err != nil {
 			return err
 		}
 
@@ -169,20 +147,9 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	}
 
 	// And update the saved STR
-	cc.updateLatestSTR(str)
-	return nil
-}
+	cc.verifiedSTR = str
 
-// verifySTR checks whether the received STR is the same with
-// the saved STR in the audit state using reflect.DeepEqual().
-// FIXME: check whether the STR was issued on time and whatnot.
-// Maybe it has something to do w/ #81 and client transitioning between epochs.
-// Try to verify w/ what's been saved
-func (cc *ConsistencyChecks) verifySTR(str *DirSTR) error {
-	if reflect.DeepEqual(cc.latestSTR, str) {
-		return nil
-	}
-	return CheckBadSTR
+	return nil
 }
 
 func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *Response,
