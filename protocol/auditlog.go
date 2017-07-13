@@ -51,7 +51,7 @@ func (h *directoryHistory) updateLatestSTR(newLatest *DirSTR) {
 // log; the auditor will add an entry for each CONIKS directory
 // the first time it observes an STR for that directory.
 func NewAuditLog() ConiksAuditLog {
-  return make(map[[crypto.HashSizeByte]byte]*directoryHistory)
+	return make(map[[crypto.HashSizeByte]byte]*directoryHistory)
 }
 
 // set associates the given directoryHistory with the directory identifier
@@ -115,7 +115,7 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 
 		// verify the consistency of each new STR before inserting
 		// into the audit log
-		if err := verifySTRConsistency(signKey, h.latestSTR, str); err != nil {
+		if err := h.verifySTRConsistency(h.latestSTR, str); err != nil {
 			return err
 		}
 
@@ -144,7 +144,7 @@ func (l ConiksAuditLog) Update(dirInitHash [crypto.HashSizeByte]byte, newSTR *Di
 		return ErrAuditLog
 	}
 
-	if err := verifySTRConsistency(h.signKey, h.latestSTR, newSTR); err != nil {
+	if err := h.verifySTRConsistency(h.latestSTR, newSTR); err != nil {
 		return err
 	}
 
