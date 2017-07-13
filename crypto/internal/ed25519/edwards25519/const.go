@@ -23,6 +23,20 @@ var A = FieldElement{
 	486662, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 }
 
+var extendedBaseEl = ExtendedGroupElement{
+	FieldElement{25485296, 5318399, 8791791, -8299916, -14349720, 6939349, -3324311, -7717049, 7287234, -6577708},
+	FieldElement{-758052, -1832720, 13046421, -4857925, 6576754, 14371947, -13139572, 6845540, -2198883, -4003719},
+	FieldElement{-947565, 6097708, -469190, 10704810, -8556274, -15589498, -16424464, -16608899, 14028613, -5004649},
+	FieldElement{6966464, -2456167, 7033433, 6781840, 28785542, 12262365, -2659449, 13959020, -21013759, -5262166},
+}
+
+// BaseBytes can be used to hash the base point if necessary
+var BaseBytes [32]byte
+
+func init() {
+	extendedBaseEl.ToBytes(&BaseBytes)
+}
+
 var bi = [8]PreComputedGroupElement{
 	{
 		FieldElement{25967493, -14356035, 29566456, 3660896, -12694345, 4014787, 27544626, -11754271, -6079156, 2047605},

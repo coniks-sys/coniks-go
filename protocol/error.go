@@ -8,18 +8,23 @@ package protocol
 // An ErrorCode implements the built-in error interface type.
 type ErrorCode int
 
-// These codes indicate the status of a client-server message exchange.
+// These codes indicate the status of a client-server or client-auditor message
+// exchange.
 // Codes prefixed by "Req" indicate different client request results.
-// Codes prefixed by "Err" indicate an internal server error or a malformed
+// Codes prefixed by "Err" indicate an internal server/auditor error or a malformed
 // message.
 const (
 	ReqSuccess ErrorCode = iota + 100
 	ReqNameExisted
 	ReqNameNotFound
+	// auditor->client: no observed history for the requested directory
+	ReqUnknownDirectory
 
 	ErrDirectory
+	ErrAuditLog
 	ErrMalformedClientMessage
 	ErrMalformedDirectoryMessage
+	ErrMalformedAuditorMessage
 )
 
 // These codes indicate the result
@@ -46,7 +51,9 @@ const (
 var Errors = map[ErrorCode]bool{
 	ErrMalformedClientMessage:    true,
 	ErrDirectory:                 true,
+	ErrAuditLog:                  true,
 	ErrMalformedDirectoryMessage: true,
+	ErrMalformedAuditorMessage:   true,
 }
 
 var (
@@ -57,7 +64,9 @@ var (
 
 		ErrMalformedClientMessage:    "[coniks] Malformed client message",
 		ErrDirectory:                 "[coniks] Directory error",
+		ErrAuditLog:                  "[coniks] Audit log error",
 		ErrMalformedDirectoryMessage: "[coniks] Malformed directory message",
+		ErrMalformedAuditorMessage:   "[coniks] Malformed auditor message",
 
 		CheckPassed:         "[coniks] Consistency checks passed",
 		CheckBadSignature:   "[coniks] Directory's signature on STR or TB is invalid",
