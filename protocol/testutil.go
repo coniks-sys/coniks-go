@@ -14,6 +14,7 @@ import (
 func NewTestDirectory(t *testing.T, useTBs bool) (
 	*ConiksDirectory, sign.PublicKey) {
 
+	// FIXME: NewTestDirectory should use a fixed VRF and Signing keys.
 	vrfKey, err := vrf.GenerateKey(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -35,17 +36,17 @@ func NewTestDirectory(t *testing.T, useTBs bool) (
 // indicating the length of the directory history with which to
 // initialize the log; if numEpochs > 0, the history contains numEpochs+1
 // STRs as it always includes the STR after the last directory update
-func NewTestAuditLog(t *testing.T, numEpochs int) (*ConiksDirectory, ConiksAuditLog, map[uint64]*DirSTR) {
+func NewTestAuditLog(t *testing.T, numEpochs int) (*ConiksDirectory, ConiksAuditLog, []*DirSTR) {
 	d, pk := NewTestDirectory(t, true)
 	aud := NewAuditLog()
 
-	hist := make(map[uint64]*DirSTR)
+	var hist []*DirSTR
 	for ep := 0; ep < numEpochs; ep++ {
-		hist[d.LatestSTR().Epoch] = d.LatestSTR()
+		hist = append(hist, d.LatestSTR())
 		d.Update()
 	}
 	// always include the actual latest STR
-	hist[d.LatestSTR().Epoch] = d.LatestSTR()
+	hist = append(hist, d.LatestSTR())
 
 	err := aud.Insert("test-server", pk, hist)
 	if err != nil {

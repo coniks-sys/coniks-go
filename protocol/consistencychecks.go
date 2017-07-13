@@ -160,7 +160,7 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 			return nil
 		}
 		// Otherwise, expect that we've entered a new epoch
-		if err := cc.verifySTRConsistency(cc.latestSTR, str); err != nil {
+		if err := verifySTRConsistency(cc.signKey, cc.SavedSTR, str); err != nil {
 			return err
 		}
 
