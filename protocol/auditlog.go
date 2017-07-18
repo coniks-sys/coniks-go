@@ -40,7 +40,7 @@ func newDirectoryHistory(addr string, signKey sign.PublicKey, initSTR *DirSTR) *
 // chronological order.
 type ConiksAuditLog map[[crypto.HashSizeByte]byte]*directoryHistory
 
-// updateLatestSTR inserts a new STR into a directory history;
+// updateVerifiedSTR inserts a new STR into a directory history;
 // assumes the STR has been validated by the caller
 func (h *directoryHistory) updateVerifiedSTR(newVerified *DirSTR) {
 	h.snapshots[newVerified.Epoch] = newVerified
@@ -129,7 +129,7 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 
 		// verify the consistency of each new STR before inserting
 		// into the audit log
-		if err := h.VerifySTRConsistency(h.verifiedSTR, str); err != nil {
+		if err := h.VerifySTRConsistency(h.VerifiedSTR(), str); err != nil {
 			return err
 		}
 
@@ -158,7 +158,7 @@ func (l ConiksAuditLog) Update(dirInitHash [crypto.HashSizeByte]byte, newSTR *Di
 		return ErrAuditLog
 	}
 
-	if err := h.VerifySTRConsistency(h.verifiedSTR, newSTR); err != nil {
+	if err := h.VerifySTRConsistency(h.VerifiedSTR(), newSTR); err != nil {
 		return err
 	}
 
@@ -195,7 +195,7 @@ func (l ConiksAuditLog) GetObservedSTRs(req *AuditingRequest) (*Response,
 	}
 
 	// make sure the request is well-formed
-	if req.EndEpoch > h.verifiedSTR.Epoch || req.StartEpoch > req.EndEpoch {
+	if req.EndEpoch > h.VerifiedSTR().Epoch || req.StartEpoch > req.EndEpoch {
 		return NewErrorResponse(ErrMalformedClientMessage),
 			ErrMalformedClientMessage
 	}
