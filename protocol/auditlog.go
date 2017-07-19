@@ -43,7 +43,6 @@ type ConiksAuditLog map[[crypto.HashSizeByte]byte]*directoryHistory
 func (h *directoryHistory) updateVerifiedSTR(newVerified []*DirSTR) {
 	h.Update(LatestSTRInRange(newVerified))
 	h.snapshots = append(h.snapshots, newVerified...)
-
 }
 
 // Audit checks that a directory's STR history
