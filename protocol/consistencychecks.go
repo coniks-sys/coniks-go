@@ -35,8 +35,6 @@ type ConsistencyChecks struct {
 	TBs    map[string]*TemporaryBinding
 }
 
-var _ Auditor = (*ConsistencyChecks)(nil)
-
 // NewCC creates an instance of ConsistencyChecks using
 // a CONIKS directory's pinned STR at epoch 0, or
 // the consistency state read from persistent storage.
@@ -58,15 +56,15 @@ func NewCC(savedSTR *DirSTR, useTBs bool, signKey sign.PublicKey) *ConsistencyCh
 	return cc
 }
 
-// Audit checks for possible equivocation between
+// CheckEquivocation checks for possible equivocation between
 // an auditors' observed STRs and the client's own view.
-// Audit() first verifies the STR range received
+// CheckEquivocation() first verifies the STR range received
 // in msg if msg contains more than 1 STR, and
 // then checks the most recent STR in msg against
 // the cc.verifiedSTR.
-// Audit() is called when a client receives a response to a
-// message.AuditingRequest from an auditor
-func (cc *ConsistencyChecks) Audit(msg *Response) error {
+// CheckEquivocation() is called when a client receives a response to a
+// message.AuditingRequest from an auditor.
+func (cc *ConsistencyChecks) CheckEquivocation(msg *Response) error {
 	if err := msg.validate(); err != nil {
 		return err.(ErrorCode)
 	}
@@ -76,7 +74,7 @@ func (cc *ConsistencyChecks) Audit(msg *Response) error {
 	// verify the hashchain of the received STRs
 	// if we get more than 1 in our range
 	if len(strs.STR) > 1 {
-		if err := cc.VerifySTRHistory(strs.STR[0], strs.STR[1:]); err != nil {
+		if err := cc.verifySTRRange(strs.STR[0], strs.STR[1:]); err != nil {
 			return err
 		}
 	}
@@ -84,7 +82,7 @@ func (cc *ConsistencyChecks) Audit(msg *Response) error {
 	// TODO: if the auditor has returned a more recent STR,
 	// should the client update its savedSTR? Should this
 	// force a new round of monitoring?
-	return cc.CheckSTRAgainstVerified(strs.STR[len(strs.STR)-1])
+	return cc.checkSTRAgainstVerified(LatestSTRInRange(strs.STR))
 }
 
 // HandleResponse verifies the directory's response for a request.
@@ -138,7 +136,8 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 		str = msg.DirectoryResponse.(*DirectoryProof).STR
 		// The initial STR is pinned in the client
 		// so cc.verifiedSTR should never be nil
-		if err := cc.CheckSTRAgainstVerified(str); err != nil {
+		// FIXME: use STR slice from Response msg
+		if err := cc.AuditDirectory([]*DirSTR{str}); err != nil {
 			return err
 		}
 
@@ -147,7 +146,7 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	}
 
 	// And update the saved STR
-	cc.verifiedSTR = str
+	cc.Update(str)
 
 	return nil
 }

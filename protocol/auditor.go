@@ -12,17 +12,19 @@ import (
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 )
 
+// Auditor provides a generic interface allowing different
+// auditor types to implement specific auditing functionality.
+type Auditor interface {
+	AuditDirectory([]*DirSTR) error
+}
+
 // AudState verifies the hash chain of a specific directory.
 type AudState struct {
 	signKey     sign.PublicKey
 	verifiedSTR *DirSTR
 }
 
-// Auditor provides a generic interface allowing different
-// auditor types to implement specific auditing functionality.
-type Auditor interface {
-	Audit(*Response) error
-}
+var _ Auditor = (*AudState)(nil)
 
 // New instantiates a new auditor state from a persistance storage.
 func NewAuditor(signKey sign.PublicKey, verified *DirSTR) *AudState {
@@ -38,9 +40,14 @@ func (a *AudState) VerifiedSTR() *DirSTR {
 	return a.verifiedSTR
 }
 
+// Update updates the auditor's verifiedSTR to newSTR
+func (a *AudState) Update(newSTR *DirSTR) {
+	a.verifiedSTR = newSTR
+}
+
 // CompareWithVerified checks whether the received STR is the same as
 // the verified STR in the AudState using reflect.DeepEqual().
-func (a *AudState) CompareWithVerified(str *DirSTR) error {
+func (a *AudState) compareWithVerified(str *DirSTR) error {
 	if reflect.DeepEqual(a.verifiedSTR, str) {
 		return nil
 	}
@@ -56,7 +63,7 @@ func (a *AudState) CompareWithVerified(str *DirSTR) error {
 // or the appropriate consistency check error if any of the checks fail,
 // or str's epoch is anything other than the same or one ahead of
 // a.verifiedSTR.
-func (a *AudState) CheckSTRAgainstVerified(str *DirSTR) error {
+func (a *AudState) checkSTRAgainstVerified(str *DirSTR) error {
 	// FIXME: check whether the STR was issued on time and whatnot.
 	// Maybe it has something to do w/ #81 and client transitioning between epochs.
 	// Try to verify w/ what's been saved
@@ -64,12 +71,12 @@ func (a *AudState) CheckSTRAgainstVerified(str *DirSTR) error {
 	switch {
 	case str.Epoch == a.verifiedSTR.Epoch:
 		// Checking an STR in the same epoch
-		if err := a.CompareWithVerified(str); err != nil {
+		if err := a.compareWithVerified(str); err != nil {
 			return err
 		}
 	case str.Epoch == a.verifiedSTR.Epoch+1:
 		// Otherwise, expect that we've entered a new epoch
-		if err := a.VerifySTRConsistency(a.verifiedSTR, str); err != nil {
+		if err := a.verifySTRConsistency(a.verifiedSTR, str); err != nil {
 			return err
 		}
 	default:
@@ -84,7 +91,7 @@ func (a *AudState) CheckSTRAgainstVerified(str *DirSTR) error {
 // The signKey param either comes from a client's
 // pinned signing key in its consistency state,
 // or an auditor's pinned signing key in its history.
-func (a *AudState) VerifySTRConsistency(prevSTR, str *DirSTR) error {
+func (a *AudState) verifySTRConsistency(prevSTR, str *DirSTR) error {
 	// verify STR's signature
 	if !a.signKey.Verify(str.Serialize(), str.Signature) {
 		return CheckBadSignature
@@ -98,10 +105,10 @@ func (a *AudState) VerifySTRConsistency(prevSTR, str *DirSTR) error {
 }
 
 // VerifySTRHistory checks the consistency of a range
-// of STRs. It begins by verifying the STR consistency between
+// of a directory's STRs. It begins by verifying the STR consistency between
 // the given prevSTR and the first STR in the given range, and
 // then verifies the consistency between each subsequent STR pair.
-func (a *AudState) VerifySTRHistory(prevSTR *DirSTR, strs []*DirSTR) error {
+func (a *AudState) verifySTRRange(prevSTR *DirSTR, strs []*DirSTR) error {
 
 	prev := prevSTR
 	for i := 0; i < len(strs); i++ {
@@ -113,11 +120,34 @@ func (a *AudState) VerifySTRHistory(prevSTR *DirSTR, strs []*DirSTR) error {
 		}
 
 		// verify the consistency of each STR in the range
-		if err := a.VerifySTRConsistency(prev, str); err != nil {
+		if err := a.verifySTRConsistency(prev, str); err != nil {
 			return err
 		}
 
 		prev = str
+	}
+
+	return nil
+}
+
+// AuditDirectory validates a range of STRs received from a CONIKS directory.
+// AuditDirectory() checks the consistency of the oldest STR in the range
+// against the verifiedSTR, and verifies the remaining
+// range if the message contains more than one STR.
+// AuditDirectory() returns the appropriate consistency check error
+// if any of the checks fail, or nil if the checks pass.
+func (a *AudState) AuditDirectory(strs []*DirSTR) error {
+
+	// check STR against the latest verified STR
+	if err := a.checkSTRAgainstVerified(strs[0]); err != nil {
+		return err
+	}
+
+	// verify the entire range if we have received more than one STR
+	if len(strs) > 1 {
+		if err := a.verifySTRRange(strs[0], strs[1:]); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -134,4 +164,11 @@ func ComputeDirectoryIdentity(str *DirSTR) [crypto.HashSizeByte]byte {
 	var initSTRHash [crypto.HashSizeByte]byte
 	copy(initSTRHash[:], crypto.Digest(str.Signature))
 	return initSTRHash
+}
+
+// LatestSTRInRange returns the STR in the last element of a
+// range of STRs. The range is assumed to be sorted
+// by increasing order of STR epoch.
+func LatestSTRInRange(strs []*DirSTR) *DirSTR {
+	return strs[len(strs)-1]
 }
