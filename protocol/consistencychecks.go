@@ -104,12 +104,8 @@ func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *Response,
 		return err.(ErrorCode)
 	}
 	switch requestType {
-	case RegistrationType, KeyLookupType:
+	case RegistrationType, KeyLookupType, KeyLookupInEpochType, MonitoringType:
 		if _, ok := msg.DirectoryResponse.(*DirectoryProof); !ok {
-			return ErrMalformedDirectoryMessage
-		}
-	case MonitoringType, KeyLookupInEpochType:
-		if _, ok := msg.DirectoryResponse.(*DirectoryProofs); !ok {
 			return ErrMalformedDirectoryMessage
 		}
 	default:
@@ -133,7 +129,7 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	var str *DirSTR
 	switch requestType {
 	case RegistrationType, KeyLookupType:
-		str = msg.DirectoryResponse.(*DirectoryProof).STR
+		str = msg.DirectoryResponse.(*DirectoryProof).STR[0]
 		// The initial STR is pinned in the client
 		// so cc.verifiedSTR should never be nil
 		// FIXME: use STR slice from Response msg
@@ -168,8 +164,10 @@ func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *Response,
 func (cc *ConsistencyChecks) verifyRegistration(msg *Response,
 	uname string, key []byte) error {
 	df := msg.DirectoryResponse.(*DirectoryProof)
-	ap := df.AP
-	str := df.STR
+	// FIXME: should explicitly validate that
+	// len(df.AP) == len(df.STR) == 1
+	ap := df.AP[0]
+	str := df.STR[0]
 
 	proofType := ap.ProofType()
 	switch {
@@ -190,8 +188,10 @@ func (cc *ConsistencyChecks) verifyRegistration(msg *Response,
 func (cc *ConsistencyChecks) verifyKeyLookup(msg *Response,
 	uname string, key []byte) error {
 	df := msg.DirectoryResponse.(*DirectoryProof)
-	ap := df.AP
-	str := df.STR
+	// FIXME: should explicitly validate that
+	// len(df.AP) == len(df.STR) == 1
+	ap := df.AP[0]
+	str := df.STR[0]
 
 	proofType := ap.ProofType()
 	switch {
@@ -247,7 +247,7 @@ func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
 	switch requestType {
 	case RegistrationType:
 		df := msg.DirectoryResponse.(*DirectoryProof)
-		if df.AP.ProofType() == m.ProofOfAbsence {
+		if df.AP[0].ProofType() == m.ProofOfAbsence {
 			if err := cc.verifyReturnedPromise(df, key); err != nil {
 				return err
 			}
@@ -257,8 +257,8 @@ func (cc *ConsistencyChecks) updateTBs(requestType int, msg *Response,
 
 	case KeyLookupType:
 		df := msg.DirectoryResponse.(*DirectoryProof)
-		ap := df.AP
-		str := df.STR
+		ap := df.AP[0]
+		str := df.STR[0]
 		proofType := ap.ProofType()
 		switch {
 		case msg.Error == ReqSuccess && proofType == m.ProofOfInclusion:
@@ -306,8 +306,8 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string, str *DirSTR,
 // These above checks should be performed before calling this method.
 func (cc *ConsistencyChecks) verifyReturnedPromise(df *DirectoryProof,
 	key []byte) error {
-	ap := df.AP
-	str := df.STR
+	ap := df.AP[0]
+	str := df.STR[0]
 	tb := df.TB
 
 	if tb == nil {

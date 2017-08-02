@@ -35,19 +35,8 @@ func UnmarshalResponse(t int, msg []byte) *p.Response {
 	}
 
 	switch t {
-	case p.RegistrationType, p.KeyLookupType:
+	case p.RegistrationType, p.KeyLookupType, p.KeyLookupInEpochType, p.MonitoringType:
 		response := new(p.DirectoryProof)
-		if err := json.Unmarshal(res.DirectoryResponse, &response); err != nil {
-			return &p.Response{
-				Error: p.ErrMalformedDirectoryMessage,
-			}
-		}
-		return &p.Response{
-			Error:             res.Error,
-			DirectoryResponse: response,
-		}
-	case p.KeyLookupInEpochType, p.MonitoringType:
-		response := new(p.DirectoryProofs)
 		if err := json.Unmarshal(res.DirectoryResponse, &response); err != nil {
 			return &p.Response{
 				Error: p.ErrMalformedDirectoryMessage,
