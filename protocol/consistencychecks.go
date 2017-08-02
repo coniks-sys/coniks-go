@@ -43,12 +43,12 @@ func NewCC(savedSTR *DirSTR, useTBs bool, signKey sign.PublicKey) *ConsistencyCh
 	if !useTBs {
 		panic("[coniks] Currently the server is forced to use TBs")
 	}
-	aud := NewAuditor(signKey, savedSTR)
+	a := NewAuditor(signKey, savedSTR)
 	cc := &ConsistencyChecks{
-		aud,
-		make(map[string][]byte),
-		useTBs,
-		nil,
+		AudState: a,
+		Bindings: make(map[string][]byte),
+		useTBs:   useTBs,
+		TBs:      nil,
 	}
 	if useTBs {
 		cc.TBs = make(map[string]*TemporaryBinding)

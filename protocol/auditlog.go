@@ -13,18 +13,18 @@ import (
 type directoryHistory struct {
 	*AudState
 	addr      string
-	snapshots []*DirSTR
+	snapshots map[uint64]*DirSTR
 }
 
 // caller validates that initSTR is for epoch 0
 func newDirectoryHistory(addr string, signKey sign.PublicKey, initSTR *DirSTR) *directoryHistory {
 	a := NewAuditor(signKey, initSTR)
 	h := &directoryHistory{
-		a,
-		addr,
-		make([]*DirSTR, 0),
+		AudState:  a,
+		addr:      addr,
+		snapshots: make(map[uint64]*DirSTR),
 	}
-	h.updateVerifiedSTR([]*DirSTR{initSTR})
+	h.updateVerifiedSTR(initSTR)
 	return h
 }
 
@@ -40,9 +40,9 @@ type ConiksAuditLog map[[crypto.HashSizeByte]byte]*directoryHistory
 
 // updateVerifiedSTR inserts a new range of STRs into a directory history;
 // assumes the STRs have been validated by the caller
-func (h *directoryHistory) updateVerifiedSTR(newVerified []*DirSTR) {
-	h.Update(LatestSTRInRange(newVerified))
-	h.snapshots = append(h.snapshots, newVerified...)
+func (h *directoryHistory) updateVerifiedSTR(newVerified *DirSTR) {
+	h.Update(newVerified)
+	h.snapshots[newVerified.Epoch] = newVerified
 }
 
 // Audit checks that a directory's STR history
@@ -97,7 +97,6 @@ func (l ConiksAuditLog) get(dirInitHash [crypto.HashSizeByte]byte) (*directoryHi
 // for "catching up" on a history in case an auditor misses epochs
 func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 	snaps []*DirSTR) error {
-
 	// make sure we're getting an initial STR at the very least
 	if len(snaps) < 1 || snaps[0].Epoch != 0 {
 		return ErrMalformedDirectoryMessage
@@ -116,7 +115,8 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 	// create the new directory history
 	h = newDirectoryHistory(addr, signKey, snaps[0])
 
-	// FIXME: remove this check --> caller calls Audit() before this function
+	// FIXME: remove this check --> caller calls Audit() before
+	// this function
 	// add each STR into the history
 	// start at 1 since we've inserted the initial STR above
 	// This loop automatically catches if snaps is malformed
@@ -129,15 +129,13 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 
 		// verify the consistency of each new STR before inserting
 		// into the audit log
-		if err := h.verifySTRConsistency(snaps[i-1], str); err != nil {
+		if err := h.verifySTRConsistency(h.VerifiedSTR(), str); err != nil {
 			return err
 		}
+
+		h.updateVerifiedSTR(snaps[i])
 	}
 
-	// Finally, add the new history to the log
-	if len(snaps) > 1 {
-		h.updateVerifiedSTR(snaps[1:])
-	}
 	l.set(dirInitHash, h)
 
 	return nil
@@ -153,21 +151,21 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 // entry for dirInitHash
 // FIXME: pass Response message as param
 func (l ConiksAuditLog) Update(dirInitHash [crypto.HashSizeByte]byte, newSTR *DirSTR) error {
-
 	// error if we want to update the entry for an addr we don't know
 	h, ok := l.get(dirInitHash)
 	if !ok {
 		return ErrAuditLog
 	}
 
-	// FIXME: remove this check --> caller calls Audit() before this function
+	// FIXME: remove this check --> caller calls Audit() before this
+	// function
 	if err := h.verifySTRConsistency(h.VerifiedSTR(), newSTR); err != nil {
 		return err
 	}
 
 	// update the latest STR
 	// FIXME: use STR slice from Response msg
-	h.updateVerifiedSTR([]*DirSTR{newSTR})
+	h.updateVerifiedSTR(newSTR)
 	return nil
 }
 
@@ -191,7 +189,6 @@ func (l ConiksAuditLog) Update(dirInitHash [crypto.HashSizeByte]byte, newSTR *Di
 // message.NewErrorResponse(ReqUnknownDirectory) tuple.
 func (l ConiksAuditLog) GetObservedSTRs(req *AuditingRequest) (*Response,
 	ErrorCode) {
-
 	// make sure we have a history for the requested directory in the log
 	h, ok := l.get(req.DirInitSTRHash)
 	if !ok {

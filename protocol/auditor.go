@@ -26,7 +26,7 @@ type AudState struct {
 
 var _ Auditor = (*AudState)(nil)
 
-// New instantiates a new auditor state from a persistance storage.
+// NewAuditor instantiates a new auditor state from a persistance storage.
 func NewAuditor(signKey sign.PublicKey, verified *DirSTR) *AudState {
 	a := &AudState{
 		signKey:     signKey,
@@ -45,7 +45,7 @@ func (a *AudState) Update(newSTR *DirSTR) {
 	a.verifiedSTR = newSTR
 }
 
-// CompareWithVerified checks whether the received STR is the same as
+// compareWithVerified checks whether the received STR is the same as
 // the verified STR in the AudState using reflect.DeepEqual().
 func (a *AudState) compareWithVerified(str *DirSTR) error {
 	if reflect.DeepEqual(a.verifiedSTR, str) {
@@ -54,20 +54,42 @@ func (a *AudState) compareWithVerified(str *DirSTR) error {
 	return CheckBadSTR
 }
 
-// CheckSTRAgainstVerified checks an STR str against the a.verifiedSTR.
-// If str's Epoch is the same as the verified, CheckSTRAgainstVerified()
+// verifySTRConsistency checks the consistency between 2 snapshots.
+// It uses the signing key signKey to verify the STR's signature.
+// The signKey param either comes from a client's
+// pinned signing key in its consistency state,
+// or an auditor's pinned signing key in its history.
+func (a *AudState) verifySTRConsistency(prevSTR, str *DirSTR) error {
+	// verify STR's signature
+	if !a.signKey.Verify(str.Serialize(), str.Signature) {
+		return CheckBadSignature
+	}
+	if str.VerifyHashChain(prevSTR) {
+		return nil
+	}
+
+	// TODO: verify the directory's policies as well. See #115
+	return CheckBadSTR
+}
+
+// checkSTRAgainstVerified checks an STR str against the a.verifiedSTR.
+// If str's Epoch is the same as the verified, checkSTRAgainstVerified()
 // compares the two STRs directly. If str is one epoch ahead of the
-// a.verifiedSTR, CheckSTRAgainstVerified() checks the consistency between
+// a.verifiedSTR, checkSTRAgainstVerified() checks the consistency between
 // the two STRs.
-// CheckSTRAgainstVerified() returns nil if the check passes,
+// checkSTRAgainstVerified() returns nil if the check passes,
 // or the appropriate consistency check error if any of the checks fail,
 // or str's epoch is anything other than the same or one ahead of
 // a.verifiedSTR.
 func (a *AudState) checkSTRAgainstVerified(str *DirSTR) error {
 	// FIXME: check whether the STR was issued on time and whatnot.
-	// Maybe it has something to do w/ #81 and client transitioning between epochs.
+	// Maybe it has something to do w/ #81 and client
+	// transitioning between epochs.
 	// Try to verify w/ what's been saved
 
+	// FIXME: we are returning the error immediately
+	// without saving the inconsistent STR
+	// see: https://github.com/coniks-sys/coniks-go/pull/74#commitcomment-19804686
 	switch {
 	case str.Epoch == a.verifiedSTR.Epoch:
 		// Checking an STR in the same epoch
@@ -86,30 +108,11 @@ func (a *AudState) checkSTRAgainstVerified(str *DirSTR) error {
 	return nil
 }
 
-// VerifySTRConsistency checks the consistency between 2 snapshots.
-// It uses the signing key signKey to verify the STR's signature.
-// The signKey param either comes from a client's
-// pinned signing key in its consistency state,
-// or an auditor's pinned signing key in its history.
-func (a *AudState) verifySTRConsistency(prevSTR, str *DirSTR) error {
-	// verify STR's signature
-	if !a.signKey.Verify(str.Serialize(), str.Signature) {
-		return CheckBadSignature
-	}
-	if str.VerifyHashChain(prevSTR) {
-		return nil
-	}
-
-	// TODO: verify the directory's policies as well. See #115
-	return CheckBadSTR
-}
-
-// VerifySTRHistory checks the consistency of a range
+// verifySTRRange checks the consistency of a range
 // of a directory's STRs. It begins by verifying the STR consistency between
 // the given prevSTR and the first STR in the given range, and
 // then verifies the consistency between each subsequent STR pair.
 func (a *AudState) verifySTRRange(prevSTR *DirSTR, strs []*DirSTR) error {
-
 	prev := prevSTR
 	for i := 0; i < len(strs); i++ {
 		str := strs[i]
@@ -137,7 +140,6 @@ func (a *AudState) verifySTRRange(prevSTR *DirSTR, strs []*DirSTR) error {
 // AuditDirectory() returns the appropriate consistency check error
 // if any of the checks fail, or nil if the checks pass.
 func (a *AudState) AuditDirectory(strs []*DirSTR) error {
-
 	// check STR against the latest verified STR
 	if err := a.checkSTRAgainstVerified(strs[0]); err != nil {
 		return err
