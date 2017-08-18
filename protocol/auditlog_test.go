@@ -17,10 +17,13 @@ func TestUpdateHistory(t *testing.T) {
 	// update the directory so we can update the audit log
 	dirInitHash := ComputeDirectoryIdentity(hist[0])
 	d.Update()
-	err := aud.Update(dirInitHash, d.LatestSTR())
+	h, _ := aud.get(dirInitHash)
+	resp, _ := NewSTRHistoryRange([]*DirSTR{d.LatestSTR()})
+
+	err := h.Audit(resp)
 
 	if err != nil {
-		t.Fatal("Error updating the server history")
+		t.Fatal("Error auditing and updating the server history")
 	}
 }
 
@@ -35,22 +38,9 @@ func TestInsertExistingHistory(t *testing.T) {
 
 	// let's make sure that we can't re-insert a new server
 	// history into our log
-	err := aud.Insert("test-server", nil, hist)
+	err := aud.InitHistory("test-server", nil, hist)
 	if err != ErrAuditLog {
 		t.Fatal("Expected an ErrAuditLog when inserting an existing server history")
-	}
-}
-
-func TestUpdateUnknownHistory(t *testing.T) {
-	// create basic test directory and audit log with 1 STR
-	d, aud, _ := NewTestAuditLog(t, 0)
-
-	// let's make sure that we can't update a history for an unknown
-	// directory in our log
-	var unknown [crypto.HashSizeByte]byte
-	err := aud.Update(unknown, d.LatestSTR())
-	if err != ErrAuditLog {
-		t.Fatal("Expected an ErrAuditLog when updating an unknown server history")
 	}
 }
 
@@ -66,7 +56,10 @@ func TestUpdateBadNewSTR(t *testing.T) {
 	d.Update()
 	d.Update()
 
-	err := aud.Update(dirInitHash, d.LatestSTR())
+	h, _ := aud.get(dirInitHash)
+	resp, _ := NewSTRHistoryRange([]*DirSTR{d.LatestSTR()})
+
+	err := h.Audit(resp)
 	if err != CheckBadSTR {
 		t.Fatal("Expected a CheckBadSTR when attempting update a server history with a bad STR")
 	}
@@ -138,7 +131,7 @@ func TestGetObservedSTRMultipleEpochs(t *testing.T) {
 		EndEpoch:       d.LatestSTR().Epoch})
 
 	if err != ReqSuccess {
-		t.Fatal("Unable to get latest range of STRs")
+		t.Fatalf("Unable to get latest range of STRs, got %s", err.Error())
 	}
 
 	obs := res.DirectoryResponse.(*STRHistoryRange)
@@ -154,7 +147,10 @@ func TestGetObservedSTRMultipleEpochs(t *testing.T) {
 
 	// go to next epoch
 	d.Update()
-	err1 := aud.Update(dirInitHash, d.LatestSTR())
+	h, _ := aud.get(dirInitHash)
+	resp, _ := NewSTRHistoryRange([]*DirSTR{d.LatestSTR()})
+
+	err1 := h.Audit(resp)
 	if err1 != nil {
 		t.Fatal("Error occurred updating audit log after auditing request")
 	}

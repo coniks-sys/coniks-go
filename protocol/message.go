@@ -16,6 +16,7 @@ const (
 	KeyLookupInEpochType
 	MonitoringType
 	AuditType
+	STRType
 )
 
 // A Request message defines the data a CONIKS client must send to a CONIKS
@@ -108,6 +109,17 @@ type AuditingRequest struct {
 	EndEpoch       uint64
 }
 
+// An STRRequest is a message with a StartEpoch and optional EndEpoch
+// of an epoch range as two uint64's that a CONIKS auditor
+// sends to a directory to retrieve a range of STRs starting at epoch
+// StartEpoch.
+// If EndEpoch is omitted, the directory assumes that the auditor
+// is requesting the STR range [StartEpoch, d.LatestSTR().Epoch].
+type STRRequest struct {
+	StartEpoch uint64
+	EndEpoch   uint64 `json:",omitempty"`
+}
+
 // A Response message indicates the result of a CONIKS client request
 // with an appropriate error code, and defines the set of cryptographic
 // proofs a CONIKS directory must return as part of its response.
@@ -135,7 +147,8 @@ type DirectoryProof struct {
 // STR representing a range of the STR hash chain. If the range only
 // covers the latest epoch, the list only contains a single STR.
 // A CONIKS auditor returns this DirectoryResponse type upon an
-// AudutingRequest.
+// AudutingRequest from a client, and a CONIKS directory returns
+// this message upon an STRRequest from an auditor.
 type STRHistoryRange struct {
 	STR []*DirSTR
 }
@@ -262,8 +275,6 @@ func (msg *Response) validate() error {
 		}
 		return nil
 	case *STRHistoryRange:
-		// treat the STRHistoryRange as an auditor response
-		// bc validate is only called by a client
 		if len(df.STR) == 0 {
 			return ErrMalformedAuditorMessage
 		}

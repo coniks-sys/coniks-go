@@ -45,6 +45,15 @@ func (h *directoryHistory) updateVerifiedSTR(newVerified *DirSTR) {
 	h.snapshots[newVerified.Epoch] = newVerified
 }
 
+// insertRange inserts the given range of STRs snaps
+// into the directoryHistory h.
+// insertRange() assumes that snaps has been audited by Audit().
+func (h *directoryHistory) insertRange(snaps []*DirSTR) {
+	for i := 0; i < len(snaps); i++ {
+		h.updateVerifiedSTR(snaps[i])
+	}
+}
+
 // Audit checks that a directory's STR history
 // is linear and updates the auditor's state
 // if the checks pass.
@@ -53,10 +62,34 @@ func (h *directoryHistory) updateVerifiedSTR(newVerified *DirSTR) {
 // and then verifies the remaining STRs in msg, and
 // finally updates the snapshots if the checks pass.
 // Audit() is called when an auditor receives new STRs
-// from a directory.
+// from a specific directory.
 func (h *directoryHistory) Audit(msg *Response) error {
-	// TODO: Implement as part of the auditor-server protocol
-	return CheckPassed
+	if err := msg.validate(); err != nil {
+		return err.(ErrorCode)
+	}
+
+	strs := msg.DirectoryResponse.(*STRHistoryRange)
+
+	// Since the str[0] is pinned in the audit log
+	// expect that STR[0].Epoch is at least 1
+	if strs.STR[0].Epoch < 1 {
+		return ErrMalformedDirectoryMessage
+	}
+
+	// audit the STRs
+	// if strs.STR is somehow malformed or invalid (e.g. strs.STR
+	// contains old STRs), AuditDirectory() will detect this
+	// and throw and error
+	if err := h.AuditDirectory(strs.STR); err != nil {
+		return err
+	}
+
+	// TODO: we should be storing inconsistent STRs nonetheless
+	// so clients can detect inconsistencies -- or auditors
+	// should blow the whistle and not store the bad STRs
+	h.insertRange(strs.STR)
+
+	return nil
 }
 
 // NewAuditLog constructs a new ConiksAuditLog. It creates an empty
@@ -68,7 +101,8 @@ func NewAuditLog() ConiksAuditLog {
 
 // set associates the given directoryHistory with the directory identifier
 // (i.e. the hash of the initial STR) dirInitHash in the ConiksAuditLog.
-func (l ConiksAuditLog) set(dirInitHash [crypto.HashSizeByte]byte, dirHistory *directoryHistory) {
+func (l ConiksAuditLog) set(dirInitHash [crypto.HashSizeByte]byte,
+	dirHistory *directoryHistory) {
 	l[dirInitHash] = dirHistory
 }
 
@@ -81,24 +115,22 @@ func (l ConiksAuditLog) get(dirInitHash [crypto.HashSizeByte]byte) (*directoryHi
 	return h, ok
 }
 
-// Insert creates a new directory history for the key directory addr
+// InitHistory creates a new directory history for the key directory addr
 // and inserts it into the audit log l.
 // The directory history is initialized with the key directory's
-// signing key signKey, and a list of snapshots snaps representing the
-// directory's STR history so far, in chronological order.
-// Insert() returns an ErrAuditLog if the auditor attempts to create
+// signing key signKey, and a list of one or more snapshots snaps
+// representing the pinned directory's STR history so far,
+// in chronological order.
+// InitHistory() returns an ErrAuditLog if the auditor attempts to create
 // a new history for a known directory, and nil otherwise.
-// Insert() only creates the initial entry in the log for addr. Use Update()
-// to insert newly observed STRs for addr in subsequent epochs.
-// Insert() assumes that the caller
-// has called Audit() on snaps before calling Insert().
-// FIXME: pass Response message as param
-// masomel: will probably want to write a more generic function
-// for "catching up" on a history in case an auditor misses epochs
-func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
+// InitHistory() is called by an auditor when it initializes its state
+// from disk (either first-time startup, or after reboot).
+func (l ConiksAuditLog) InitHistory(addr string, signKey sign.PublicKey,
 	snaps []*DirSTR) error {
+
 	// make sure we're getting an initial STR at the very least
 	if len(snaps) < 1 || snaps[0].Epoch != 0 {
+		// FIXME: This should be a more generic "malformed error"
 		return ErrMalformedDirectoryMessage
 	}
 
@@ -115,57 +147,14 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 	// create the new directory history
 	h = newDirectoryHistory(addr, signKey, snaps[0])
 
-	// FIXME: remove this check --> caller calls Audit() before
-	// this function
-	// add each STR into the history
-	// start at 1 since we've inserted the initial STR above
-	// This loop automatically catches if snaps is malformed
-	// (i.e. snaps is missing an epoch between 0 and the latest given)
-	for i := 1; i < len(snaps); i++ {
-		str := snaps[i]
-		if str == nil {
-			return ErrMalformedDirectoryMessage
-		}
-
-		// verify the consistency of each new STR before inserting
-		// into the audit log
-		if err := h.verifySTRConsistency(h.VerifiedSTR(), str); err != nil {
-			return err
-		}
-
-		h.updateVerifiedSTR(snaps[i])
-	}
-
+	// TODO: re-verify all snaps although auditor should have
+	// already done so in the past? After all, if we have
+	// more than one snapshot, this means that the auditor is
+	// re-initializing its state from disk, and it wouldn't have
+	// saved those STRs if they didn't pass the Audit() checks.
+	h.insertRange(snaps[1:])
 	l.set(dirInitHash, h)
 
-	return nil
-}
-
-// Update inserts a newly observed STR newSTR into the log entry for the
-// directory history given by dirInitHash (hash of direcotry's initial STR).
-// Update() assumes that Insert() has been called for
-// dirInitHash prior to its first call and thereby expects that an
-// entry for addr exists in the audit log l, and that the caller
-// has called Audit() on newSTR before calling Update().
-// Update() returns ErrAuditLog if the audit log doesn't contain an
-// entry for dirInitHash.
-// FIXME: pass Response message as param
-func (l ConiksAuditLog) Update(dirInitHash [crypto.HashSizeByte]byte, newSTR *DirSTR) error {
-	// error if we want to update the entry for an addr we don't know
-	h, ok := l.get(dirInitHash)
-	if !ok {
-		return ErrAuditLog
-	}
-
-	// FIXME: remove this check --> caller calls Audit() before this
-	// function
-	if err := h.verifySTRConsistency(h.VerifiedSTR(), newSTR); err != nil {
-		return err
-	}
-
-	// update the latest STR
-	// FIXME: use STR slice from Response msg
-	h.updateVerifiedSTR(newSTR)
 	return nil
 }
 
