@@ -82,7 +82,7 @@ func (cc *ConsistencyChecks) CheckEquivocation(msg *Response) error {
 	// TODO: if the auditor has returned a more recent STR,
 	// should the client update its savedSTR? Should this
 	// force a new round of monitoring?
-	return cc.checkSTRAgainstVerified(LatestSTRInRange(strs.STR))
+	return cc.checkSTRAgainstVerified(strs.STR[len(strs.STR)-1])
 }
 
 // HandleResponse verifies the directory's response for a request.

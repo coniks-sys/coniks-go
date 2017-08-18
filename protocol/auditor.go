@@ -140,6 +140,12 @@ func (a *AudState) verifySTRRange(prevSTR *DirSTR, strs []*DirSTR) error {
 // AuditDirectory() returns the appropriate consistency check error
 // if any of the checks fail, or nil if the checks pass.
 func (a *AudState) AuditDirectory(strs []*DirSTR) error {
+
+	// validate strs
+	if strs == nil {
+		return ErrMalformedDirectoryMessage
+	}
+
 	// check STR against the latest verified STR
 	if err := a.checkSTRAgainstVerified(strs[0]); err != nil {
 		return err
@@ -166,11 +172,4 @@ func ComputeDirectoryIdentity(str *DirSTR) [crypto.HashSizeByte]byte {
 	var initSTRHash [crypto.HashSizeByte]byte
 	copy(initSTRHash[:], crypto.Digest(str.Signature))
 	return initSTRHash
-}
-
-// LatestSTRInRange returns the STR in the last element of a
-// range of STRs. The range is assumed to be sorted
-// by increasing order of STR epoch.
-func LatestSTRInRange(strs []*DirSTR) *DirSTR {
-	return strs[len(strs)-1]
 }
