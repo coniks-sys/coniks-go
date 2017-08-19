@@ -140,9 +140,8 @@ func (a *AudState) verifySTRRange(prevSTR *DirSTR, strs []*DirSTR) error {
 // AuditDirectory() returns the appropriate consistency check error
 // if any of the checks fail, or nil if the checks pass.
 func (a *AudState) AuditDirectory(strs []*DirSTR) error {
-
 	// validate strs
-	if strs == nil {
+	if len(strs) == 0 {
 		return ErrMalformedDirectoryMessage
 	}
 
