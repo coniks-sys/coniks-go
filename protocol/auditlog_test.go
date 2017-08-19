@@ -65,6 +65,39 @@ func TestUpdateBadNewSTR(t *testing.T) {
 	}
 }
 
+func TestAuditBadRange(t *testing.T) {
+	// create basic test directory and audit log with 11 STRs
+	d, aud, hist := NewTestAuditLog(t, 0)
+
+	d.Update()
+
+	resp, err := d.GetSTRHistory(&STRHistoryRequest{
+		StartEpoch: uint64(0),
+		EndEpoch:   uint64(0)})
+
+	if err != ReqSuccess {
+		t.Fatalf("Error occurred while fetching STR history: %s", err.Error())
+	}
+
+	strs := resp.DirectoryResponse.(*STRHistoryRange)
+	if len(strs.STR) != 2 {
+		t.Fatalf("Expect 2 STRs from directory, got %d", len(strs.STR))
+	}
+
+	if strs.STR[0].Epoch != 0 || strs.STR[1].Epoch != 1 {
+		t.Fatalf("Expect latest epoch of 1, got %d", strs.STR[1].Epoch)
+	}
+
+	// compute the hash of the initial STR for later lookups
+	dirInitHash := ComputeDirectoryIdentity(hist[0])
+	h, _ := aud.get(dirInitHash)
+
+	err1 := h.Audit(resp)
+	if err1 != ErrMalformedDirectoryMessage {
+		t.Fatalf("Expect ErrMalformedDirectoryMessage when auditing an STR range starting at 1")
+	}
+}
+
 func TestGetLatestObservedSTR(t *testing.T) {
 	// create basic test directory and audit log with 1 STR
 	d, aud, hist := NewTestAuditLog(t, 0)

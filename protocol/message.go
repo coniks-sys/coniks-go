@@ -109,13 +109,15 @@ type AuditingRequest struct {
 	EndEpoch       uint64
 }
 
-// An STRRequest is a message with a StartEpoch and optional EndEpoch
+// An STRHistoryRequest is a message with a StartEpoch and optional EndEpoch
 // of an epoch range as two uint64's that a CONIKS auditor
 // sends to a directory to retrieve a range of STRs starting at epoch
 // StartEpoch.
-// If EndEpoch is omitted, the directory assumes that the auditor
-// is requesting the STR range [StartEpoch, d.LatestSTR().Epoch].
-type STRRequest struct {
+//
+// The response to a successful request is an STRHistoryRange with
+// a list of STRs covering the epoch range [StartEpoch, EndEpoch],
+// or [StartEpoch, d.LatestSTR().Epoch] if EndEpoch is omitted.
+type STRHistoryRequest struct {
 	StartEpoch uint64
 	EndEpoch   uint64 `json:",omitempty"`
 }
@@ -148,7 +150,7 @@ type DirectoryProof struct {
 // covers the latest epoch, the list only contains a single STR.
 // A CONIKS auditor returns this DirectoryResponse type upon an
 // AudutingRequest from a client, and a CONIKS directory returns
-// this message upon an STRRequest from an auditor.
+// this message upon an STRHistoryRequest from an auditor.
 type STRHistoryRange struct {
 	STR []*DirSTR
 }
