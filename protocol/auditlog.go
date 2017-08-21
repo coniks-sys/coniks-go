@@ -80,7 +80,7 @@ func (h *directoryHistory) Audit(msg *Response) error {
 	// if strs.STR is somehow malformed or invalid (e.g. strs.STR
 	// contains old STRs), AuditDirectory() will detect this
 	// and throw and error
-	if err := h.AuditDirectory(strs.STR); err != nil {
+	if err := h.AuditDirectory(strs.STR); err != CheckPassed {
 		return err
 	}
 

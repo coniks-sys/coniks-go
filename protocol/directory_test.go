@@ -306,7 +306,6 @@ func TestSTRHistoryRequestLatest(t *testing.T) {
 	if err1 != nil {
 		t.Fatalf("Error occurred auditing the latest STR: %s", err1.Error())
 	}
-
 }
 
 func TestSTRHistoryRequestRangeLatest(t *testing.T) {
@@ -343,7 +342,6 @@ func TestSTRHistoryRequestRangeLatest(t *testing.T) {
 	if err1 != nil {
 		t.Fatalf("Error occurred auditing the latest STR: %s", err1.Error())
 	}
-
 }
 
 func TestSTRHistoryRequestInEpoch(t *testing.T) {
@@ -380,7 +378,6 @@ func TestSTRHistoryRequestInEpoch(t *testing.T) {
 	if err1 != nil {
 		t.Fatalf("Error occurred auditing the latest STR: %s", err1.Error())
 	}
-
 }
 
 func TestSTRHistoryRequestBadRange(t *testing.T) {

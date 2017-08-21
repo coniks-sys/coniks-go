@@ -44,29 +44,8 @@ func TestInsertExistingHistory(t *testing.T) {
 	}
 }
 
-func TestUpdateBadNewSTR(t *testing.T) {
-	// create basic test directory and audit log with 11 STRs
-	d, aud, hist := NewTestAuditLog(t, 10)
-
-	// compute the hash of the initial STR for later lookups
-	dirInitHash := ComputeDirectoryIdentity(hist[0])
-
-	// update the directory a few more times and then try
-	// to update
-	d.Update()
-	d.Update()
-
-	h, _ := aud.get(dirInitHash)
-	resp, _ := NewSTRHistoryRange([]*DirSTR{d.LatestSTR()})
-
-	err := h.Audit(resp)
-	if err != CheckBadSTR {
-		t.Fatal("Expected a CheckBadSTR when attempting update a server history with a bad STR")
-	}
-}
-
-func TestAuditBadRange(t *testing.T) {
-	// create basic test directory and audit log with 11 STRs
+func TestAuditLogBadEpochRange(t *testing.T) {
+	// create basic test directory and audit log with 1 STR
 	d, aud, hist := NewTestAuditLog(t, 0)
 
 	d.Update()

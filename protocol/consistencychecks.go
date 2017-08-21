@@ -133,7 +133,7 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 		// The initial STR is pinned in the client
 		// so cc.verifiedSTR should never be nil
 		// FIXME: use STR slice from Response msg
-		if err := cc.AuditDirectory([]*DirSTR{str}); err != nil {
+		if err := cc.AuditDirectory([]*DirSTR{str}); err != CheckPassed {
 			return err
 		}
 

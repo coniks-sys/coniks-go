@@ -21,3 +21,76 @@ func TestVerifyHashChain(t *testing.T) {
 		savedSTR = str
 	}
 }
+
+func TestVerifyHashChainBadPrevSTRHash(t *testing.T) {
+	// create basic test directory and audit log with 4 STRs
+	d, aud, hist := NewTestAuditLog(t, 3)
+
+	d.Update()
+
+	// modify the latest STR so that the consistency check fails
+	str := d.LatestSTR()
+	str2 := *str.SignedTreeRoot
+	str2.PreviousSTRHash = append([]byte{}, str.PreviousSTRHash...)
+	str2.PreviousSTRHash[0]++
+	str.SignedTreeRoot = &str2
+
+	// compute the hash of the initial STR for later lookups
+	dirInitHash := ComputeDirectoryIdentity(hist[0])
+	h, _ := aud.get(dirInitHash)
+
+	// try to verify a new STR with a bad previous STR hash:
+	// case hash(verifiedSTR.Signature) != str.PreviousSTRHash in
+	// str.VerifyHashChain()
+	if str.VerifyHashChain(h.VerifiedSTR()) {
+		t.Fatal("Expect hash chain verification to fail with bad previos STR hash")
+	}
+}
+
+func TestVerifyHashChainBadPrevEpoch(t *testing.T) {
+	// create basic test directory and audit log with 4 STRs
+	d, aud, hist := NewTestAuditLog(t, 3)
+
+	d.Update()
+
+	// modify the latest STR so that the consistency check fails
+	str := d.LatestSTR()
+	str2 := *str.SignedTreeRoot
+	str2.PreviousEpoch++
+	str.SignedTreeRoot = &str2
+
+	// compute the hash of the initial STR for later lookups
+	dirInitHash := ComputeDirectoryIdentity(hist[0])
+	h, _ := aud.get(dirInitHash)
+
+	// try to verify a new STR with a bad previous STR hash:
+	// case str.PrevousEpoch != verifiedSTR.Epoch in
+	// str.VerifyHashChain()
+	if str.VerifyHashChain(h.VerifiedSTR()) {
+		t.Fatal("Expect hash chain verification to fail with bad previos epoch")
+	}
+}
+
+func TestVerifyHashChainBadCurEpoch(t *testing.T) {
+	// create basic test directory and audit log with 4 STRs
+	d, aud, hist := NewTestAuditLog(t, 3)
+
+	d.Update()
+
+	// modify the latest STR so that the consistency check fails
+	str := d.LatestSTR()
+	str2 := *str.SignedTreeRoot
+	str2.Epoch++
+	str.SignedTreeRoot = &str2
+
+	// compute the hash of the initial STR for later lookups
+	dirInitHash := ComputeDirectoryIdentity(hist[0])
+	h, _ := aud.get(dirInitHash)
+
+	// try to verify a new STR with a bad previous STR hash:
+	// case str.Epoch != verifiedSTR.Epoch+1 in
+	// str.VerifyHashChain()
+	if str.VerifyHashChain(h.VerifiedSTR()) {
+		t.Fatal("Expect hash chain verification to fail with bad previos epoch")
+	}
+}
