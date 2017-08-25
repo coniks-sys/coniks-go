@@ -16,7 +16,7 @@ type directoryHistory struct {
 	snapshots map[uint64]*DirSTR
 }
 
-// caller validates that initSTR is for epoch 0
+// caller validates that initSTR is for epoch 0.
 func newDirectoryHistory(addr string, signKey sign.PublicKey, initSTR *DirSTR) *directoryHistory {
 	a := NewAuditor(signKey, initSTR)
 	h := &directoryHistory{
@@ -38,15 +38,15 @@ func newDirectoryHistory(addr string, signKey sign.PublicKey, initSTR *DirSTR) *
 // chronological order.
 type ConiksAuditLog map[[crypto.HashSizeByte]byte]*directoryHistory
 
-// updateVerifiedSTR inserts a new range of STRs into a directory history;
-// assumes the STRs have been validated by the caller
+// updateVerifiedSTR inserts the latest verified STR into a directory history;
+// assumes the STRs have been validated by the caller.
 func (h *directoryHistory) updateVerifiedSTR(newVerified *DirSTR) {
 	h.Update(newVerified)
 	h.snapshots[newVerified.Epoch] = newVerified
 }
 
 // Audit checks that a directory's STR history
-// is linear and updates the audtor's state
+// is linear and updates the auditor's state
 // if the checks pass.
 // Audit() first checks the oldest STR in the
 // STR range received in message against the h.verfiedSTR,
@@ -148,7 +148,7 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 // entry for addr exists in the audit log l, and that the caller
 // has called Audit() on newSTR before calling Update().
 // Update() returns ErrAuditLog if the audit log doesn't contain an
-// entry for dirInitHash
+// entry for dirInitHash.
 // FIXME: pass Response message as param
 func (l ConiksAuditLog) Update(dirInitHash [crypto.HashSizeByte]byte, newSTR *DirSTR) error {
 	// error if we want to update the entry for an addr we don't know
