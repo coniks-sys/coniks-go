@@ -26,7 +26,6 @@ var registrationMsg = `
     }
 }
 `
-
 var keylookupMsg = `
 {
     "type": 1,
@@ -48,7 +47,6 @@ func startServer(t *testing.T, epDeadline Timestamp, useBot bool, policiesPath s
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	addrs := []*Address{
 		&Address{
 			Address:           testutil.PublicConnection,
@@ -57,6 +55,12 @@ func startServer(t *testing.T, epDeadline Timestamp, useBot bool, policiesPath s
 			AllowRegistration: !useBot,
 		},
 	}
+	addrs = append(addrs, &Address{
+		Address:           testutil.PublicHTTPSConnection,
+		TLSCertPath:       path.Join(dir, "server.pem"),
+		TLSKeyPath:        path.Join(dir, "server.key"),
+		AllowRegistration: !useBot,
+	})
 	if useBot {
 		addrs = append(addrs, &Address{
 			Address:           testutil.LocalConnection,
@@ -77,7 +81,6 @@ func startServer(t *testing.T, epDeadline Timestamp, useBot bool, policiesPath s
 			Path:        path.Join(dir, "coniksserver.log"),
 		},
 	}
-
 	server := NewConiksServer(conf)
 	server.Run(conf.Addresses)
 	return server, func() {
@@ -101,7 +104,8 @@ func TestResolveAddresses(t *testing.T) {
 		TLSCertPath: path.Join(dir, "server.pem"),
 		TLSKeyPath:  path.Join(dir, "server.key"),
 	}
-	ln, _, perms := resolveAndListen(addr)
+	perms := updatePerms(addr)
+	ln, _ := resolveAndListen(addr)
 	defer ln.Close()
 	if perms[RegistrationType] != false {
 		t.Error("Expect disallowing registration permission.")
@@ -112,7 +116,8 @@ func TestResolveAddresses(t *testing.T) {
 		Address:           testutil.LocalConnection,
 		AllowRegistration: true,
 	}
-	ln, _, perms = resolveAndListen(addr)
+	perms = updatePerms(addr)
+	ln, _ = resolveAndListen(addr)
 	defer ln.Close()
 	if perms[RegistrationType] != true {
 		t.Error("Expect allowing registration permission.")
@@ -142,10 +147,28 @@ func TestServerReloadPoliciesWithError(t *testing.T) {
 	<-timer.C
 }
 
-func TestAcceptOutsideRegistrationRequests(t *testing.T) {
+func TestAcceptOutsideRegistrationTCPRequests(t *testing.T) {
 	_, teardown := startServer(t, 60, false, "")
 	defer teardown()
 	rev, err := testutil.NewTCPClientDefault([]byte(registrationMsg))
+	if err != nil {
+		t.Error(err)
+	}
+	var response testutil.ExpectingDirProofResponse
+	err = json.Unmarshal(rev, &response)
+	if err != nil {
+		t.Log(string(rev))
+		t.Error(err)
+	}
+	if response.Error != ReqSuccess {
+		t.Error("Expect a successful registration", "got", response.Error)
+	}
+}
+
+func TestAcceptOutsideRegistrationHTTPSRequests(t *testing.T) {
+	_, teardown := startServer(t, 60, false, "")
+	defer teardown()
+	rev, err := testutil.NewHTTPSClientDefault([]byte(registrationMsg))
 	if err != nil {
 		t.Error(err)
 	}
@@ -180,11 +203,29 @@ func TestBotSendsRegistration(t *testing.T) {
 	}
 }
 
-func TestSendsRegistrationFromOutside(t *testing.T) {
+func TestSendsTCPRegistrationFromOutside(t *testing.T) {
 	_, teardown := startServer(t, 60, true, "")
 	defer teardown()
 
 	rev, err := testutil.NewTCPClientDefault([]byte(registrationMsg))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var response Response
+	err = json.Unmarshal(rev, &response)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.Error != ErrMalformedClientMessage {
+		t.Fatalf("Expect error code %d", ErrMalformedClientMessage)
+	}
+}
+
+func TestSendsHTTPSRegistrationFromOutside(t *testing.T) {
+	_, teardown := startServer(t, 60, true, "")
+	defer teardown()
+
+	rev, err := testutil.NewHTTPSClientDefault([]byte(registrationMsg))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -349,7 +390,7 @@ func TestRegisterAndLookupInTheSameEpoch(t *testing.T) {
 	}
 }
 
-func TestRegisterAndLookup(t *testing.T) {
+func TestRegisterAndTCPLookup(t *testing.T) {
 	server, teardown := startServer(t, 1, true, "")
 	defer teardown()
 
@@ -378,6 +419,49 @@ func TestRegisterAndLookup(t *testing.T) {
 
 	var str testutil.ExpectingSTR
 	err = json.Unmarshal(res.DirectoryResponse.STR[0], &str)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if str.Epoch == 0 {
+		t.Fatal("Expect STR with epoch > 0")
+	}
+	if res.DirectoryResponse.AP == nil {
+		t.Fatal("Expect a proof of inclusion")
+	}
+	if res.DirectoryResponse.TB != nil {
+		t.Fatal("Expect returned TB is nil")
+	}
+}
+
+func TestRegisterAndHTTPSLookup(t *testing.T) {
+	server, teardown := startServer(t, 1, true, "")
+	defer teardown()
+
+	_, err := testutil.NewUnixClientDefault([]byte(registrationMsg))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	server.dir.Update()
+	rev, err := testutil.NewHTTPSClientDefault([]byte(keylookupMsg))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var res testutil.ExpectingDirProofResponse
+	err = json.Unmarshal(rev, &res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Error != ReqSuccess {
+		t.Fatal("Expect no error", "got", res.Error)
+	}
+	if res.DirectoryResponse.STR == nil {
+		t.Fatal("Expect the latets STR")
+	}
+
+	var str testutil.ExpectingSTR
+	err = json.Unmarshal(res.DirectoryResponse.STR, &str)
 	if err != nil {
 		t.Fatal(err)
 	}
