@@ -70,12 +70,6 @@ func (h *directoryHistory) Audit(msg *Response) error {
 
 	strs := msg.DirectoryResponse.(*STRHistoryRange)
 
-	// Since the str[0] is pinned in the audit log
-	// expect that STR[0].Epoch is at least 1
-	if strs.STR[0].Epoch < 1 {
-		return ErrMalformedDirectoryMessage
-	}
-
 	// audit the STRs
 	// if strs.STR is somehow malformed or invalid (e.g. strs.STR
 	// contains old STRs), AuditDirectory() will detect this

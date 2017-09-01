@@ -52,7 +52,7 @@ func TestAuditLogBadEpochRange(t *testing.T) {
 
 	resp, err := d.GetSTRHistory(&STRHistoryRequest{
 		StartEpoch: uint64(0),
-		EndEpoch:   uint64(0)})
+		EndEpoch:   uint64(1)})
 
 	if err != ReqSuccess {
 		t.Fatalf("Error occurred while fetching STR history: %s", err.Error())
@@ -72,8 +72,15 @@ func TestAuditLogBadEpochRange(t *testing.T) {
 	h, _ := aud.get(dirInitHash)
 
 	err1 := h.Audit(resp)
-	if err1 != ErrMalformedDirectoryMessage {
-		t.Fatalf("Expect ErrMalformedDirectoryMessage when auditing an STR range starting at 1")
+	if err1 != nil {
+		t.Fatalf("Error occurred while auditing STR history: %s", err1.Error())
+	}
+
+	// now try to audit the same range again: should fail because the
+	// verified epoch is at 1
+	err1 = h.Audit(resp)
+	if err1 != CheckBadSTR {
+		t.Fatalf("Expecting CheckBadSTR, got %s", err1.Error())
 	}
 }
 
