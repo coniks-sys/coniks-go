@@ -11,10 +11,21 @@ import (
 )
 
 type directoryHistory struct {
+	*AudState
 	addr      string
-	signKey   sign.PublicKey
 	snapshots map[uint64]*DirSTR
-	latestSTR *DirSTR
+}
+
+// caller validates that initSTR is for epoch 0.
+func newDirectoryHistory(addr string, signKey sign.PublicKey, initSTR *DirSTR) *directoryHistory {
+	a := NewAuditor(signKey, initSTR)
+	h := &directoryHistory{
+		AudState:  a,
+		addr:      addr,
+		snapshots: make(map[uint64]*DirSTR),
+	}
+	h.updateVerifiedSTR(initSTR)
+	return h
 }
 
 // A ConiksAuditLog maintains the histories
@@ -27,21 +38,25 @@ type directoryHistory struct {
 // chronological order.
 type ConiksAuditLog map[[crypto.HashSizeByte]byte]*directoryHistory
 
-// updateLatestSTR inserts a new STR into a directory history;
-// assumes the STR has been validated by the caller
-func (h *directoryHistory) updateLatestSTR(newLatest *DirSTR) {
-	h.snapshots[newLatest.Epoch] = newLatest
-	h.latestSTR = newLatest
+// updateVerifiedSTR inserts the latest verified STR into a directory history;
+// assumes the STRs have been validated by the caller.
+func (h *directoryHistory) updateVerifiedSTR(newVerified *DirSTR) {
+	h.Update(newVerified)
+	h.snapshots[newVerified.Epoch] = newVerified
 }
 
-// caller validates that initSTR is for epoch 0
-func newDirectoryHistory(addr string, signKey sign.PublicKey, initSTR *DirSTR) *directoryHistory {
-	h := new(directoryHistory)
-	h.addr = addr
-	h.signKey = signKey
-	h.snapshots = make(map[uint64]*DirSTR)
-	h.updateLatestSTR(initSTR)
-	return h
+// Audit checks that a directory's STR history
+// is linear and updates the auditor's state
+// if the checks pass.
+// Audit() first checks the oldest STR in the
+// STR range received in message against the h.verfiedSTR,
+// and then verifies the remaining STRs in msg, and
+// finally updates the snapshots if the checks pass.
+// Audit() is called when an auditor receives new STRs
+// from a directory.
+func (h *directoryHistory) Audit(msg *Response) error {
+	// TODO: Implement as part of the auditor-server protocol
+	return CheckPassed
 }
 
 // NewAuditLog constructs a new ConiksAuditLog. It creates an empty
@@ -72,16 +87,16 @@ func (l ConiksAuditLog) get(dirInitHash [crypto.HashSizeByte]byte) (*directoryHi
 // signing key signKey, and a list of snapshots snaps representing the
 // directory's STR history so far, in chronological order.
 // Insert() returns an ErrAuditLog if the auditor attempts to create
-// a new history for a known directory, an ErrMalformedDirectoryMessage
-// if oldSTRs is malformed, and nil otherwise.
+// a new history for a known directory, and nil otherwise.
 // Insert() only creates the initial entry in the log for addr. Use Update()
 // to insert newly observed STRs for addr in subsequent epochs.
+// Insert() assumes that the caller
+// has called Audit() on snaps before calling Insert().
 // FIXME: pass Response message as param
 // masomel: will probably want to write a more generic function
 // for "catching up" on a history in case an auditor misses epochs
 func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 	snaps []*DirSTR) error {
-
 	// make sure we're getting an initial STR at the very least
 	if len(snaps) < 1 || snaps[0].Epoch != 0 {
 		return ErrMalformedDirectoryMessage
@@ -100,6 +115,8 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 	// create the new directory history
 	h = newDirectoryHistory(addr, signKey, snaps[0])
 
+	// FIXME: remove this check --> caller calls Audit() before
+	// this function
 	// add each STR into the history
 	// start at 1 since we've inserted the initial STR above
 	// This loop automatically catches if snaps is malformed
@@ -112,41 +129,43 @@ func (l ConiksAuditLog) Insert(addr string, signKey sign.PublicKey,
 
 		// verify the consistency of each new STR before inserting
 		// into the audit log
-		if err := verifySTRConsistency(signKey, h.latestSTR, str); err != nil {
+		if err := h.verifySTRConsistency(h.VerifiedSTR(), str); err != nil {
 			return err
 		}
 
-		h.updateLatestSTR(snaps[i])
+		h.updateVerifiedSTR(snaps[i])
 	}
 
-	// Finally, add the new history to the log
 	l.set(dirInitHash, h)
 
 	return nil
 }
 
-// Update verifies the consistency of a newly observed STR newSTR for
-// the directory addr, and inserts the newSTR into addr's directory history
-// if the checks (i.e. STR signature and hash chain verifications) pass.
-// Update() returns nil if the checks pass, and the appropriate consistency
-// check error otherwise. Update() assumes that Insert() has been called for
-// addr prior to its first call and thereby expects that an entry for addr
-// exists in the audit log l.
+// Update inserts a newly observed STR newSTR into the log entry for the
+// directory history given by dirInitHash (hash of direcotry's initial STR).
+// Update() assumes that Insert() has been called for
+// dirInitHash prior to its first call and thereby expects that an
+// entry for addr exists in the audit log l, and that the caller
+// has called Audit() on newSTR before calling Update().
+// Update() returns ErrAuditLog if the audit log doesn't contain an
+// entry for dirInitHash.
 // FIXME: pass Response message as param
 func (l ConiksAuditLog) Update(dirInitHash [crypto.HashSizeByte]byte, newSTR *DirSTR) error {
-
 	// error if we want to update the entry for an addr we don't know
 	h, ok := l.get(dirInitHash)
 	if !ok {
 		return ErrAuditLog
 	}
 
-	if err := verifySTRConsistency(h.signKey, h.latestSTR, newSTR); err != nil {
+	// FIXME: remove this check --> caller calls Audit() before this
+	// function
+	if err := h.verifySTRConsistency(h.VerifiedSTR(), newSTR); err != nil {
 		return err
 	}
 
 	// update the latest STR
-	h.updateLatestSTR(newSTR)
+	// FIXME: use STR slice from Response msg
+	h.updateVerifiedSTR(newSTR)
 	return nil
 }
 
@@ -170,7 +189,6 @@ func (l ConiksAuditLog) Update(dirInitHash [crypto.HashSizeByte]byte, newSTR *Di
 // message.NewErrorResponse(ReqUnknownDirectory) tuple.
 func (l ConiksAuditLog) GetObservedSTRs(req *AuditingRequest) (*Response,
 	ErrorCode) {
-
 	// make sure we have a history for the requested directory in the log
 	h, ok := l.get(req.DirInitSTRHash)
 	if !ok {
@@ -178,7 +196,7 @@ func (l ConiksAuditLog) GetObservedSTRs(req *AuditingRequest) (*Response,
 	}
 
 	// make sure the request is well-formed
-	if req.EndEpoch > h.latestSTR.Epoch || req.StartEpoch > req.EndEpoch {
+	if req.EndEpoch > h.VerifiedSTR().Epoch || req.StartEpoch > req.EndEpoch {
 		return NewErrorResponse(ErrMalformedClientMessage),
 			ErrMalformedClientMessage
 	}
