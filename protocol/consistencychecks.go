@@ -8,7 +8,6 @@ package protocol
 
 import (
 	"bytes"
-	"reflect"
 
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	m "github.com/coniks-sys/coniks-go/merkletree"
@@ -26,15 +25,14 @@ import (
 // subsequent responses from the ConiksDirectory to any
 // client request.
 type ConsistencyChecks struct {
-	// SavedSTR stores the latest verified signed tree root.
-	SavedSTR *DirSTR
+	// the auditor state stores the latest verified signed tree root
+	// as well as the server's signing key
+	*AudState
 	Bindings map[string][]byte
 
 	// extensions settings
 	useTBs bool
 	TBs    map[string]*TemporaryBinding
-
-	signKey sign.PublicKey
 }
 
 // NewCC creates an instance of ConsistencyChecks using
@@ -45,16 +43,46 @@ func NewCC(savedSTR *DirSTR, useTBs bool, signKey sign.PublicKey) *ConsistencyCh
 	if !useTBs {
 		panic("[coniks] Currently the server is forced to use TBs")
 	}
+	a := NewAuditor(signKey, savedSTR)
 	cc := &ConsistencyChecks{
-		SavedSTR: savedSTR,
+		AudState: a,
 		Bindings: make(map[string][]byte),
 		useTBs:   useTBs,
-		signKey:  signKey,
+		TBs:      nil,
 	}
 	if useTBs {
 		cc.TBs = make(map[string]*TemporaryBinding)
 	}
 	return cc
+}
+
+// CheckEquivocation checks for possible equivocation between
+// an auditors' observed STRs and the client's own view.
+// CheckEquivocation() first verifies the STR range received
+// in msg if msg contains more than 1 STR, and
+// then checks the most recent STR in msg against
+// the cc.verifiedSTR.
+// CheckEquivocation() is called when a client receives a response to a
+// message.AuditingRequest from an auditor.
+func (cc *ConsistencyChecks) CheckEquivocation(msg *Response) error {
+	if err := msg.validate(); err != nil {
+		return err.(ErrorCode)
+	}
+
+	strs := msg.DirectoryResponse.(*STRHistoryRange)
+
+	// verify the hashchain of the received STRs
+	// if we get more than 1 in our range
+	if len(strs.STR) > 1 {
+		if err := cc.verifySTRRange(strs.STR[0], strs.STR[1:]); err != nil {
+			return err
+		}
+	}
+
+	// TODO: if the auditor has returned a more recent STR,
+	// should the client update its savedSTR? Should this
+	// force a new round of monitoring?
+	return cc.checkSTRAgainstVerified(strs.STR[len(strs.STR)-1])
 }
 
 // HandleResponse verifies the directory's response for a request.
@@ -102,16 +130,10 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	switch requestType {
 	case RegistrationType, KeyLookupType:
 		str = msg.DirectoryResponse.(*DirectoryProof).STR[0]
-		// First response
-		if cc.SavedSTR == nil {
-			cc.SavedSTR = str
-			return nil
-		}
-		if err := cc.verifySTR(str); err == nil {
-			return nil
-		}
-		// Otherwise, expect that we've entered a new epoch
-		if err := verifySTRConsistency(cc.signKey, cc.SavedSTR, str); err != nil {
+		// The initial STR is pinned in the client
+		// so cc.verifiedSTR should never be nil
+		// FIXME: use STR slice from Response msg
+		if err := cc.AuditDirectory([]*DirSTR{str}); err != nil {
 			return err
 		}
 
@@ -120,40 +142,9 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *Response) error {
 	}
 
 	// And update the saved STR
-	cc.SavedSTR = str
+	cc.Update(str)
+
 	return nil
-}
-
-// verifySTR checks whether the received STR is the same with
-// the SavedSTR using reflect.DeepEqual().
-// FIXME: check whether the STR was issued on time and whatnot.
-// Maybe it has something to do w/ #81 and client transitioning between epochs.
-// Try to verify w/ what's been saved
-// FIXME: make this generic so the auditor can also verify the timeliness of the
-// STR etc. Might make sense to separate the comparison, which is only done on the client,
-// from the rest.
-func (cc *ConsistencyChecks) verifySTR(str *DirSTR) error {
-	if reflect.DeepEqual(cc.SavedSTR, str) {
-		return nil
-	}
-	return CheckBadSTR
-}
-
-// verifySTRConsistency checks the consistency between 2 snapshots.
-// It uses the signing key signKey to verify the STR's signature.
-// The signKey param either comes from a client's
-// pinned signing key, or an auditor's pinned signing key
-// in its history.
-func verifySTRConsistency(signKey sign.PublicKey, savedSTR, str *DirSTR) error {
-	// verify STR's signature
-	if !signKey.Verify(str.Serialize(), str.Signature) {
-		return CheckBadSignature
-	}
-	if str.VerifyHashChain(savedSTR) {
-		return nil
-	}
-	// TODO: verify the directory's policies as well. See #115
-	return CheckBadSTR
 }
 
 func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *Response,
