@@ -149,7 +149,7 @@ type DirectoryProof struct {
 // STR representing a range of the STR hash chain. If the range only
 // covers the latest epoch, the list only contains a single STR.
 // A CONIKS auditor returns this DirectoryResponse type upon an
-// AudutingRequest from a client, and a CONIKS directory returns
+// AuditingRequest from a client, and a CONIKS directory returns
 // this message upon an STRHistoryRequest from an auditor.
 type STRHistoryRange struct {
 	STR []*DirSTR

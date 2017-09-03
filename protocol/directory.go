@@ -341,7 +341,6 @@ func (d *ConiksDirectory) Monitor(req *MonitoringRequest) (
 // omitted in req, the end of the range will be set to d.LatestSTR().Epoch.
 func (d *ConiksDirectory) GetSTRHistory(req *STRHistoryRequest) (*Response,
 	ErrorCode) {
-
 	// make sure the request is well-formed
 	if req.StartEpoch > d.LatestSTR().Epoch ||
 		(req.EndEpoch != 0 && req.EndEpoch < req.StartEpoch) {

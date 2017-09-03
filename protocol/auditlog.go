@@ -16,6 +16,16 @@ type directoryHistory struct {
 	snapshots map[uint64]*DirSTR
 }
 
+// A ConiksAuditLog maintains the histories
+// of all CONIKS directories known to a CONIKS auditor,
+// indexing the histories by the hash of a directory's initial
+// STR (specifically, the hash of the STR's signature).
+// Each history includes the directory's domain addr as a string, its
+// public signing key enabling the auditor to verify the corresponding
+// signed tree roots, and a list with all observed snapshots in
+// chronological order.
+type ConiksAuditLog map[[crypto.HashSizeByte]byte]*directoryHistory
+
 // caller validates that initSTR is for epoch 0.
 func newDirectoryHistory(addr string, signKey sign.PublicKey, initSTR *DirSTR) *directoryHistory {
 	a := NewAuditor(signKey, initSTR)
@@ -27,16 +37,6 @@ func newDirectoryHistory(addr string, signKey sign.PublicKey, initSTR *DirSTR) *
 	h.updateVerifiedSTR(initSTR)
 	return h
 }
-
-// A ConiksAuditLog maintains the histories
-// of all CONIKS directories known to a CONIKS auditor,
-// indexing the histories by the hash of a directory's initial
-// STR (specifically, the hash of the STR's signature).
-// Each history includes the directory's domain addr as a string, its
-// public signing key enabling the auditor to verify the corresponding
-// signed tree roots, and a list with all observed snapshots in
-// chronological order.
-type ConiksAuditLog map[[crypto.HashSizeByte]byte]*directoryHistory
 
 // updateVerifiedSTR inserts the latest verified STR into a directory history;
 // assumes the STRs have been validated by the caller.
@@ -65,7 +65,7 @@ func (h *directoryHistory) insertRange(snaps []*DirSTR) {
 // from a specific directory.
 func (h *directoryHistory) Audit(msg *Response) error {
 	if err := msg.validate(); err != nil {
-		return err.(ErrorCode)
+		return err
 	}
 
 	strs := msg.DirectoryResponse.(*STRHistoryRange)
@@ -121,7 +121,6 @@ func (l ConiksAuditLog) get(dirInitHash [crypto.HashSizeByte]byte) (*directoryHi
 // from disk (either first-time startup, or after reboot).
 func (l ConiksAuditLog) InitHistory(addr string, signKey sign.PublicKey,
 	snaps []*DirSTR) error {
-
 	// make sure we're getting an initial STR at the very least
 	if len(snaps) < 1 || snaps[0].Epoch != 0 {
 		// FIXME: This should be a more generic "malformed error"
