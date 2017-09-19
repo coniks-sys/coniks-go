@@ -111,14 +111,14 @@ func (l ConiksAuditLog) get(dirInitHash [crypto.HashSizeByte]byte) (*directoryHi
 
 // InitHistory creates a new directory history for the key directory addr
 // and inserts it into the audit log l.
-// The directory history is initialized with the key directory's
-// signing key signKey, and a list of one or more snapshots snaps
-// representing the pinned directory's STR history so far,
-// in chronological order.
-// InitHistory() returns an ErrAuditLog if the auditor attempts to create
-// a new history for a known directory, and nil otherwise.
 // InitHistory() is called by an auditor when it initializes its state
 // from disk (either first-time startup, or after reboot).
+// The directory history is initialized with the key directory's
+// signing key signKey, and a list of one or more snapshots snaps
+// containing the pinned initial STR as well as the saved directory's
+// STR history so far, in chronological order.
+// InitHistory() returns an ErrAuditLog if the auditor attempts to create
+// a new history for a known directory, and nil otherwise.
 func (l ConiksAuditLog) InitHistory(addr string, signKey sign.PublicKey,
 	snaps []*DirSTR) error {
 	// make sure we're getting an initial STR at the very least
