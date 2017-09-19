@@ -287,7 +287,7 @@ func TestSTRHistoryRequestLatest(t *testing.T) {
 	d.Update()
 	resp, err := d.GetSTRHistory(&STRHistoryRequest{
 		StartEpoch: uint64(d.LatestSTR().Epoch),
-		EndEpoch:   uint64(0)})
+		EndEpoch:   uint64(d.LatestSTR().Epoch)})
 
 	if err != ReqSuccess {
 		t.Fatalf("Error occurred getting the latest STR from the directory: %s", err.Error())
@@ -319,7 +319,7 @@ func TestSTRHistoryRequestRangeLatest(t *testing.T) {
 
 	resp, err := d.GetSTRHistory(&STRHistoryRequest{
 		StartEpoch: uint64(4),
-		EndEpoch:   uint64(0)})
+		EndEpoch:   uint64(d.LatestSTR().Epoch)})
 
 	if err != ReqSuccess {
 		t.Fatalf("Error occurred getting the latest STR from the directory: %s", err.Error())
@@ -396,7 +396,7 @@ func TestSTRHistoryRequestBadRange(t *testing.T) {
 
 	_, err = d.GetSTRHistory(&STRHistoryRequest{
 		StartEpoch: uint64(6),
-		EndEpoch:   uint64(0)})
+		EndEpoch:   uint64(d.LatestSTR().Epoch)})
 
 	if err != ErrMalformedAuditorMessage {
 		t.Fatal("Expect ErrMalformedAuditorMessage for out-of-bounds STR history")

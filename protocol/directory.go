@@ -330,27 +330,27 @@ func (d *ConiksDirectory) Monitor(req *MonitoringRequest) (
 //
 // A request with a start epoch greater than the
 // latest epoch of this directory, or a start epoch greater than the
-// end epoch (if included) is considered malformed, and causes
+// end epoch is considered malformed, and causes
 // GetSTRHistory() to return a
 // message.NewErrorResponse(ErrMalformedAuditorMessage) tuple.
 // GetSTRHistory() returns a message.NewSTRHistoryRange(strs) tuple.
 // strs is a list of STRs for
 // the epoch range [startEpoch, endEpoch], where startEpoch
 // and endEpoch are the epoch range endpoints indicated in the client's
-// request. If req.endEpoch is greater than d.LatestSTR().Epoch or
-// omitted in req, the end of the range will be set to d.LatestSTR().Epoch.
+// request. If req.endEpoch is greater than d.LatestSTR().Epoch,
+// the end of the range will be set to d.LatestSTR().Epoch.
 func (d *ConiksDirectory) GetSTRHistory(req *STRHistoryRequest) (*Response,
 	ErrorCode) {
 	// make sure the request is well-formed
 	if req.StartEpoch > d.LatestSTR().Epoch ||
-		(req.EndEpoch != 0 && req.EndEpoch < req.StartEpoch) {
+		req.EndEpoch < req.StartEpoch {
 		return NewErrorResponse(ErrMalformedAuditorMessage),
 			ErrMalformedAuditorMessage
 	}
 
-	endEp := d.LatestSTR().Epoch
-	if req.EndEpoch != 0 && req.EndEpoch < d.LatestSTR().Epoch {
-		endEp = req.EndEpoch
+	endEp := req.EndEpoch
+	if req.EndEpoch > d.LatestSTR().Epoch {
+		endEp = d.LatestSTR().Epoch
 	}
 
 	var strs []*DirSTR

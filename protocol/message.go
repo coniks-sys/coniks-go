@@ -119,7 +119,7 @@ type AuditingRequest struct {
 // or [StartEpoch, d.LatestSTR().Epoch] if EndEpoch is omitted.
 type STRHistoryRequest struct {
 	StartEpoch uint64
-	EndEpoch   uint64 `json:",omitempty"`
+	EndEpoch   uint64
 }
 
 // A Response message indicates the result of a CONIKS client request

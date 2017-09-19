@@ -134,7 +134,7 @@ func TestAuditMalformedSTRRange(t *testing.T) {
 
 	resp, err := d.GetSTRHistory(&STRHistoryRequest{
 		StartEpoch: uint64(4),
-		EndEpoch:   uint64(0)})
+		EndEpoch:   uint64(d.LatestSTR().Epoch)})
 
 	if err != ReqSuccess {
 		t.Fatalf("Error occurred getting the latest STR from the directory: %s", err.Error())
