@@ -279,3 +279,126 @@ func TestPoliciesChanges(t *testing.T) {
 		t.Fatal("Maybe the STR's policies were malformed")
 	}
 }
+
+func TestSTRHistoryRequestLatest(t *testing.T) {
+	// create basic test directory and audit log with 1 STR
+	d, aud, hist := NewTestAuditLog(t, 0)
+
+	d.Update()
+	resp, err := d.GetSTRHistory(&STRHistoryRequest{
+		StartEpoch: uint64(d.LatestSTR().Epoch),
+		EndEpoch:   uint64(d.LatestSTR().Epoch)})
+
+	if err != ReqSuccess {
+		t.Fatalf("Error occurred getting the latest STR from the directory: %s", err.Error())
+	}
+
+	str := resp.DirectoryResponse.(*STRHistoryRange)
+	if len(str.STR) != 1 {
+		t.Fatalf("Expected 1 STR from directory, got %d", len(str.STR))
+	}
+
+	// compute the hash of the initial STR for later lookups
+	dirInitHash := ComputeDirectoryIdentity(hist[0])
+	h, _ := aud.get(dirInitHash)
+
+	err1 := h.Audit(resp)
+	if err1 != nil {
+		t.Fatalf("Error occurred auditing the latest STR: %s", err1.Error())
+	}
+}
+
+func TestSTRHistoryRequestRangeLatest(t *testing.T) {
+	// create basic test directory and audit log with 4 STR
+	d, aud, hist := NewTestAuditLog(t, 3)
+
+	// now update the directory 4 times and get a range
+	for i := 0; i < 4; i++ {
+		d.Update()
+	}
+
+	resp, err := d.GetSTRHistory(&STRHistoryRequest{
+		StartEpoch: uint64(4),
+		EndEpoch:   uint64(d.LatestSTR().Epoch)})
+
+	if err != ReqSuccess {
+		t.Fatalf("Error occurred getting the latest STR from the directory: %s", err.Error())
+	}
+
+	strs := resp.DirectoryResponse.(*STRHistoryRange)
+	if len(strs.STR) != 4 {
+		t.Fatalf("Expect 4 STRs from directory, got %d", len(strs.STR))
+	}
+
+	if strs.STR[3].Epoch != 7 {
+		t.Fatalf("Expect latest epoch of 7, got %d", strs.STR[3].Epoch)
+	}
+
+	// compute the hash of the initial STR for later lookups
+	dirInitHash := ComputeDirectoryIdentity(hist[0])
+	h, _ := aud.get(dirInitHash)
+
+	err1 := h.Audit(resp)
+	if err1 != nil {
+		t.Fatalf("Error occurred auditing the latest STR: %s", err1.Error())
+	}
+}
+
+func TestSTRHistoryRequestInEpoch(t *testing.T) {
+	// create basic test directory and audit log with 4 STR
+	d, aud, hist := NewTestAuditLog(t, 3)
+
+	// now update the directory 4 times and get a range
+	for i := 0; i < 4; i++ {
+		d.Update()
+	}
+
+	resp, err := d.GetSTRHistory(&STRHistoryRequest{
+		StartEpoch: uint64(4),
+		EndEpoch:   uint64(5)})
+
+	if err != ReqSuccess {
+		t.Fatalf("Error occurred getting the latest STR from the directory: %s", err.Error())
+	}
+
+	strs := resp.DirectoryResponse.(*STRHistoryRange)
+	if len(strs.STR) != 2 {
+		t.Fatalf("Expect 2 STRs from directory, got %d", len(strs.STR))
+	}
+
+	if strs.STR[0].Epoch != 4 || strs.STR[1].Epoch != 5 {
+		t.Fatalf("Expect latest epoch of 5, got %d", strs.STR[1].Epoch)
+	}
+
+	// compute the hash of the initial STR for later lookups
+	dirInitHash := ComputeDirectoryIdentity(hist[0])
+	h, _ := aud.get(dirInitHash)
+
+	err1 := h.Audit(resp)
+	if err1 != nil {
+		t.Fatalf("Error occurred auditing the latest STR: %s", err1.Error())
+	}
+}
+
+func TestSTRHistoryRequestBadRange(t *testing.T) {
+	// create basic test directory
+	d, _ := NewTestDirectory(t, true)
+
+	d.Update()
+
+	_, err := d.GetSTRHistory(&STRHistoryRequest{
+		StartEpoch: uint64(4),
+		EndEpoch:   uint64(2)})
+
+	if err != ErrMalformedAuditorMessage {
+		t.Fatal("Expect ErrMalformedAuditorMessage for bad STR history end epoch")
+	}
+
+	_, err = d.GetSTRHistory(&STRHistoryRequest{
+		StartEpoch: uint64(6),
+		EndEpoch:   uint64(d.LatestSTR().Epoch)})
+
+	if err != ErrMalformedAuditorMessage {
+		t.Fatal("Expect ErrMalformedAuditorMessage for out-of-bounds STR history")
+	}
+}

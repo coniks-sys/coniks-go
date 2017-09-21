@@ -321,3 +321,43 @@ func (d *ConiksDirectory) Monitor(req *MonitoringRequest) (
 
 	return NewMonitoringProof(aps, strs)
 }
+
+// GetSTRHistory gets the directory snapshots for the epoch range
+// indicated in the STRHistoryRequest req received from a CONIKS auditor.
+// The response (which also includes the error code) is supposed to
+// be sent back to the auditor. The returned error is used by the key
+// server for logging purposes.
+//
+// A request with a start epoch greater than the
+// latest epoch of this directory, or a start epoch greater than the
+// end epoch is considered malformed, and causes
+// GetSTRHistory() to return a
+// message.NewErrorResponse(ErrMalformedAuditorMessage) tuple.
+// GetSTRHistory() returns a message.NewSTRHistoryRange(strs) tuple.
+// strs is a list of STRs for
+// the epoch range [startEpoch, endEpoch], where startEpoch
+// and endEpoch are the epoch range endpoints indicated in the client's
+// request. If req.endEpoch is greater than d.LatestSTR().Epoch,
+// the end of the range will be set to d.LatestSTR().Epoch.
+func (d *ConiksDirectory) GetSTRHistory(req *STRHistoryRequest) (*Response,
+	ErrorCode) {
+	// make sure the request is well-formed
+	if req.StartEpoch > d.LatestSTR().Epoch ||
+		req.EndEpoch < req.StartEpoch {
+		return NewErrorResponse(ErrMalformedAuditorMessage),
+			ErrMalformedAuditorMessage
+	}
+
+	endEp := req.EndEpoch
+	if req.EndEpoch > d.LatestSTR().Epoch {
+		endEp = d.LatestSTR().Epoch
+	}
+
+	var strs []*DirSTR
+	for ep := req.StartEpoch; ep <= endEp; ep++ {
+		str := NewDirSTR(d.pad.GetSTR(ep))
+		strs = append(strs, str)
+	}
+
+	return NewSTRHistoryRange(strs)
+}

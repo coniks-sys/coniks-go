@@ -17,10 +17,13 @@ func TestUpdateHistory(t *testing.T) {
 	// update the directory so we can update the audit log
 	dirInitHash := ComputeDirectoryIdentity(hist[0])
 	d.Update()
-	err := aud.Update(dirInitHash, d.LatestSTR())
+	h, _ := aud.get(dirInitHash)
+	resp, _ := NewSTRHistoryRange([]*DirSTR{d.LatestSTR()})
+
+	err := h.Audit(resp)
 
 	if err != nil {
-		t.Fatal("Error updating the server history")
+		t.Fatal("Error auditing and updating the server history")
 	}
 }
 
@@ -35,40 +38,49 @@ func TestInsertExistingHistory(t *testing.T) {
 
 	// let's make sure that we can't re-insert a new server
 	// history into our log
-	err := aud.Insert("test-server", nil, hist)
+	err := aud.InitHistory("test-server", nil, hist)
 	if err != ErrAuditLog {
 		t.Fatal("Expected an ErrAuditLog when inserting an existing server history")
 	}
 }
 
-func TestUpdateUnknownHistory(t *testing.T) {
+func TestAuditLogBadEpochRange(t *testing.T) {
 	// create basic test directory and audit log with 1 STR
-	d, aud, _ := NewTestAuditLog(t, 0)
+	d, aud, hist := NewTestAuditLog(t, 0)
 
-	// let's make sure that we can't update a history for an unknown
-	// directory in our log
-	var unknown [crypto.HashSizeByte]byte
-	err := aud.Update(unknown, d.LatestSTR())
-	if err != ErrAuditLog {
-		t.Fatal("Expected an ErrAuditLog when updating an unknown server history")
+	d.Update()
+
+	resp, err := d.GetSTRHistory(&STRHistoryRequest{
+		StartEpoch: uint64(0),
+		EndEpoch:   uint64(1)})
+
+	if err != ReqSuccess {
+		t.Fatalf("Error occurred while fetching STR history: %s", err.Error())
 	}
-}
 
-func TestUpdateBadNewSTR(t *testing.T) {
-	// create basic test directory and audit log with 11 STRs
-	d, aud, hist := NewTestAuditLog(t, 10)
+	strs := resp.DirectoryResponse.(*STRHistoryRange)
+	if len(strs.STR) != 2 {
+		t.Fatalf("Expect 2 STRs from directory, got %d", len(strs.STR))
+	}
+
+	if strs.STR[0].Epoch != 0 || strs.STR[1].Epoch != 1 {
+		t.Fatalf("Expect latest epoch of 1, got %d", strs.STR[1].Epoch)
+	}
 
 	// compute the hash of the initial STR for later lookups
 	dirInitHash := ComputeDirectoryIdentity(hist[0])
+	h, _ := aud.get(dirInitHash)
 
-	// update the directory a few more times and then try
-	// to update
-	d.Update()
-	d.Update()
+	err1 := h.Audit(resp)
+	if err1 != nil {
+		t.Fatalf("Error occurred while auditing STR history: %s", err1.Error())
+	}
 
-	err := aud.Update(dirInitHash, d.LatestSTR())
-	if err != CheckBadSTR {
-		t.Fatal("Expected a CheckBadSTR when attempting update a server history with a bad STR")
+	// now try to audit the same range again: should fail because the
+	// verified epoch is at 1
+	err1 = h.Audit(resp)
+	if err1 != CheckBadSTR {
+		t.Fatalf("Expecting CheckBadSTR, got %s", err1.Error())
 	}
 }
 
@@ -138,7 +150,7 @@ func TestGetObservedSTRMultipleEpochs(t *testing.T) {
 		EndEpoch:       d.LatestSTR().Epoch})
 
 	if err != ReqSuccess {
-		t.Fatal("Unable to get latest range of STRs")
+		t.Fatalf("Unable to get latest range of STRs, got %s", err.Error())
 	}
 
 	obs := res.DirectoryResponse.(*STRHistoryRange)
@@ -154,7 +166,10 @@ func TestGetObservedSTRMultipleEpochs(t *testing.T) {
 
 	// go to next epoch
 	d.Update()
-	err1 := aud.Update(dirInitHash, d.LatestSTR())
+	h, _ := aud.get(dirInitHash)
+	resp, _ := NewSTRHistoryRange([]*DirSTR{d.LatestSTR()})
+
+	err1 := h.Audit(resp)
 	if err1 != nil {
 		t.Fatal("Error occurred updating audit log after auditing request")
 	}

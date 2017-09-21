@@ -30,27 +30,6 @@ func lookupAndVerify(d *ConiksDirectory, cc *ConsistencyChecks,
 	return err, cc.HandleResponse(KeyLookupType, res, name, key)
 }
 
-func TestVerifyWithError(t *testing.T) {
-	d, pk := NewTestDirectory(t, true)
-	str := d.LatestSTR()
-
-	// modify the pinning STR so that the consistency check should fail.
-	str2 := *str.SignedTreeRoot
-	str2.Signature = append([]byte{}, str.Signature...)
-	str2.Signature[0]++
-	str.SignedTreeRoot = &str2
-
-	cc := NewCC(str, true, pk)
-
-	e1, e2 := registerAndVerify(d, cc, alice, key)
-	if e1 != ReqSuccess {
-		t.Error("Expect", ReqSuccess, "got", e1)
-	}
-	if e2 != CheckBadSTR {
-		t.Error("Expect", CheckBadSTR, "got", e2)
-	}
-}
-
 func TestMalformedClientMessage(t *testing.T) {
 	d, pk := NewTestDirectory(t, true)
 	cc := NewCC(d.LatestSTR(), true, pk)

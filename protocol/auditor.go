@@ -51,6 +51,7 @@ func (a *AudState) compareWithVerified(str *DirSTR) error {
 	if reflect.DeepEqual(a.verifiedSTR, str) {
 		return nil
 	}
+
 	return CheckBadSTR
 }
 
@@ -105,7 +106,7 @@ func (a *AudState) checkSTRAgainstVerified(str *DirSTR) error {
 		return CheckBadSTR
 	}
 
-	return nil
+	return CheckPassed
 }
 
 // verifySTRRange checks the consistency of a range
@@ -146,7 +147,7 @@ func (a *AudState) AuditDirectory(strs []*DirSTR) error {
 	}
 
 	// check STR against the latest verified STR
-	if err := a.checkSTRAgainstVerified(strs[0]); err != nil {
+	if err := a.checkSTRAgainstVerified(strs[0]); err != CheckPassed {
 		return err
 	}
 
@@ -157,7 +158,7 @@ func (a *AudState) AuditDirectory(strs []*DirSTR) error {
 		}
 	}
 
-	return nil
+	return CheckPassed
 }
 
 // ComputeDirectoryIdentity returns the hash of
