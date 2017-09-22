@@ -17,7 +17,7 @@ func UnmarshalResponse(t int, msg []byte) *protocol.Response {
 	var res Response
 	if err := json.Unmarshal(msg, &res); err != nil {
 		return &protocol.Response{
-			Error: protocol.ErrMalformedDirectoryMessage,
+			Error: protocol.ErrMalformedMessage,
 		}
 	}
 
@@ -26,7 +26,7 @@ func UnmarshalResponse(t int, msg []byte) *protocol.Response {
 	if res.DirectoryResponse == nil {
 		if !protocol.Errors[res.Error] {
 			return &protocol.Response{
-				Error: protocol.ErrMalformedDirectoryMessage,
+				Error: protocol.ErrMalformedMessage,
 			}
 		}
 		return &protocol.Response{
@@ -39,7 +39,7 @@ func UnmarshalResponse(t int, msg []byte) *protocol.Response {
 		response := new(protocol.DirectoryProof)
 		if err := json.Unmarshal(res.DirectoryResponse, &response); err != nil {
 			return &protocol.Response{
-				Error: protocol.ErrMalformedDirectoryMessage,
+				Error: protocol.ErrMalformedMessage,
 			}
 		}
 		return &protocol.Response{

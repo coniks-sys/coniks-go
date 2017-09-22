@@ -181,7 +181,7 @@ func (bot *TwitterBot) HandleRegistration(username string, msg []byte) string {
 	if invalid {
 		log.Println("[registration bot] Malformed client request")
 		res, err := coniksserver.MarshalResponse(
-			protocol.NewErrorResponse(protocol.ErrMalformedClientMessage))
+			protocol.NewErrorResponse(protocol.ErrMalformedMessage))
 		if err != nil {
 			panic(err)
 		}

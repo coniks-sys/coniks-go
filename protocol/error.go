@@ -22,17 +22,14 @@ const (
 
 	ErrDirectory
 	ErrAuditLog
-	ErrMalformedClientMessage
-	ErrMalformedDirectoryMessage
-	ErrMalformedAuditorMessage
+	ErrMalformedMessage
 )
 
 // These codes indicate the result
 // of a consistency check or cryptographic verification.
 // These codes are prefixed by "Check".
 const (
-	CheckPassed ErrorCode = iota + 200
-	CheckBadSignature
+	CheckBadSignature ErrorCode = iota + 200
 	CheckBadVRFProof
 	CheckBindingsDiffer
 	CheckBadCommitment
@@ -48,12 +45,10 @@ const (
 // that either a client request could not be processed due to
 // a malformed client request, an internal server error or
 // due to a malformed server response.
-var Errors = map[ErrorCode]bool{
-	ErrMalformedClientMessage:    true,
-	ErrDirectory:                 true,
-	ErrAuditLog:                  true,
-	ErrMalformedDirectoryMessage: true,
-	ErrMalformedAuditorMessage:   true,
+var Errors = map[error]bool{
+	ErrMalformedMessage: true,
+	ErrDirectory:        true,
+	ErrAuditLog:         true,
 }
 
 var (
@@ -62,13 +57,10 @@ var (
 		ReqNameExisted:  "[coniks] Registering identity is already registered",
 		ReqNameNotFound: "[coniks] Searched name not found in directory",
 
-		ErrMalformedClientMessage:    "[coniks] Malformed client message",
-		ErrDirectory:                 "[coniks] Directory error",
-		ErrAuditLog:                  "[coniks] Audit log error",
-		ErrMalformedDirectoryMessage: "[coniks] Malformed directory message",
-		ErrMalformedAuditorMessage:   "[coniks] Malformed auditor message",
+		ErrMalformedMessage: "[coniks] Malformed message",
+		ErrDirectory:        "[coniks] Directory error",
+		ErrAuditLog:         "[coniks] Audit log error",
 
-		CheckPassed:         "[coniks] Consistency checks passed",
 		CheckBadSignature:   "[coniks] Directory's signature on STR or TB is invalid",
 		CheckBadVRFProof:    "[coniks] Returned index is not valid for the given name",
 		CheckBindingsDiffer: "[coniks] The key in the binding is inconsistent with our expectation",

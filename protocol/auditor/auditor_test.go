@@ -127,7 +127,7 @@ func TestAuditMalformedSTRRange(t *testing.T) {
 	// try to audit a malformed STR range
 	// case str[i] == nil in verifySTRRange() loop
 	err1 := aud.AuditDirectory(strs.STR)
-	if err1 != protocol.ErrMalformedDirectoryMessage {
-		t.Error("Expect", protocol.ErrMalformedDirectoryMessage, "got", err1)
+	if err1 != protocol.ErrMalformedMessage {
+		t.Error("Expect", protocol.ErrMalformedMessage, "got", err1)
 	}
 }

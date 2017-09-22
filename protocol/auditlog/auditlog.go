@@ -127,8 +127,7 @@ func (l ConiksAuditLog) InitHistory(addr string, signKey sign.PublicKey,
 	snaps []*protocol.DirSTR) error {
 	// make sure we're getting an initial STR at the very least
 	if len(snaps) < 1 || snaps[0].Epoch != 0 {
-		// FIXME: This should be a more generic "malformed error"
-		return protocol.ErrMalformedDirectoryMessage
+		return protocol.ErrMalformedMessage
 	}
 
 	// compute the hash of the initial STR
@@ -166,7 +165,7 @@ func (l ConiksAuditLog) InitHistory(addr string, signKey sign.PublicKey,
 // greater than the latest observed epoch of this directory, or with
 // at StartEpoch > EndEpoch is considered
 // malformed and causes GetObservedSTRs() to return a
-// message.NewErrorResponse(ErrMalformedClientMessage) tuple.
+// message.NewErrorResponse(ErrMalformedMessage) tuple.
 // GetObservedSTRs() returns a message.NewSTRHistoryRange(strs) tuple.
 // strs is a list of STRs for the epoch range [StartEpoch, EndEpoch];
 // if StartEpoch == EndEpoch, the list returned is of length 1.
@@ -174,7 +173,7 @@ func (l ConiksAuditLog) InitHistory(addr string, signKey sign.PublicKey,
 // directory, GetObservedSTRs() returns a
 // message.NewErrorResponse(ReqUnknownDirectory) tuple.
 func (l ConiksAuditLog) GetObservedSTRs(req *protocol.AuditingRequest) (*protocol.Response,
-	protocol.ErrorCode) {
+	error) {
 	// make sure we have a history for the requested directory in the log
 	h, ok := l.get(req.DirInitSTRHash)
 	if !ok {
@@ -183,8 +182,8 @@ func (l ConiksAuditLog) GetObservedSTRs(req *protocol.AuditingRequest) (*protoco
 
 	// make sure the request is well-formed
 	if req.EndEpoch > h.VerifiedSTR().Epoch || req.StartEpoch > req.EndEpoch {
-		return protocol.NewErrorResponse(protocol.ErrMalformedClientMessage),
-			protocol.ErrMalformedClientMessage
+		return protocol.NewErrorResponse(protocol.ErrMalformedMessage),
+			protocol.ErrMalformedMessage
 	}
 
 	var strs []*protocol.DirSTR

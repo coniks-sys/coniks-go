@@ -79,9 +79,9 @@ func (server *ConiksServer) acceptClient(conn net.Conn, handler func(msg []byte)
 func malformedClientMsg(err error) ([]byte, error) {
 	// check if we're just propagating a message
 	if err == nil {
-		err = protocol.ErrMalformedClientMessage
+		err = protocol.ErrMalformedMessage
 	}
-	response := protocol.NewErrorResponse(protocol.ErrMalformedClientMessage)
+	response := protocol.NewErrorResponse(protocol.ErrMalformedMessage)
 	res, e := MarshalResponse(response)
 	if e != nil {
 		panic(e)
@@ -91,7 +91,7 @@ func malformedClientMsg(err error) ([]byte, error) {
 
 // handleOps validates the request message and then pass it to
 // appropriate operation handler according to the request type.
-func (server *ConiksServer) handleOps(req *protocol.Request) (*protocol.Response, protocol.ErrorCode) {
+func (server *ConiksServer) handleOps(req *protocol.Request) (*protocol.Response, error) {
 	switch req.Type {
 	case protocol.RegistrationType:
 		if msg, ok := req.Request.(*protocol.RegistrationRequest); ok {
@@ -110,8 +110,8 @@ func (server *ConiksServer) handleOps(req *protocol.Request) (*protocol.Response
 			return server.dir.Monitor(msg)
 		}
 	}
-	return protocol.NewErrorResponse(protocol.ErrMalformedClientMessage),
-		protocol.ErrMalformedClientMessage
+	return protocol.NewErrorResponse(protocol.ErrMalformedMessage),
+		protocol.ErrMalformedMessage
 }
 
 func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(msg []byte) ([]byte, error) {
@@ -124,7 +124,7 @@ func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(msg [
 		if !acceptableTypes[req.Type] {
 			server.logger.Error("Unacceptable message type",
 				"request type", req.Type)
-			return malformedClientMsg(protocol.ErrMalformedClientMessage)
+			return malformedClientMsg(protocol.ErrMalformedMessage)
 		}
 
 		switch req.Type {

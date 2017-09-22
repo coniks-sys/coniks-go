@@ -122,9 +122,7 @@ func (a *AudState) VerifySTRRange(prevSTR *protocol.DirSTR, strs []*protocol.Dir
 	for i := 0; i < len(strs); i++ {
 		str := strs[i]
 		if str == nil {
-			// FIXME: if this comes from the auditor, this
-			// should really be an ErrMalformedAuditorMessage
-			return protocol.ErrMalformedDirectoryMessage
+			return protocol.ErrMalformedMessage
 		}
 
 		// verify the consistency of each STR in the range
@@ -147,7 +145,7 @@ func (a *AudState) VerifySTRRange(prevSTR *protocol.DirSTR, strs []*protocol.Dir
 func (a *AudState) AuditDirectory(strs []*protocol.DirSTR) error {
 	// validate strs
 	if len(strs) == 0 {
-		return protocol.ErrMalformedDirectoryMessage
+		return protocol.ErrMalformedMessage
 	}
 
 	// check STR against the latest verified STR

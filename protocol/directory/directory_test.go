@@ -229,10 +229,10 @@ func TestDirectoryKeyLookupInEpochBadEpoch(t *testing.T) {
 	}
 
 	// Send an invalid KeyLookupInEpochRequest (epoch > d.LatestEpoch())
-	// Expect ErrMalformedClientMessage
+	// Expect ErrMalformedMessage
 	_, err := d.KeyLookupInEpoch(&protocol.KeyLookupInEpochRequest{Username: "alice", Epoch: uint64(6)})
-	if err != protocol.ErrMalformedClientMessage {
-		t.Fatal("Expect error", protocol.ErrMalformedClientMessage, "got", err)
+	if err != protocol.ErrMalformedMessage {
+		t.Fatal("Expect error", protocol.ErrMalformedMessage, "got", err)
 	}
 }
 
@@ -245,21 +245,21 @@ func TestMonitoringBadStartEpoch(t *testing.T) {
 	}
 
 	// Send an invalid MonitoringRequest (startEpoch > d.LatestEpoch())
-	// Expect ErrMalformedClientMessage
+	// Expect ErrMalformedMessage
 	_, err := d.Monitor(&protocol.MonitoringRequest{
 		Username: "alice", StartEpoch: uint64(6), EndEpoch: uint64(10),
 	})
-	if err != protocol.ErrMalformedClientMessage {
-		t.Fatal("Expect error", protocol.ErrMalformedClientMessage, "got", err)
+	if err != protocol.ErrMalformedMessage {
+		t.Fatal("Expect error", protocol.ErrMalformedMessage, "got", err)
 	}
 
 	// Send an invalid MonitoringRequest (startEpoch > EndEpoch)
-	// Expect ErrMalformedClientMessage
+	// Expect ErrMalformedMessage
 	_, err = d.Monitor(&protocol.MonitoringRequest{
 		Username: "alice", StartEpoch: uint64(2), EndEpoch: uint64(0),
 	})
-	if err != protocol.ErrMalformedClientMessage {
-		t.Fatal("Expect error", protocol.ErrMalformedClientMessage, "got", err)
+	if err != protocol.ErrMalformedMessage {
+		t.Fatal("Expect error", protocol.ErrMalformedMessage, "got", err)
 	}
 }
 
@@ -300,15 +300,15 @@ func TestSTRHistoryRequestBadRange(t *testing.T) {
 		StartEpoch: uint64(4),
 		EndEpoch:   uint64(2)})
 
-	if err != protocol.ErrMalformedAuditorMessage {
-		t.Fatal("Expect ErrMalformedAuditorMessage for bad STR history end epoch")
+	if err != protocol.ErrMalformedMessage {
+		t.Fatal("Expect ErrMalformedMessage for bad STR history end epoch")
 	}
 
 	_, err = d.GetSTRHistory(&protocol.STRHistoryRequest{
 		StartEpoch: uint64(6),
 		EndEpoch:   uint64(d.LatestSTR().Epoch)})
 
-	if err != protocol.ErrMalformedAuditorMessage {
-		t.Fatal("Expect ErrMalformedAuditorMessage for out-of-bounds STR history")
+	if err != protocol.ErrMalformedMessage {
+		t.Fatal("Expect ErrMalformedMessage for out-of-bounds STR history")
 	}
 }

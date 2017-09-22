@@ -275,12 +275,12 @@ func (msg *Response) Validate() error {
 	switch df := msg.DirectoryResponse.(type) {
 	case *DirectoryProof:
 		if len(df.STR) == 0 || len(df.AP) == 0 {
-			return ErrMalformedDirectoryMessage
+			return ErrMalformedMessage
 		}
 		return nil
 	case *STRHistoryRange:
 		if len(df.STR) == 0 {
-			return ErrMalformedAuditorMessage
+			return ErrMalformedMessage
 		}
 		return nil
 	default:

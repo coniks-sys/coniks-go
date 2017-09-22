@@ -15,7 +15,7 @@ func TestCannotUnmarshallRequest(t *testing.T) {
     }`
 	bot := new(TwitterBot)
 	response := bot.HandleRegistration(username, []byte(request))
-	if response != fmt.Sprintf(`{"Error":%d}`, protocol.ErrMalformedClientMessage) {
+	if response != fmt.Sprintf(`{"Error":%d}`, protocol.ErrMalformedMessage) {
 		t.Error("Unexpected response", "got", response)
 	}
 }
@@ -32,7 +32,7 @@ func TestInvalidRequestType(t *testing.T) {
 
 	bot := new(TwitterBot)
 	response := bot.HandleRegistration(username, []byte(request))
-	if response != fmt.Sprintf(`{"Error":%d}`, protocol.ErrMalformedClientMessage) {
+	if response != fmt.Sprintf(`{"Error":%d}`, protocol.ErrMalformedMessage) {
 		t.Error("Unexpected response", "got", response)
 	}
 }
@@ -48,7 +48,7 @@ func TestInvalidUsername(t *testing.T) {
 	})
 	bot := new(TwitterBot)
 	response := bot.HandleRegistration(username, []byte(request))
-	if response != fmt.Sprintf(`{"Error":%d}`, protocol.ErrMalformedClientMessage) {
+	if response != fmt.Sprintf(`{"Error":%d}`, protocol.ErrMalformedMessage) {
 		t.Error("Unexpected response", "got", response)
 	}
 }

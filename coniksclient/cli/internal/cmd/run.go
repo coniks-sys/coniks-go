@@ -144,7 +144,7 @@ func register(cc *client.ConsistencyChecks, conf *coniksclient.Config, name stri
 	case protocol.CheckBadSTR:
 		// FIXME: remove me
 		return ("Error: " + err.Error() + ". Maybe the client missed an epoch in between two commands, monitoring isn't supported yet.")
-	case protocol.CheckPassed:
+	case nil:
 		switch response.Error {
 		case protocol.ReqSuccess:
 			return ("Succesfully registered name: " + name)
@@ -201,7 +201,7 @@ func keyLookup(cc *client.ConsistencyChecks, conf *coniksclient.Config, name str
 	case protocol.CheckBadSTR:
 		// FIXME: remove me
 		return ("Error: " + err.Error() + ". Maybe the client missed an epoch in between two commands, monitoring isn't supported yet.")
-	case protocol.CheckPassed:
+	case nil:
 		switch response.Error {
 		case protocol.ReqSuccess:
 			key, err := response.GetKey()

@@ -100,30 +100,30 @@ func (cc *ConsistencyChecks) CheckEquivocation(msg *protocol.Response) error {
 // whether the checks pass / fail, since a response message contains
 // cryptographic proof of having been issued nonetheless.
 func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *protocol.Response,
-	uname string, key []byte) protocol.ErrorCode {
+	uname string, key []byte) error {
 	if err := msg.Validate(); err != nil {
-		return err.(protocol.ErrorCode)
+		return err
 	}
 	switch requestType {
 	case protocol.RegistrationType, protocol.KeyLookupType, protocol.KeyLookupInEpochType, protocol.MonitoringType:
 		if _, ok := msg.DirectoryResponse.(*protocol.DirectoryProof); !ok {
-			return protocol.ErrMalformedDirectoryMessage
+			return protocol.ErrMalformedMessage
 		}
 	default:
 		panic("[coniks] Unknown request type")
 	}
 	if err := cc.updateSTR(requestType, msg); err != nil {
-		return err.(protocol.ErrorCode)
+		return err
 	}
-	if err := cc.checkConsistency(requestType, msg, uname, key); err != protocol.CheckPassed {
+	if err := cc.checkConsistency(requestType, msg, uname, key); err != nil {
 		return err
 	}
 	if err := cc.updateTBs(requestType, msg, uname, key); err != nil {
-		return err.(protocol.ErrorCode)
+		return err
 	}
 	recvKey, _ := msg.GetKey()
 	cc.Bindings[uname] = recvKey
-	return protocol.CheckPassed
+	return nil
 }
 
 func (cc *ConsistencyChecks) updateSTR(requestType int, msg *protocol.Response) error {
@@ -149,7 +149,7 @@ func (cc *ConsistencyChecks) updateSTR(requestType int, msg *protocol.Response) 
 }
 
 func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *protocol.Response,
-	uname string, key []byte) protocol.ErrorCode {
+	uname string, key []byte) error {
 	var err error
 	switch requestType {
 	case protocol.RegistrationType:
@@ -159,7 +159,7 @@ func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *protocol.Res
 	default:
 		panic("[coniks] Unknown request type")
 	}
-	return err.(protocol.ErrorCode)
+	return err
 }
 
 func (cc *ConsistencyChecks) verifyRegistration(msg *protocol.Response,
@@ -176,14 +176,10 @@ func (cc *ConsistencyChecks) verifyRegistration(msg *protocol.Response,
 	case msg.Error == protocol.ReqNameExisted && proofType == merkletree.ProofOfAbsence && cc.useTBs:
 	case msg.Error == protocol.ReqSuccess && proofType == merkletree.ProofOfAbsence:
 	default:
-		return protocol.ErrMalformedDirectoryMessage
+		return protocol.ErrMalformedMessage
 	}
 
-	if err := verifyAuthPath(uname, key, ap, str); err != nil {
-		return err
-	}
-
-	return protocol.CheckPassed
+	return verifyAuthPath(uname, key, ap, str)
 }
 
 func (cc *ConsistencyChecks) verifyKeyLookup(msg *protocol.Response,
@@ -201,14 +197,10 @@ func (cc *ConsistencyChecks) verifyKeyLookup(msg *protocol.Response,
 	case msg.Error == protocol.ReqSuccess && proofType == merkletree.ProofOfInclusion:
 	case msg.Error == protocol.ReqSuccess && proofType == merkletree.ProofOfAbsence && cc.useTBs:
 	default:
-		return protocol.ErrMalformedDirectoryMessage
+		return protocol.ErrMalformedMessage
 	}
 
-	if err := verifyAuthPath(uname, key, ap, str); err != nil {
-		return err
-	}
-
-	return protocol.CheckPassed
+	return verifyAuthPath(uname, key, ap, str)
 }
 
 func verifyAuthPath(uname string, key []byte, ap *merkletree.AuthenticationPath, str *protocol.DirSTR) error {

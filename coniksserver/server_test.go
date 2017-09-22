@@ -193,8 +193,8 @@ func TestSendsRegistrationFromOutside(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if response.Error != protocol.ErrMalformedClientMessage {
-		t.Fatalf("Expect error code %d", protocol.ErrMalformedClientMessage)
+	if response.Error != protocol.ErrMalformedMessage {
+		t.Fatalf("Expect error code %d", protocol.ErrMalformedMessage)
 	}
 }
 
