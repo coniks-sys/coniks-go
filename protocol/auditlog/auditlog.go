@@ -156,34 +156,31 @@ func (l ConiksAuditLog) InitHistory(addr string, signKey sign.PublicKey,
 
 // GetObservedSTRs gets a range of observed STRs for the CONIKS directory
 // address indicated in the AuditingRequest req received from a
-// CONIKS client, and returns a tuple of the form (response, error).
+// CONIKS client, and returns a protocol.Response.
 // The response (which also includes the error code) is sent back to
-// the client. The returned error is used by the auditor
-// for logging purposes.
+// the client.
 //
 // A request without a directory address, with a StartEpoch or EndEpoch
 // greater than the latest observed epoch of this directory, or with
 // at StartEpoch > EndEpoch is considered
 // malformed and causes GetObservedSTRs() to return a
-// message.NewErrorResponse(ErrMalformedMessage) tuple.
-// GetObservedSTRs() returns a message.NewSTRHistoryRange(strs) tuple.
+// message.NewErrorResponse(ErrMalformedMessage).
+// GetObservedSTRs() returns a message.NewSTRHistoryRange(strs).
 // strs is a list of STRs for the epoch range [StartEpoch, EndEpoch];
 // if StartEpoch == EndEpoch, the list returned is of length 1.
 // If the auditor doesn't have any history entries for the requested CONIKS
 // directory, GetObservedSTRs() returns a
-// message.NewErrorResponse(ReqUnknownDirectory) tuple.
-func (l ConiksAuditLog) GetObservedSTRs(req *protocol.AuditingRequest) (*protocol.Response,
-	error) {
+// message.NewErrorResponse(ReqUnknownDirectory).
+func (l ConiksAuditLog) GetObservedSTRs(req *protocol.AuditingRequest) *protocol.Response {
 	// make sure we have a history for the requested directory in the log
 	h, ok := l.get(req.DirInitSTRHash)
 	if !ok {
-		return protocol.NewErrorResponse(protocol.ReqUnknownDirectory), protocol.ReqUnknownDirectory
+		return protocol.NewErrorResponse(protocol.ReqUnknownDirectory)
 	}
 
 	// make sure the request is well-formed
 	if req.EndEpoch > h.VerifiedSTR().Epoch || req.StartEpoch > req.EndEpoch {
-		return protocol.NewErrorResponse(protocol.ErrMalformedMessage),
-			protocol.ErrMalformedMessage
+		return protocol.NewErrorResponse(protocol.ErrMalformedMessage)
 	}
 
 	var strs []*protocol.DirSTR

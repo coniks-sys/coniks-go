@@ -11,7 +11,7 @@ import (
 )
 
 func (server *ConiksServer) handleRequests(ln net.Listener, tlsConfig *tls.Config,
-	handler func(msg []byte) ([]byte, error)) {
+	handler func(req *protocol.Request) *protocol.Response) {
 	defer ln.Close()
 	go func() {
 		<-server.stop
@@ -48,26 +48,35 @@ func (server *ConiksServer) handleRequests(ln net.Listener, tlsConfig *tls.Confi
 	}
 }
 
-func (server *ConiksServer) acceptClient(conn net.Conn, handler func(msg []byte) ([]byte, error)) {
+func (server *ConiksServer) acceptClient(conn net.Conn, handler func(req *protocol.Request) *protocol.Response) {
 	defer conn.Close()
 	conn.SetDeadline(time.Now().Add(5 * time.Second))
 
 	var buf bytes.Buffer
+	var response *protocol.Response
 	if _, err := io.CopyN(&buf, conn, 8192); err != nil && err != io.EOF {
 		server.logger.Error(err.Error(),
 			"address", conn.RemoteAddr().String())
 		return
 	}
 
-	res, err := handler(buf.Bytes())
-	// TODO: The `err` returned here is purely for logging purposes.  It
-	// would be better for `handler` not to return any error, and instead
-	// log if the error code in the `res` is not `ReqSuccess`.
-	if err != protocol.ReqSuccess {
-		server.logger.Warn(err.Error(),
-			"address", conn.RemoteAddr().String())
+	// unmarshalling
+	req, err := UnmarshalRequest(buf.Bytes())
+	if err != nil {
+		response = malformedClientMsg(err)
+	} else {
+		response = handler(req)
+		if response.Error != protocol.ReqSuccess {
+			server.logger.Warn(response.Error.Error(),
+				"address", conn.RemoteAddr().String())
+		}
 	}
 
+	// marshalling
+	res, e := MarshalResponse(response)
+	if e != nil {
+		panic(e)
+	}
 	_, err = conn.Write([]byte(res))
 	if err != nil {
 		server.logger.Error(err.Error(),
@@ -76,22 +85,17 @@ func (server *ConiksServer) acceptClient(conn net.Conn, handler func(msg []byte)
 	}
 }
 
-func malformedClientMsg(err error) ([]byte, error) {
+func malformedClientMsg(err error) *protocol.Response {
 	// check if we're just propagating a message
 	if err == nil {
 		err = protocol.ErrMalformedMessage
 	}
-	response := protocol.NewErrorResponse(protocol.ErrMalformedMessage)
-	res, e := MarshalResponse(response)
-	if e != nil {
-		panic(e)
-	}
-	return res, err
+	return protocol.NewErrorResponse(protocol.ErrMalformedMessage)
 }
 
 // handleOps validates the request message and then pass it to
 // appropriate operation handler according to the request type.
-func (server *ConiksServer) handleOps(req *protocol.Request) (*protocol.Response, error) {
+func (server *ConiksServer) handleOps(req *protocol.Request) *protocol.Response {
 	switch req.Type {
 	case protocol.RegistrationType:
 		if msg, ok := req.Request.(*protocol.RegistrationRequest); ok {
@@ -110,17 +114,11 @@ func (server *ConiksServer) handleOps(req *protocol.Request) (*protocol.Response
 			return server.dir.Monitor(msg)
 		}
 	}
-	return protocol.NewErrorResponse(protocol.ErrMalformedMessage),
-		protocol.ErrMalformedMessage
+	return protocol.NewErrorResponse(protocol.ErrMalformedMessage)
 }
 
-func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(msg []byte) ([]byte, error) {
-	return func(msg []byte) ([]byte, error) {
-		// get request message
-		req, err := UnmarshalRequest(msg)
-		if err != nil {
-			return malformedClientMsg(err)
-		}
+func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(req *protocol.Request) *protocol.Response {
+	return func(req *protocol.Request) *protocol.Response {
 		if !acceptableTypes[req.Type] {
 			server.logger.Error("Unacceptable message type",
 				"request type", req.Type)
@@ -133,7 +131,7 @@ func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(msg [
 		default:
 			server.Lock()
 		}
-		response, e := server.handleOps(req)
+		response := server.handleOps(req)
 		switch req.Type {
 		case protocol.KeyLookupType, protocol.KeyLookupInEpochType, protocol.MonitoringType:
 			server.RUnlock()
@@ -141,10 +139,6 @@ func (server *ConiksServer) makeHandler(acceptableTypes map[int]bool) func(msg [
 			server.Unlock()
 		}
 
-		res, err := MarshalResponse(response)
-		if err != nil {
-			panic(err)
-		}
-		return res, e
+		return response
 	}
 }

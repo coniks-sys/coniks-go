@@ -15,22 +15,22 @@ var (
 )
 
 func registerAndVerify(d *directory.ConiksDirectory, cc *ConsistencyChecks,
-	name string, key []byte) (error, error) {
+	name string, key []byte) error {
 	request := &protocol.RegistrationRequest{
 		Username: name,
 		Key:      key,
 	}
-	res, err := d.Register(request)
-	return err, cc.HandleResponse(protocol.RegistrationType, res, name, key)
+	res := d.Register(request)
+	return cc.HandleResponse(protocol.RegistrationType, res, name, key)
 }
 
 func lookupAndVerify(d *directory.ConiksDirectory, cc *ConsistencyChecks,
-	name string, key []byte) (error, error) {
+	name string, key []byte) error {
 	request := &protocol.KeyLookupRequest{
 		Username: name,
 	}
-	res, err := d.KeyLookup(request)
-	return err, cc.HandleResponse(protocol.KeyLookupType, res, name, key)
+	res := d.KeyLookup(request)
+	return cc.HandleResponse(protocol.KeyLookupType, res, name, key)
 }
 
 func TestMalformedClientMessage(t *testing.T) {
@@ -41,7 +41,7 @@ func TestMalformedClientMessage(t *testing.T) {
 		Username: "", // invalid username
 		Key:      key,
 	}
-	res, _ := d.Register(request)
+	res := d.Register(request)
 	if err := cc.HandleResponse(protocol.RegistrationType, res, "", key); err != protocol.ErrMalformedMessage {
 		t.Error("Unexpected verification result",
 			"got", err)
@@ -56,7 +56,7 @@ func TestMalformedDirectoryMessage(t *testing.T) {
 		Username: "alice",
 		Key:      key,
 	}
-	res, _ := d.Register(request)
+	res := d.Register(request)
 	// modify response message
 	res.DirectoryResponse.(*protocol.DirectoryProof).STR = nil
 	if err := cc.HandleResponse(protocol.RegistrationType, res, "alice", key); err != protocol.ErrMalformedMessage {
@@ -69,9 +69,8 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 
 	cc := New(d.LatestSTR(), true, pk)
 
-	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != protocol.ReqSuccess || e2 != nil {
-		t.Error(e1)
-		t.Error(e2)
+	if err := registerAndVerify(d, cc, alice, key); err != nil {
+		t.Error(err)
 	}
 
 	if len(cc.TBs) != 1 {
@@ -79,15 +78,13 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	}
 
 	// test error name existed
-	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != protocol.ReqNameExisted || e2 != nil {
-		t.Error(e1)
-		t.Error(e2)
+	if err := registerAndVerify(d, cc, alice, key); err != nil {
+		t.Error(err)
 	}
 
 	// test error name existed with different key
-	if e1, e2 := registerAndVerify(d, cc, alice, []byte{1, 2, 3}); e1 != protocol.ReqNameExisted || e2 != protocol.CheckBindingsDiffer {
-		t.Error(e1)
-		t.Error(e2)
+	if err := registerAndVerify(d, cc, alice, []byte{1, 2, 3}); err != protocol.CheckBindingsDiffer {
+		t.Error(err)
 	}
 	if len(cc.TBs) != 1 {
 		t.Fatal("Expect the directory to return a signed promise")
@@ -98,13 +95,11 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 	// when the client is monitoring, we do _not_ expect a TB's verification here.
 	d.Update()
 
-	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != protocol.ReqNameExisted || e2 != nil {
-		t.Error(e1)
-		t.Error(e2)
+	if err := registerAndVerify(d, cc, alice, key); err != nil {
+		t.Error(err)
 	}
-	if e1, e2 := registerAndVerify(d, cc, alice, []byte{1, 2, 3}); e1 != protocol.ReqNameExisted || e2 != protocol.CheckBindingsDiffer {
-		t.Error(e1)
-		t.Error(e2)
+	if err := registerAndVerify(d, cc, alice, []byte{1, 2, 3}); err != protocol.CheckBindingsDiffer {
+		t.Error(err)
 	}
 }
 
@@ -113,13 +108,11 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 
 	cc := New(d.LatestSTR(), true, pk)
 
-	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != protocol.ReqSuccess || e2 != nil {
-		t.Error(e1)
-		t.Error(e2)
+	if err := registerAndVerify(d, cc, alice, key); err != nil {
+		t.Error(err)
 	}
-	if e1, e2 := registerAndVerify(d, cc, bob, key); e1 != protocol.ReqSuccess || e2 != nil {
-		t.Error(e1)
-		t.Error(e2)
+	if err := registerAndVerify(d, cc, bob, key); err != nil {
+		t.Error(err)
 	}
 
 	if len(cc.TBs) != 2 {
@@ -129,9 +122,8 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 	d.Update()
 
 	for i := 0; i < 2; i++ {
-		if e1, e2 := lookupAndVerify(d, cc, alice, key); e1 != protocol.ReqSuccess || e2 != nil {
-			t.Error(e1)
-			t.Error(e2)
+		if err := lookupAndVerify(d, cc, alice, key); err != nil {
+			t.Error(err)
 		}
 	}
 
@@ -140,9 +132,8 @@ func TestVerifyFullfilledPromise(t *testing.T) {
 		t.Error("Expect the directory to insert the binding as promised")
 	}
 
-	if e1, e2 := lookupAndVerify(d, cc, bob, key); e1 != protocol.ReqSuccess || e2 != nil {
-		t.Error(e1)
-		t.Error(e2)
+	if err := lookupAndVerify(d, cc, bob, key); err != nil {
+		t.Error(err)
 	}
 	if len(cc.TBs) != 0 {
 		t.Error("Expect the directory to insert the binding as promised")
@@ -155,15 +146,13 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	cc := New(d.LatestSTR(), true, pk)
 
 	// do lookup first
-	if e1, e2 := lookupAndVerify(d, cc, alice, key); e1 != protocol.ReqNameNotFound || e2 != nil {
-		t.Error(e1)
-		t.Error(e2)
+	if err := lookupAndVerify(d, cc, alice, key); err != nil {
+		t.Error(err)
 	}
 
 	// register
-	if e1, e2 := registerAndVerify(d, cc, alice, key); e1 != protocol.ReqSuccess || e2 != nil {
-		t.Error(e1)
-		t.Error(e2)
+	if err := registerAndVerify(d, cc, alice, key); err != nil {
+		t.Error(err)
 	}
 
 	// do lookup in the same epoch - TB TOFU
@@ -171,9 +160,9 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	request := &protocol.KeyLookupRequest{
 		Username: alice,
 	}
-	res, err := d.KeyLookup(request)
-	if err != protocol.ReqSuccess {
-		t.Error("Expect", protocol.ReqSuccess, "got", err)
+	res := d.KeyLookup(request)
+	if res.Error != protocol.ReqSuccess {
+		t.Error("Expect", protocol.ReqSuccess, "got", res.Error)
 	}
 	if err := cc.HandleResponse(protocol.KeyLookupType, res, alice, nil); err != nil {
 		t.Error("Expect", nil, "got", err)
@@ -190,9 +179,9 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	request = &protocol.KeyLookupRequest{
 		Username: alice,
 	}
-	res, err = d.KeyLookup(request)
-	if err != protocol.ReqSuccess {
-		t.Error("Expect", protocol.ReqSuccess, "got", err)
+	res = d.KeyLookup(request)
+	if res.Error != protocol.ReqSuccess {
+		t.Error("Expect", protocol.ReqSuccess, "got", res.Error)
 	}
 	if err := cc.HandleResponse(protocol.KeyLookupType, res, alice, nil); err != nil {
 		t.Error("Expect nil", "got", err)
@@ -203,8 +192,7 @@ func TestVerifyKeyLookupResponseWithTB(t *testing.T) {
 	}
 
 	// test error name not found
-	if e1, e2 := lookupAndVerify(d, cc, bob, key); e1 != protocol.ReqNameNotFound || e2 != nil {
-		t.Error(e1)
-		t.Error(e2)
+	if err := lookupAndVerify(d, cc, bob, key); err != nil {
+		t.Error(err)
 	}
 }

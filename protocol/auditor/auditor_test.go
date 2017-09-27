@@ -83,7 +83,7 @@ func TestAuditBadNewSTREpoch(t *testing.T) {
 
 	// try to re-audit only STR epoch 2:
 	// case str.Epoch < verifiedSTR.Epoch in checkAgainstVerifiedSTR()
-	resp, _ := d.GetSTRHistory(&protocol.STRHistoryRequest{
+	resp := d.GetSTRHistory(&protocol.STRHistoryRequest{
 		StartEpoch: uint64(2),
 		EndEpoch:   uint64(2)})
 
@@ -112,12 +112,12 @@ func TestAuditMalformedSTRRange(t *testing.T) {
 		d.Update()
 	}
 
-	resp, err := d.GetSTRHistory(&protocol.STRHistoryRequest{
+	resp := d.GetSTRHistory(&protocol.STRHistoryRequest{
 		StartEpoch: uint64(4),
 		EndEpoch:   uint64(d.LatestSTR().Epoch)})
 
-	if err != protocol.ReqSuccess {
-		t.Fatalf("Error occurred getting the latest STR from the directory: %s", err.Error())
+	if resp.Error != protocol.ReqSuccess {
+		t.Fatalf("Error occurred getting the latest STR from the directory: %s", resp.Error)
 	}
 
 	strs := resp.DirectoryResponse.(*protocol.STRHistoryRange)

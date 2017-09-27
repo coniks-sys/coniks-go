@@ -106,41 +106,37 @@ func (d *ConiksDirectory) NewTB(name string, key []byte) *protocol.TemporaryBind
 
 // Register inserts the username-to-key mapping contained in a
 // RegistrationRequest req received from a CONIKS client
-// into this ConiksDirectory, and returns a tuple of the form
-// (response, error).
+// into this ConiksDirectory, and returns a protocol.Response.
 // The response (which also includes the error code) is supposed to
-// be sent back to the client. The returned error is used by the key
-// server for logging purposes.
+// be sent back to the client.
 //
 // A request without a username or without a public key is considered
 // malformed, and causes Register() to return a
-// message.NewErrorResponse(ErrMalformedMessage) tuple.
+// message.NewErrorResponse(ErrMalformedMessage).
 // Register() inserts the new mapping in req
 // into a pending version of the directory so it can be included in the
 // snapshot taken at the end of the latest epoch, and returns a
 // message.NewRegistrationProof(ap=proof of absence, str, tb, ReqSuccess)
-// tuple if this operation succeeds.
+// if this operation succeeds.
 // Otherwise, if the username already exists, Register() returns a
 // message.NewRegistrationProof(ap=proof of inclusion, str, nil,
-// ReqNameExisted) tuple. ap will be a proof of absence with a non-nil
+// ReqNameExisted). ap will be a proof of absence with a non-nil
 // TB, if the username is still pending inclusion in the next directory
 // snapshot.
 // In any case, str is the signed tree root for the latest epoch.
 // If Register() encounters an internal error at any point, it returns
-// a message.NewErrorResponse(ErrDirectory) tuple.
-func (d *ConiksDirectory) Register(req *protocol.RegistrationRequest) (
-	*protocol.Response, error) {
+// a message.NewErrorResponse(ErrDirectory).
+func (d *ConiksDirectory) Register(req *protocol.RegistrationRequest) *protocol.Response {
 	// make sure the request is well-formed
 	if len(req.Username) <= 0 || len(req.Key) <= 0 {
-		return protocol.NewErrorResponse(protocol.ErrMalformedMessage),
-			protocol.ErrMalformedMessage
+		return protocol.NewErrorResponse(protocol.ErrMalformedMessage)
 	}
 
 	// check whether the name already exists
 	// in the directory before we register
 	ap, err := d.pad.Lookup(req.Username)
 	if err != nil {
-		return protocol.NewErrorResponse(protocol.ErrDirectory), protocol.ErrDirectory
+		return protocol.NewErrorResponse(protocol.ErrDirectory)
 	}
 	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
 		return protocol.NewRegistrationProof(ap, d.LatestSTR(), nil, protocol.ReqNameExisted)
@@ -158,7 +154,7 @@ func (d *ConiksDirectory) Register(req *protocol.RegistrationRequest) (
 	}
 
 	if err = d.pad.Set(req.Username, req.Key); err != nil {
-		return protocol.NewErrorResponse(protocol.ErrDirectory), protocol.ErrDirectory
+		return protocol.NewErrorResponse(protocol.ErrDirectory)
 	}
 
 	if tb != nil {
@@ -169,39 +165,35 @@ func (d *ConiksDirectory) Register(req *protocol.RegistrationRequest) (
 
 // KeyLookup gets the public key for the username indicated in the
 // KeyLookupRequest req received from a CONIKS client from the latest
-// snapshot of this ConiksDirectory, and returns a tuple of the form
-// (response, error).
+// snapshot of this ConiksDirectory, and returns a protocol.Response.
 // The response (which also includes the error code) is supposed to
-// be sent back to the client. The returned error is used by the key
-// server for logging purposes.
+// be sent back to the client.
 //
 // A request without a username is considered
 // malformed, and causes KeyLookup() to return a
-// message.NewErrorResponse(ErrMalformedMessage) tuple.
+// message.NewErrorResponse(ErrMalformedMessage).
 // If the username doesn't have an entry in the latest directory
 // snapshot and also isn't pending registration (i.e. has a corresponding
 // TB), KeyLookup() returns a message.NewKeyLookupProof(ap=proof of absence,
-// str, nil, ReqNameNotFound) tuple.
+// str, nil, ReqNameNotFound).
 // Otherwise, KeyLookup() returns a message.NewKeyLookupProof(ap=proof of
-// absence, str, tb, ReqSuccess) tuple if there is a corresponding TB for
+// absence, str, tb, ReqSuccess) if there is a corresponding TB for
 // the username, but there isn't an entry in the directory yet, and a
 // a message.NewKeyLookupProof(ap=proof of inclusion, str, nil, ReqSuccess)
 // if there is.
 // In any case, str is the signed tree root for the latest epoch.
 // If KeyLookup() encounters an internal error at any point, it returns
-// a message.NewErrorResponse(ErrDirectory) tuple.
-func (d *ConiksDirectory) KeyLookup(req *protocol.KeyLookupRequest) (
-	*protocol.Response, error) {
+// a message.NewErrorResponse(ErrDirectory).
+func (d *ConiksDirectory) KeyLookup(req *protocol.KeyLookupRequest) *protocol.Response {
 
 	// make sure the request is well-formed
 	if len(req.Username) <= 0 {
-		return protocol.NewErrorResponse(protocol.ErrMalformedMessage),
-			protocol.ErrMalformedMessage
+		return protocol.NewErrorResponse(protocol.ErrMalformedMessage)
 	}
 
 	ap, err := d.pad.Lookup(req.Username)
 	if err != nil {
-		return protocol.NewErrorResponse(protocol.ErrDirectory), protocol.ErrDirectory
+		return protocol.NewErrorResponse(protocol.ErrDirectory)
 	}
 
 	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
@@ -219,22 +211,20 @@ func (d *ConiksDirectory) KeyLookup(req *protocol.KeyLookupRequest) (
 // KeyLookupInEpoch gets the public key for the username for a prior
 // epoch in the directory history indicated in the
 // KeyLookupInEpochRequest req received from a CONIKS client,
-// and returns a tuple of the form (response, error).
+// and returns a protocol.Response.
 // The response (which also includes the error code) is supposed to
-// be sent back to the client. The returned error is used by the key
-// server for logging purposes.
+// be sent back to the client.
 //
 // A request without a username or with an epoch greater than the latest
 // epoch of this directory is considered malformed, and causes
 // KeyLookupInEpoch() to return a
-// message.NewErrorResponse(ErrMalformedMessage) tuple.
+// message.NewErrorResponse(ErrMalformedMessage).
 // If the username doesn't have an entry in the directory
 // snapshot for the indicated epoch, KeyLookupInEpoch()
 // returns a message.NewKeyLookupInEpochProof(ap=proof of absence, str,
-// ReqNameNotFound) tuple.
+// ReqNameNotFound).
 // Otherwise, KeyLookupInEpoch() returns a
-// message.NewKeyLookupInEpochProof(ap=proof of inclusion, str, ReqSuccess)
-// tuple.
+// message.NewKeyLookupInEpochProof(ap=proof of inclusion, str, ReqSuccess).
 // In either case, str is a list of STRs for the epoch range [ep,
 // d.LatestSTR().Epoch], where ep is the past epoch for which
 // the client has requested the user's key.
@@ -242,15 +232,13 @@ func (d *ConiksDirectory) KeyLookup(req *protocol.KeyLookupRequest) (
 // the TB corresponding to a registered binding is discarded at the time
 // the binding is included in a directory snapshot.
 // If KeyLookupInEpoch() encounters an internal error at any point,
-// it returns a message.NewErrorResponse(ErrDirectory) tuple.
-func (d *ConiksDirectory) KeyLookupInEpoch(req *protocol.KeyLookupInEpochRequest) (
-	*protocol.Response, error) {
+// it returns a message.NewErrorResponse(ErrDirectory).
+func (d *ConiksDirectory) KeyLookupInEpoch(req *protocol.KeyLookupInEpochRequest) *protocol.Response {
 
 	// make sure the request is well-formed
 	if len(req.Username) <= 0 ||
 		req.Epoch > d.LatestSTR().Epoch {
-		return protocol.NewErrorResponse(protocol.ErrMalformedMessage),
-			protocol.ErrMalformedMessage
+		return protocol.NewErrorResponse(protocol.ErrMalformedMessage)
 	}
 
 	var strs []*protocol.DirSTR
@@ -259,7 +247,7 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *protocol.KeyLookupInEpochRequest
 
 	ap, err := d.pad.LookupInEpoch(req.Username, startEp)
 	if err != nil {
-		return protocol.NewErrorResponse(protocol.ErrDirectory), protocol.ErrDirectory
+		return protocol.NewErrorResponse(protocol.ErrDirectory)
 	}
 	for ep := startEp; ep <= endEp; ep++ {
 		str := protocol.NewDirSTR(d.pad.GetSTR(ep))
@@ -274,33 +262,29 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *protocol.KeyLookupInEpochRequest
 
 // Monitor gets the directory proofs for the username for the range of
 // epochs indicated in the MonitoringRequest req received from a
-// CONIKS client,
-// and returns a tuple of the form (response, error).
+// CONIKS client, and returns a protocol.Response.
 // The response (which also includes the error code) is supposed to
-// be sent back to the client. The returned error is used by the key
-// server for logging purposes.
+// be sent back to the client.
 //
 // A request without a username, with a start epoch greater than the
 // latest epoch of this directory, or a start epoch greater than the
 // end epoch is considered malformed, and causes Monitor() to return a
-// message.NewErrorResponse(ErrMalformedMessage) tuple.
-// Monitor() returns a message.NewMonitoringProof(ap, str) tuple.
+// message.NewErrorResponse(ErrMalformedMessage).
+// Monitor() returns a message.NewMonitoringProof(ap, str).
 // ap is a list of proofs of inclusion, and str is a list of STRs for
 // the epoch range [startEpoch, endEpoch], where startEpoch
 // and endEpoch are the epoch range endpoints indicated in the client's
 // request. If req.endEpoch is greater than d.LatestSTR().Epoch,
 // the end of the range will be set to d.LatestSTR().Epoch.
 // If Monitor() encounters an internal error at any point,
-// it returns a message.NewErrorResponse(ErrDirectory) tuple.
-func (d *ConiksDirectory) Monitor(req *protocol.MonitoringRequest) (
-	*protocol.Response, error) {
+// it returns a message.NewErrorResponse(ErrDirectory).
+func (d *ConiksDirectory) Monitor(req *protocol.MonitoringRequest) *protocol.Response {
 
 	// make sure the request is well-formed
 	if len(req.Username) <= 0 ||
 		req.StartEpoch > d.LatestSTR().Epoch ||
 		req.StartEpoch > req.EndEpoch {
-		return protocol.NewErrorResponse(protocol.ErrMalformedMessage),
-			protocol.ErrMalformedMessage
+		return protocol.NewErrorResponse(protocol.ErrMalformedMessage)
 	}
 
 	var strs []*protocol.DirSTR
@@ -313,7 +297,7 @@ func (d *ConiksDirectory) Monitor(req *protocol.MonitoringRequest) (
 	for ep := startEp; ep <= endEp; ep++ {
 		ap, err := d.pad.LookupInEpoch(req.Username, ep)
 		if err != nil {
-			return protocol.NewErrorResponse(protocol.ErrDirectory), protocol.ErrDirectory
+			return protocol.NewErrorResponse(protocol.ErrDirectory)
 		}
 		aps = append(aps, ap)
 		str := protocol.NewDirSTR(d.pad.GetSTR(ep))
@@ -326,27 +310,24 @@ func (d *ConiksDirectory) Monitor(req *protocol.MonitoringRequest) (
 // GetSTRHistory gets the directory snapshots for the epoch range
 // indicated in the STRHistoryRequest req received from a CONIKS auditor.
 // The response (which also includes the error code) is supposed to
-// be sent back to the auditor. The returned error is used by the key
-// server for logging purposes.
+// be sent back to the auditor.
 //
 // A request with a start epoch greater than the
 // latest epoch of this directory, or a start epoch greater than the
 // end epoch is considered malformed, and causes
 // GetSTRHistory() to return a
-// message.NewErrorResponse(ErrMalformedMessage) tuple.
-// GetSTRHistory() returns a message.NewSTRHistoryRange(strs) tuple.
+// message.NewErrorResponse(ErrMalformedMessage).
+// GetSTRHistory() returns a message.NewSTRHistoryRange(strs).
 // strs is a list of STRs for
 // the epoch range [startEpoch, endEpoch], where startEpoch
 // and endEpoch are the epoch range endpoints indicated in the client's
 // request. If req.endEpoch is greater than d.LatestSTR().Epoch,
 // the end of the range will be set to d.LatestSTR().Epoch.
-func (d *ConiksDirectory) GetSTRHistory(req *protocol.STRHistoryRequest) (*protocol.Response,
-	error) {
+func (d *ConiksDirectory) GetSTRHistory(req *protocol.STRHistoryRequest) *protocol.Response {
 	// make sure the request is well-formed
 	if req.StartEpoch > d.LatestSTR().Epoch ||
 		req.EndEpoch < req.StartEpoch {
-		return protocol.NewErrorResponse(protocol.ErrMalformedMessage),
-			protocol.ErrMalformedMessage
+		return protocol.NewErrorResponse(protocol.ErrMalformedMessage)
 	}
 
 	endEp := req.EndEpoch

@@ -204,8 +204,8 @@ func TestUpdateDirectory(t *testing.T) {
 	str0 := server.dir.LatestSTR()
 	rs := createMultiRegistrationRequests(10)
 	for i := range rs {
-		_, err := server.handleOps(rs[i])
-		if err != protocol.ReqSuccess {
+		req := server.handleOps(rs[i])
+		if req.Error != protocol.ReqSuccess {
 			t.Fatal("Error while submitting registration request number", i, "to server")
 		}
 	}
@@ -239,17 +239,16 @@ func TestRegisterDuplicateUserInOneEpoch(t *testing.T) {
 	defer teardown()
 	r0 := createMultiRegistrationRequests(1)[0]
 	r1 := createMultiRegistrationRequests(1)[0]
-	_, err := server.handleOps(r0)
-	if err != protocol.ReqSuccess {
+	rev := server.handleOps(r0)
+	if rev.Error != protocol.ReqSuccess {
 		t.Fatal("Error while submitting registration request")
 	}
-	rev, err := server.handleOps(r1)
+	rev = server.handleOps(r1)
 	response, ok := rev.DirectoryResponse.(*protocol.DirectoryProof)
 	if !ok {
 		t.Fatal("Expect a directory proof response")
 	}
-	if err != protocol.ReqNameExisted ||
-		rev.Error != protocol.ReqNameExisted {
+	if rev.Error != protocol.ReqNameExisted {
 		t.Fatal("Expect error code", protocol.ReqNameExisted)
 	}
 	if response.STR == nil || response.AP == nil || response.TB == nil {
@@ -264,20 +263,19 @@ func TestRegisterDuplicateUserInDifferentEpoches(t *testing.T) {
 	server, teardown := startServer(t, 1, true, "")
 	defer teardown()
 	r0 := createMultiRegistrationRequests(1)[0]
-	_, err := server.handleOps(r0)
-	if err != protocol.ReqSuccess {
+	rev := server.handleOps(r0)
+	if rev.Error != protocol.ReqSuccess {
 		t.Fatal("Error while submitting registration request")
 	}
 	timer := time.NewTimer(2 * time.Second)
 	<-timer.C
-	rev, err := server.handleOps(r0)
+	rev = server.handleOps(r0)
 	response, ok := rev.DirectoryResponse.(*protocol.DirectoryProof)
 	if !ok {
 		t.Fatal("Expect a directory proof response")
 	}
-	if err != protocol.ReqNameExisted ||
-		rev.Error != protocol.ReqNameExisted {
-		t.Fatal("Expect error code", protocol.ReqNameExisted, "got", err)
+	if rev.Error != protocol.ReqNameExisted {
+		t.Fatal("Expect error code", protocol.ReqNameExisted, "got", rev.Error)
 	}
 	if response.STR == nil || response.AP == nil || response.TB != nil {
 		t.Fatal("Unexpected response")

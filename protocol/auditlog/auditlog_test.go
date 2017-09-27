@@ -21,7 +21,7 @@ func TestUpdateHistory(t *testing.T) {
 	dirInitHash := auditor.ComputeDirectoryIdentity(hist[0])
 	d.Update()
 	h, _ := aud.get(dirInitHash)
-	resp, _ := protocol.NewSTRHistoryRange([]*protocol.DirSTR{d.LatestSTR()})
+	resp := protocol.NewSTRHistoryRange([]*protocol.DirSTR{d.LatestSTR()})
 
 	err := h.Audit(resp)
 
@@ -53,12 +53,12 @@ func TestAuditLogBadEpochRange(t *testing.T) {
 
 	d.Update()
 
-	resp, err := d.GetSTRHistory(&protocol.STRHistoryRequest{
+	resp := d.GetSTRHistory(&protocol.STRHistoryRequest{
 		StartEpoch: uint64(0),
 		EndEpoch:   uint64(1)})
 
-	if err != protocol.ReqSuccess {
-		t.Fatalf("Error occurred while fetching STR history: %s", err.Error())
+	if resp.Error != protocol.ReqSuccess {
+		t.Fatalf("Error occurred while fetching STR history: %s", resp.Error)
 	}
 
 	strs := resp.DirectoryResponse.(*protocol.STRHistoryRange)
@@ -94,11 +94,11 @@ func TestGetLatestObservedSTR(t *testing.T) {
 	// compute the hash of the initial STR for later lookups
 	dirInitHash := auditor.ComputeDirectoryIdentity(hist[0])
 
-	res, err := aud.GetObservedSTRs(&protocol.AuditingRequest{
+	res := aud.GetObservedSTRs(&protocol.AuditingRequest{
 		DirInitSTRHash: dirInitHash,
 		StartEpoch:     uint64(d.LatestSTR().Epoch),
 		EndEpoch:       uint64(d.LatestSTR().Epoch)})
-	if err != protocol.ReqSuccess {
+	if res.Error != protocol.ReqSuccess {
 		t.Fatal("Unable to get latest observed STR")
 	}
 
@@ -118,12 +118,12 @@ func TestGetObservedSTRInEpoch(t *testing.T) {
 	// compute the hash of the initial STR for later lookups
 	dirInitHash := auditor.ComputeDirectoryIdentity(hist[0])
 
-	res, err := aud.GetObservedSTRs(&protocol.AuditingRequest{
+	res := aud.GetObservedSTRs(&protocol.AuditingRequest{
 		DirInitSTRHash: dirInitHash,
 		StartEpoch:     uint64(6),
 		EndEpoch:       uint64(8)})
 
-	if err != protocol.ReqSuccess {
+	if res.Error != protocol.ReqSuccess {
 		t.Fatal("Unable to get latest range of STRs")
 	}
 
@@ -147,13 +147,13 @@ func TestGetObservedSTRMultipleEpochs(t *testing.T) {
 	dirInitHash := auditor.ComputeDirectoryIdentity(hist[0])
 
 	// first AuditingRequest
-	res, err := aud.GetObservedSTRs(&protocol.AuditingRequest{
+	res := aud.GetObservedSTRs(&protocol.AuditingRequest{
 		DirInitSTRHash: dirInitHash,
 		StartEpoch:     uint64(0),
 		EndEpoch:       d.LatestSTR().Epoch})
 
-	if err != protocol.ReqSuccess {
-		t.Fatalf("Unable to get latest range of STRs, got %s", err.Error())
+	if res.Error != protocol.ReqSuccess {
+		t.Fatalf("Unable to get latest range of STRs, got %s", res.Error)
 	}
 
 	obs := res.DirectoryResponse.(*protocol.STRHistoryRange)
@@ -170,7 +170,7 @@ func TestGetObservedSTRMultipleEpochs(t *testing.T) {
 	// go to next epoch
 	d.Update()
 	h, _ := aud.get(dirInitHash)
-	resp, _ := protocol.NewSTRHistoryRange([]*protocol.DirSTR{d.LatestSTR()})
+	resp := protocol.NewSTRHistoryRange([]*protocol.DirSTR{d.LatestSTR()})
 
 	err1 := h.Audit(resp)
 	if err1 != nil {
@@ -178,12 +178,12 @@ func TestGetObservedSTRMultipleEpochs(t *testing.T) {
 	}
 
 	// request the new latest STR
-	res, err = aud.GetObservedSTRs(&protocol.AuditingRequest{
+	res = aud.GetObservedSTRs(&protocol.AuditingRequest{
 		DirInitSTRHash: dirInitHash,
 		StartEpoch:     d.LatestSTR().Epoch,
 		EndEpoch:       d.LatestSTR().Epoch})
 
-	if err != protocol.ReqSuccess {
+	if res.Error != protocol.ReqSuccess {
 		t.Fatal("Unable to get new latest STRs")
 	}
 
@@ -202,19 +202,19 @@ func TestGetObservedSTRUnknown(t *testing.T) {
 	d, aud, _ := NewTestAuditLog(t, 10)
 
 	var unknown [crypto.HashSizeByte]byte
-	_, err := aud.GetObservedSTRs(&protocol.AuditingRequest{
+	res := aud.GetObservedSTRs(&protocol.AuditingRequest{
 		DirInitSTRHash: unknown,
 		StartEpoch:     uint64(d.LatestSTR().Epoch),
 		EndEpoch:       uint64(d.LatestSTR().Epoch)})
-	if err != protocol.ReqUnknownDirectory {
+	if res.Error != protocol.ReqUnknownDirectory {
 		t.Fatal("Expect ReqUnknownDirectory for latest STR")
 	}
 
-	_, err = aud.GetObservedSTRs(&protocol.AuditingRequest{
+	res = aud.GetObservedSTRs(&protocol.AuditingRequest{
 		DirInitSTRHash: unknown,
 		StartEpoch:     uint64(6),
 		EndEpoch:       uint64(8)})
-	if err != protocol.ReqUnknownDirectory {
+	if res.Error != protocol.ReqUnknownDirectory {
 		t.Fatal("Expect ReqUnknownDirectory for older STR")
 	}
 
@@ -228,18 +228,18 @@ func TestGetObservedSTRMalformed(t *testing.T) {
 	dirInitHash := auditor.ComputeDirectoryIdentity(hist[0])
 
 	// also test the epoch range
-	_, err := aud.GetObservedSTRs(&protocol.AuditingRequest{
+	res := aud.GetObservedSTRs(&protocol.AuditingRequest{
 		DirInitSTRHash: dirInitHash,
 		StartEpoch:     uint64(6),
 		EndEpoch:       uint64(4)})
-	if err != protocol.ErrMalformedMessage {
+	if res.Error != protocol.ErrMalformedMessage {
 		t.Fatal("Expect ErrMalformedMessage for bad end epoch")
 	}
-	_, err = aud.GetObservedSTRs(&protocol.AuditingRequest{
+	res = aud.GetObservedSTRs(&protocol.AuditingRequest{
 		DirInitSTRHash: dirInitHash,
 		StartEpoch:     uint64(6),
 		EndEpoch:       uint64(11)})
-	if err != protocol.ErrMalformedMessage {
+	if res.Error != protocol.ErrMalformedMessage {
 		t.Fatal("Expect ErrMalformedMessage for out-of-bounds epoch range")
 	}
 }
@@ -322,12 +322,12 @@ func TestSTRHistoryRequestLatest(t *testing.T) {
 	d, aud, hist := NewTestAuditLog(t, 0)
 
 	d.Update()
-	resp, err := d.GetSTRHistory(&protocol.STRHistoryRequest{
+	resp := d.GetSTRHistory(&protocol.STRHistoryRequest{
 		StartEpoch: uint64(d.LatestSTR().Epoch),
 		EndEpoch:   uint64(d.LatestSTR().Epoch)})
 
-	if err != protocol.ReqSuccess {
-		t.Fatalf("Error occurred getting the latest STR from the directory: %s", err.Error())
+	if resp.Error != protocol.ReqSuccess {
+		t.Fatalf("Error occurred getting the latest STR from the directory: %s", resp.Error)
 	}
 
 	str := resp.DirectoryResponse.(*protocol.STRHistoryRange)
@@ -354,12 +354,12 @@ func TestSTRHistoryRequestRangeLatest(t *testing.T) {
 		d.Update()
 	}
 
-	resp, err := d.GetSTRHistory(&protocol.STRHistoryRequest{
+	resp := d.GetSTRHistory(&protocol.STRHistoryRequest{
 		StartEpoch: uint64(4),
 		EndEpoch:   uint64(d.LatestSTR().Epoch)})
 
-	if err != protocol.ReqSuccess {
-		t.Fatalf("Error occurred getting the latest STR from the directory: %s", err.Error())
+	if resp.Error != protocol.ReqSuccess {
+		t.Fatalf("Error occurred getting the latest STR from the directory: %s", resp.Error)
 	}
 
 	strs := resp.DirectoryResponse.(*protocol.STRHistoryRange)
@@ -390,12 +390,12 @@ func TestSTRHistoryRequestInEpoch(t *testing.T) {
 		d.Update()
 	}
 
-	resp, err := d.GetSTRHistory(&protocol.STRHistoryRequest{
+	resp := d.GetSTRHistory(&protocol.STRHistoryRequest{
 		StartEpoch: uint64(4),
 		EndEpoch:   uint64(5)})
 
-	if err != protocol.ReqSuccess {
-		t.Fatalf("Error occurred getting the latest STR from the directory: %s", err.Error())
+	if resp.Error != protocol.ReqSuccess {
+		t.Fatalf("Error occurred getting the latest STR from the directory: %s", resp.Error)
 	}
 
 	strs := resp.DirectoryResponse.(*protocol.STRHistoryRange)

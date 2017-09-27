@@ -12,11 +12,11 @@ func TestRegisterWithTB(t *testing.T) {
 	// along with a TB of registering user
 	d, _ := NewTestDirectory(t, true)
 
-	res, err := d.Register(&protocol.RegistrationRequest{
+	res := d.Register(&protocol.RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
 	df := res.DirectoryResponse.(*protocol.DirectoryProof)
-	if err != protocol.ReqSuccess {
+	if res.Error != protocol.ReqSuccess {
 		t.Fatal("Unable to register")
 	}
 	if ap := df.AP[0]; ap == nil || bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
@@ -36,22 +36,22 @@ func TestRegisterWithTB(t *testing.T) {
 
 func TestRegisterExistedUserWithTB(t *testing.T) {
 	d, _ := NewTestDirectory(t, true)
-	_, err := d.Register(&protocol.RegistrationRequest{
+	res := d.Register(&protocol.RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
-	if err != protocol.ReqSuccess {
+	if res.Error != protocol.ReqSuccess {
 		t.Fatal("Unable to register")
 	}
 	// register in the same epoch
 	// expect return a proof of absence
 	// along with a TB of registering user
 	// and error ReqNameExisted
-	res, err := d.Register(&protocol.RegistrationRequest{
+	res = d.Register(&protocol.RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
 	df := res.DirectoryResponse.(*protocol.DirectoryProof)
-	if err != protocol.ReqNameExisted {
-		t.Fatal("Expect error code", protocol.ReqNameExisted, "got", err)
+	if res.Error != protocol.ReqNameExisted {
+		t.Fatal("Expect error code", protocol.ReqNameExisted, "got", res.Error)
 	}
 	if ap := df.AP[0]; ap == nil || bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
 		t.Fatal("Expect a proof of absence")
@@ -64,12 +64,12 @@ func TestRegisterExistedUserWithTB(t *testing.T) {
 	// register in different epochs
 	// expect return a proof of inclusion
 	// and error ReqNameExisted
-	res, err = d.Register(&protocol.RegistrationRequest{
+	res = d.Register(&protocol.RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
 	df = res.DirectoryResponse.(*protocol.DirectoryProof)
-	if err != protocol.ReqNameExisted {
-		t.Fatal("Expect error code", protocol.ReqNameExisted, "got", err)
+	if res.Error != protocol.ReqNameExisted {
+		t.Fatal("Expect error code", protocol.ReqNameExisted, "got", res.Error)
 	}
 	if ap := df.AP[0]; ap == nil || !bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
 		t.Fatal("Expect a proof of inclusion")
@@ -92,13 +92,13 @@ func TestNewDirectoryPanicWithoutTB(t *testing.T) {
 
 func TestKeyLookupWithTB(t *testing.T) {
 	d, _ := NewTestDirectory(t, true)
-	res, _ := d.Register(&protocol.RegistrationRequest{
+	res := d.Register(&protocol.RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
 	tb := res.DirectoryResponse.(*protocol.DirectoryProof).TB
 	// lookup in the same epoch
 	// expect a proof of absence and the TB of looking up user
-	res, _ = d.KeyLookup(&protocol.KeyLookupRequest{Username: "alice"})
+	res = d.KeyLookup(&protocol.KeyLookupRequest{Username: "alice"})
 	df := res.DirectoryResponse.(*protocol.DirectoryProof)
 	if res.Error != protocol.ReqSuccess {
 		t.Fatal("Expect no error", "got", res.Error)
@@ -119,7 +119,7 @@ func TestKeyLookupWithTB(t *testing.T) {
 	d.Update()
 	// lookup in epoch after registering epoch
 	// expect a proof of inclusion
-	res, _ = d.KeyLookup(&protocol.KeyLookupRequest{Username: "alice"})
+	res = d.KeyLookup(&protocol.KeyLookupRequest{Username: "alice"})
 	df = res.DirectoryResponse.(*protocol.DirectoryProof)
 	if ap := df.AP[0]; ap == nil || !bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
 		t.Fatal("Expect a proof of inclusion")
@@ -133,7 +133,7 @@ func TestDirectoryMonitoring(t *testing.T) {
 	N := 10
 
 	d, _ := NewTestDirectory(t, true)
-	_, err := d.Register(&protocol.RegistrationRequest{
+	d.Register(&protocol.RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
 
@@ -144,11 +144,11 @@ func TestDirectoryMonitoring(t *testing.T) {
 	}
 
 	// missed from epoch 2
-	res, err := d.Monitor(&protocol.MonitoringRequest{
+	res := d.Monitor(&protocol.MonitoringRequest{
 		Username: "alice", StartEpoch: uint64(2), EndEpoch: d.LatestSTR().Epoch,
 	})
 	df := res.DirectoryResponse.(*protocol.DirectoryProof)
-	if err != protocol.ReqSuccess {
+	if res.Error != protocol.ReqSuccess {
 		t.Fatal("Unable to perform key lookup in epoch", 2)
 	}
 	expectNumberOfSTR := 10 - 2
@@ -167,11 +167,11 @@ func TestDirectoryMonitoring(t *testing.T) {
 	}
 
 	// assert the number of STRs returned is correct
-	res, err = d.Monitor(&protocol.MonitoringRequest{
+	res = d.Monitor(&protocol.MonitoringRequest{
 		Username: "alice", StartEpoch: uint64(2), EndEpoch: d.LatestSTR().Epoch + 5,
 	})
 	df = res.DirectoryResponse.(*protocol.DirectoryProof)
-	if err != protocol.ReqSuccess {
+	if res.Error != protocol.ReqSuccess {
 		t.Fatal("Unable to perform key lookup in epoch", 2)
 	}
 	if len(df.AP) != expectNumberOfSTR || len(df.STR) != expectNumberOfSTR {
@@ -188,10 +188,10 @@ func TestDirectoryKeyLookupInEpoch(t *testing.T) {
 	}
 
 	// lookup at epoch 1, expect a proof of absence & ReqNameNotFound
-	res, err := d.KeyLookupInEpoch(&protocol.KeyLookupInEpochRequest{Username: "alice", Epoch: uint64(1)})
+	res := d.KeyLookupInEpoch(&protocol.KeyLookupInEpochRequest{Username: "alice", Epoch: uint64(1)})
 	df := res.DirectoryResponse.(*protocol.DirectoryProof)
-	if err != protocol.ReqNameNotFound {
-		t.Fatal("Expect error", protocol.ReqNameNotFound, "got", err)
+	if res.Error != protocol.ReqNameNotFound {
+		t.Fatal("Expect error", protocol.ReqNameNotFound, "got", res.Error)
 	}
 	if len(df.AP) != 1 {
 		t.Fatal("Expect only 1 auth path in response")
@@ -207,10 +207,10 @@ func TestDirectoryKeyLookupInEpoch(t *testing.T) {
 		d.Update()
 	}
 
-	res, err = d.KeyLookupInEpoch(&protocol.KeyLookupInEpochRequest{Username: "alice", Epoch: uint64(5)})
+	res = d.KeyLookupInEpoch(&protocol.KeyLookupInEpochRequest{Username: "alice", Epoch: uint64(5)})
 	df = res.DirectoryResponse.(*protocol.DirectoryProof)
-	if err != protocol.ReqSuccess {
-		t.Fatal("Expect error", protocol.ReqSuccess, "got", err)
+	if res.Error != protocol.ReqSuccess {
+		t.Fatal("Expect error", protocol.ReqSuccess, "got", res.Error)
 	}
 	if len(df.AP) != 1 {
 		t.Fatal("Expect only 1 auth path in response")
@@ -230,9 +230,9 @@ func TestDirectoryKeyLookupInEpochBadEpoch(t *testing.T) {
 
 	// Send an invalid KeyLookupInEpochRequest (epoch > d.LatestEpoch())
 	// Expect ErrMalformedMessage
-	_, err := d.KeyLookupInEpoch(&protocol.KeyLookupInEpochRequest{Username: "alice", Epoch: uint64(6)})
-	if err != protocol.ErrMalformedMessage {
-		t.Fatal("Expect error", protocol.ErrMalformedMessage, "got", err)
+	res := d.KeyLookupInEpoch(&protocol.KeyLookupInEpochRequest{Username: "alice", Epoch: uint64(6)})
+	if res.Error != protocol.ErrMalformedMessage {
+		t.Fatal("Expect error", protocol.ErrMalformedMessage, "got", res.Error)
 	}
 }
 
@@ -246,20 +246,20 @@ func TestMonitoringBadStartEpoch(t *testing.T) {
 
 	// Send an invalid MonitoringRequest (startEpoch > d.LatestEpoch())
 	// Expect ErrMalformedMessage
-	_, err := d.Monitor(&protocol.MonitoringRequest{
+	res := d.Monitor(&protocol.MonitoringRequest{
 		Username: "alice", StartEpoch: uint64(6), EndEpoch: uint64(10),
 	})
-	if err != protocol.ErrMalformedMessage {
-		t.Fatal("Expect error", protocol.ErrMalformedMessage, "got", err)
+	if res.Error != protocol.ErrMalformedMessage {
+		t.Fatal("Expect error", protocol.ErrMalformedMessage, "got", res.Error)
 	}
 
 	// Send an invalid MonitoringRequest (startEpoch > EndEpoch)
 	// Expect ErrMalformedMessage
-	_, err = d.Monitor(&protocol.MonitoringRequest{
+	res = d.Monitor(&protocol.MonitoringRequest{
 		Username: "alice", StartEpoch: uint64(2), EndEpoch: uint64(0),
 	})
-	if err != protocol.ErrMalformedMessage {
-		t.Fatal("Expect error", protocol.ErrMalformedMessage, "got", err)
+	if res.Error != protocol.ErrMalformedMessage {
+		t.Fatal("Expect error", protocol.ErrMalformedMessage, "got", res.Error)
 	}
 }
 
@@ -296,19 +296,19 @@ func TestSTRHistoryRequestBadRange(t *testing.T) {
 
 	d.Update()
 
-	_, err := d.GetSTRHistory(&protocol.STRHistoryRequest{
+	res := d.GetSTRHistory(&protocol.STRHistoryRequest{
 		StartEpoch: uint64(4),
 		EndEpoch:   uint64(2)})
 
-	if err != protocol.ErrMalformedMessage {
+	if res.Error != protocol.ErrMalformedMessage {
 		t.Fatal("Expect ErrMalformedMessage for bad STR history end epoch")
 	}
 
-	_, err = d.GetSTRHistory(&protocol.STRHistoryRequest{
+	res = d.GetSTRHistory(&protocol.STRHistoryRequest{
 		StartEpoch: uint64(6),
 		EndEpoch:   uint64(d.LatestSTR().Epoch)})
 
-	if err != protocol.ErrMalformedMessage {
+	if res.Error != protocol.ErrMalformedMessage {
 		t.Fatal("Expect ErrMalformedMessage for out-of-bounds STR history")
 	}
 }

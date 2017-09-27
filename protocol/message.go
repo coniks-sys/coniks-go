@@ -176,7 +176,7 @@ var _ DirectoryResponse = (*STRHistoryRange)(nil)
 // See directory.Register() for details on the contents of the created
 // DirectoryProof.
 func NewRegistrationProof(ap *merkletree.AuthenticationPath, str *DirSTR,
-	tb *TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
+	tb *TemporaryBinding, e ErrorCode) *Response {
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProof{
@@ -184,7 +184,7 @@ func NewRegistrationProof(ap *merkletree.AuthenticationPath, str *DirSTR,
 			STR: append([]*DirSTR{}, str),
 			TB:  tb,
 		},
-	}, e
+	}
 }
 
 // NewKeyLookupProof creates the response message a CONIKS directory
@@ -198,7 +198,7 @@ func NewRegistrationProof(ap *merkletree.AuthenticationPath, str *DirSTR,
 // See directory.KeyLookup() for details on the contents of the created
 // DirectoryProof.
 func NewKeyLookupProof(ap *merkletree.AuthenticationPath, str *DirSTR,
-	tb *TemporaryBinding, e ErrorCode) (*Response, ErrorCode) {
+	tb *TemporaryBinding, e ErrorCode) *Response {
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProof{
@@ -206,7 +206,7 @@ func NewKeyLookupProof(ap *merkletree.AuthenticationPath, str *DirSTR,
 			STR: append([]*DirSTR{}, str),
 			TB:  tb,
 		},
-	}, e
+	}
 }
 
 // NewKeyLookupInEpochProof creates the response message a CONIKS directory
@@ -219,7 +219,7 @@ func NewKeyLookupProof(ap *merkletree.AuthenticationPath, str *DirSTR,
 // See directory.KeyLookupInEpoch() for details on the contents of the
 // created DirectoryProofs.
 func NewKeyLookupInEpochProof(ap *merkletree.AuthenticationPath,
-	str []*DirSTR, e ErrorCode) (*Response, ErrorCode) {
+	str []*DirSTR, e ErrorCode) *Response {
 	aps := append([]*merkletree.AuthenticationPath{}, ap)
 	return &Response{
 		Error: e,
@@ -227,7 +227,7 @@ func NewKeyLookupInEpochProof(ap *merkletree.AuthenticationPath,
 			AP:  aps,
 			STR: str,
 		},
-	}, e
+	}
 }
 
 // NewMonitoringProof creates the response message a CONIKS directory
@@ -239,14 +239,14 @@ func NewKeyLookupInEpochProof(ap *merkletree.AuthenticationPath,
 // See directory.Monitor() for details on the contents of the created
 // DirectoryProofs.
 func NewMonitoringProof(ap []*merkletree.AuthenticationPath,
-	str []*DirSTR) (*Response, ErrorCode) {
+	str []*DirSTR) *Response {
 	return &Response{
 		Error: ReqSuccess,
 		DirectoryResponse: &DirectoryProof{
 			AP:  ap,
 			STR: str,
 		},
-	}, ReqSuccess
+	}
 }
 
 // NewSTRHistoryRange creates the response message a CONIKS auditor
@@ -257,13 +257,13 @@ func NewMonitoringProof(ap []*merkletree.AuthenticationPath,
 //
 // See auditlog.GetObservedSTRs() for details on the contents of the created
 // STRHistoryRange.
-func NewSTRHistoryRange(str []*DirSTR) (*Response, ErrorCode) {
+func NewSTRHistoryRange(str []*DirSTR) *Response {
 	return &Response{
 		Error: ReqSuccess,
 		DirectoryResponse: &STRHistoryRange{
 			STR: str,
 		},
-	}, ReqSuccess
+	}
 }
 
 // Validate returns immediately if the message includes an error code.

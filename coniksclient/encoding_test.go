@@ -38,7 +38,7 @@ func TestUnmarshalMalformedErrorResponse(t *testing.T) {
 
 func TestUnmarshalSampleMessage(t *testing.T) {
 	d, _ := directory.NewTestDirectory(t, true)
-	res, _ := d.Register(&protocol.RegistrationRequest{
+	res := d.Register(&protocol.RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
 	msg, _ := coniksserver.MarshalResponse(res)
