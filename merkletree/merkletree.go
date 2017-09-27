@@ -29,15 +29,14 @@ const (
 // nonce.
 type MerkleTree struct {
 	nonce []byte
-	root  *interiorNode
+	root  merkleNode
 	hash  []byte
 }
 
 // NewMerkleTree returns an empty Merkle prefix tree
-// with a secure random nonce. The tree root is an interior node
-// and its children are two empty leaf nodes.
+// with a secure random nonce. The tree root is an empty node.
 func NewMerkleTree() (*MerkleTree, error) {
-	root := newInteriorNode(nil, 0, []bool{})
+	root := newEmptyNode(nil, 0, []bool{})
 	nonce, err := crypto.MakeRand()
 	if err != nil {
 		return nil, err
@@ -151,14 +150,22 @@ func (m *MerkleTree) insertNode(index []byte, toAdd *userLeafNode) {
 insertLoop:
 	for {
 		switch nodePointer.(type) {
+		case *emptyNode:
+			// assert that this is an empty tree.
+			// then we just replace the root node
+			// with a user leaf node and return.
+			if nodePointer.(*emptyNode).parent != nil {
+				panic(ErrInvalidTree)
+			}
+			toAdd.parent = nil
+			toAdd.level = 0
+			m.root = toAdd
+			return
 		case *userLeafNode:
 			// reached a "bottom" of the tree.
 			// add a new interior node and push the previous leaf down
 			// then continue insertion
 			currentNodeUL := nodePointer.(*userLeafNode)
-			if currentNodeUL.parent == nil {
-				panic(ErrInvalidTree)
-			}
 
 			if bytes.Equal(currentNodeUL.index, toAdd.index) {
 				// replace the value
@@ -178,6 +185,12 @@ insertLoop:
 			}
 			currentNodeUL.level = depth + 1
 			currentNodeUL.parent = newInteriorNode
+
+			if newInteriorNode.parent == nil {
+				m.root = newInteriorNode
+				nodePointer = newInteriorNode
+				break
+			}
 			if newInteriorNode.parent.(*interiorNode).leftChild == nodePointer {
 				newInteriorNode.parent.(*interiorNode).leftChild = newInteriorNode
 			} else {
@@ -249,7 +262,7 @@ func (m *MerkleTree) recomputeHash() {
 func (m *MerkleTree) Clone() *MerkleTree {
 	return &MerkleTree{
 		nonce: m.nonce,
-		root:  m.root.clone(nil).(*interiorNode),
+		root:  m.root.clone(nil),
 		hash:  append([]byte{}, m.hash...),
 	}
 }

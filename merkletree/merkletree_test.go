@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
-	"github.com/coniks-sys/coniks-go/utils"
-	"golang.org/x/crypto/sha3"
 )
 
 var vrfPrivKey1, _ = vrf.GenerateKey(bytes.NewReader(
@@ -15,73 +13,136 @@ var vrfPrivKey1, _ = vrf.GenerateKey(bytes.NewReader(
 var vrfPrivKey2, _ = vrf.GenerateKey(bytes.NewReader(
 	[]byte("deterministic tests need 32 byte")))
 
-func TestOneEntry(t *testing.T) {
+func TestEmptyTree(t *testing.T) {
 	m, err := NewMerkleTree()
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	var commit [32]byte
-	var expect [32]byte
-
-	key := "key"
-	val := []byte("value")
-	index := vrfPrivKey1.Compute([]byte(key))
-	if err := m.Set(index, key, val); err != nil {
-		t.Fatal(err)
-	}
 	m.recomputeHash()
 
-	// Check empty node hash
-	h := sha3.NewShake128()
-	h.Write([]byte{EmptyBranchIdentifier})
-	h.Write(m.nonce)
-	h.Write(utils.ToBytes([]bool{true}))
-	h.Write(utils.UInt32ToBytes(1))
-	h.Read(expect[:])
-	if !bytes.Equal(m.root.rightHash, expect[:]) {
-		t.Error("Wrong righ hash!",
-			"expected", expect,
-			"get", m.root.rightHash)
+	newTree := m.Clone()
+	newTree.recomputeHash()
+
+	// assert tree clone.
+	if newTree.root.(*emptyNode).parent != nil {
+		t.Error("Expect a nil parent")
+	}
+	if !bytes.Equal(m.hash, newTree.hash) {
+		t.Error("Expect 2 identical trees, got different tree hashes")
 	}
 
-	r := m.Get(index)
-	if r.Leaf.Value == nil {
-		t.Error("Cannot find value of key:", key)
-		return
+	key1 := "key1"
+	index1 := vrfPrivKey1.Compute([]byte(key1))
+	val1 := []byte("value1")
+	key2 := "key2"
+	index2 := vrfPrivKey1.Compute([]byte(key2))
+
+	// assert Get from empty tree
+	proof := newTree.Get(index1)
+	if proof.Leaf.Value != nil {
+		t.Fatal("Expect returned leaf's value is nil")
 	}
-	v := r.Leaf.Value
-	if !bytes.Equal(v, val) {
-		t.Errorf("Value mismatch %v / %v", v, val)
-	}
-
-	// Check leaf node hash
-	h.Reset()
-	h.Write(r.Leaf.Commitment.Salt)
-	h.Write([]byte(key))
-	h.Write(val)
-	h.Read(commit[:])
-
-	h.Reset()
-	h.Write([]byte{LeafIdentifier})
-	h.Write(m.nonce)
-	h.Write(index)
-	h.Write(utils.UInt32ToBytes(1))
-	h.Write(commit[:])
-	h.Read(expect[:])
-
-	if !bytes.Equal(m.root.leftHash, expect[:]) {
-		t.Error("Wrong left hash!",
-			"expected", expect,
-			"get", m.root.leftHash)
+	if bytes.Equal(proof.LookupIndex, proof.Leaf.Index) ||
+		!bytes.Equal(index1, proof.LookupIndex) {
+		t.Fatal("Expect a proof of absence")
 	}
 
-	r = m.Get([]byte("abc"))
-	if r.Leaf.Value != nil {
-		t.Error("Invalid look-up operation:", key)
-		return
+	// assert Set into empty tree
+	if nil != m.Set(index1, key1, val1) {
+		t.Fatal(err)
+	}
+
+	if nil != newTree.Set(index1, key1, val1) {
+		t.Fatal("WTF")
+	}
+
+	proof = newTree.Get(index1)
+	if proof.Leaf.Value == nil {
+		t.Fatal("Expect returned leaf's value is not nil")
+	}
+	if !bytes.Equal(proof.LookupIndex, proof.Leaf.Index) ||
+		!bytes.Equal(index1, proof.LookupIndex) {
+		t.Fatal("Expect a proof of inclusion")
+	}
+
+	proof = newTree.Get(index2)
+	if proof.Leaf.Value != nil {
+		t.Fatal("Expect returned leaf's value is nil")
+	}
+	if bytes.Equal(proof.LookupIndex, proof.Leaf.Index) ||
+		!bytes.Equal(index2, proof.LookupIndex) {
+		t.Fatal("Expect a proof of absence")
 	}
 }
+
+// func TestOneEntry(t *testing.T) {
+// 	m, err := NewMerkleTree()
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+
+// 	var commit [32]byte
+// 	var expect [32]byte
+
+// 	key := "key"
+// 	val := []byte("value")
+// 	index := vrfPrivKey1.Compute([]byte(key))
+// 	if err := m.Set(index, key, val); err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	m.recomputeHash()
+
+// 	// Check empty node hash
+// 	h := sha3.NewShake128()
+// 	h.Write([]byte{EmptyBranchIdentifier})
+// 	h.Write(m.nonce)
+// 	h.Write(utils.ToBytes([]bool{true}))
+// 	h.Write(utils.UInt32ToBytes(1))
+// 	h.Read(expect[:])
+// 	root := m.root.(*interiorNode)
+// 	if !bytes.Equal(root.rightHash, expect[:]) {
+// 		t.Error("Wrong righ hash!",
+// 			"expected", expect,
+// 			"get", root.rightHash)
+// 	}
+
+// 	r := m.Get(index)
+// 	if r.Leaf.Value == nil {
+// 		t.Error("Cannot find value of key:", key)
+// 		return
+// 	}
+// 	v := r.Leaf.Value
+// 	if !bytes.Equal(v, val) {
+// 		t.Errorf("Value mismatch %v / %v", v, val)
+// 	}
+
+// 	// Check leaf node hash
+// 	h.Reset()
+// 	h.Write(r.Leaf.Commitment.Salt)
+// 	h.Write([]byte(key))
+// 	h.Write(val)
+// 	h.Read(commit[:])
+
+// 	h.Reset()
+// 	h.Write([]byte{LeafIdentifier})
+// 	h.Write(m.nonce)
+// 	h.Write(index)
+// 	h.Write(utils.UInt32ToBytes(1))
+// 	h.Write(commit[:])
+// 	h.Read(expect[:])
+// 	root = m.root.(*interiorNode)
+// 	if !bytes.Equal(root.leftHash, expect[:]) {
+// 		t.Error("Wrong left hash!",
+// 			"expected", expect,
+// 			"get", root.leftHash)
+// 	}
+
+// 	r = m.Get([]byte("abc"))
+// 	if r.Leaf.Value != nil {
+// 		t.Error("Invalid look-up operation:", key)
+// 		return
+// 	}
+// }
 
 func TestTwoEntries(t *testing.T) {
 	m, err := NewMerkleTree()

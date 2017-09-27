@@ -31,6 +31,16 @@ type emptyNode struct {
 	index []byte
 }
 
+func newEmptyNode(parent merkleNode, level uint32, prefixBits []bool) *emptyNode {
+	return &emptyNode{
+		node: node{
+			parent: parent,
+			level:  level,
+		},
+		index: utils.ToBytes(prefixBits),
+	}
+}
+
 func newInteriorNode(parent merkleNode, level uint32, prefixBits []bool) *interiorNode {
 	prefixLeft := append([]bool(nil), prefixBits...)
 	prefixLeft = append(prefixLeft, false)
@@ -68,7 +78,7 @@ func newInteriorNode(parent merkleNode, level uint32, prefixBits []bool) *interi
 type merkleNode interface {
 	isEmpty() bool
 	hash(*MerkleTree) []byte
-	clone(*interiorNode) merkleNode
+	clone(merkleNode) merkleNode
 }
 
 var _ merkleNode = (*userLeafNode)(nil)
@@ -104,7 +114,7 @@ func (n *emptyNode) hash(m *MerkleTree) []byte {
 	)
 }
 
-func (n *interiorNode) clone(parent *interiorNode) merkleNode {
+func (n *interiorNode) clone(parent merkleNode) merkleNode {
 	newNode := &interiorNode{
 		node: node{
 			parent: parent,
@@ -122,7 +132,7 @@ func (n *interiorNode) clone(parent *interiorNode) merkleNode {
 	return newNode
 }
 
-func (n *userLeafNode) clone(parent *interiorNode) merkleNode {
+func (n *userLeafNode) clone(parent merkleNode) merkleNode {
 	return &userLeafNode{
 		node: node{
 			parent: parent,
@@ -135,7 +145,7 @@ func (n *userLeafNode) clone(parent *interiorNode) merkleNode {
 	}
 }
 
-func (n *emptyNode) clone(parent *interiorNode) merkleNode {
+func (n *emptyNode) clone(parent merkleNode) merkleNode {
 	return &emptyNode{
 		node: node{
 			parent: parent,

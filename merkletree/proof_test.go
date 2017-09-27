@@ -184,10 +184,10 @@ func TestProofVerificationErrors(t *testing.T) {
 	if err := proof2.Verify([]byte("a"), nil, m.hash); err != ErrBindingsDiffer {
 		t.Error("Expect", ErrBindingsDiffer, "got", err)
 	}
-	// - ErrIndicesMismatch
+	// - ErrUnequalTreeHashes
 	proof2.Leaf.Value = nil
-	proof2.Leaf.Index[0] &= 0x01
-	if err := proof2.Verify([]byte("a"), nil, m.hash); err != ErrIndicesMismatch {
-		t.Error("Expect", ErrIndicesMismatch, "got", err)
+	proof2.Leaf.Index[0] ^= 0x01
+	if err := proof2.Verify([]byte("a"), nil, m.hash); err != ErrUnequalTreeHashes {
+		t.Error("Expect", ErrUnequalTreeHashes, "got", err)
 	}
 }
