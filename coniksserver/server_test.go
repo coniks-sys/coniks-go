@@ -202,7 +202,7 @@ func TestUpdateDirectory(t *testing.T) {
 	server, teardown := startServer(t, 1, true, "")
 	defer teardown()
 	str0 := server.dir.LatestSTR()
-	rs := createMultiRegistrationRequests(10)
+	rs := createMultiRegistrationRequests(10, str0.Epoch)
 	for i := range rs {
 		req := server.handleOps(rs[i])
 		if req.Error != protocol.ReqSuccess {
@@ -217,12 +217,13 @@ func TestUpdateDirectory(t *testing.T) {
 	}
 }
 
-func createMultiRegistrationRequests(N uint64) []*protocol.Request {
+func createMultiRegistrationRequests(N, epoch uint64) []*protocol.Request {
 	var rs []*protocol.Request
 	for i := uint64(0); i < N; i++ {
 		r := &protocol.Request{
 			Type: protocol.RegistrationType,
 			Request: &protocol.RegistrationRequest{
+				Epoch:                  epoch,
 				Username:               "user" + string(i),
 				Key:                    []byte("key" + string(i)),
 				AllowPublicLookup:      true,
@@ -237,8 +238,8 @@ func createMultiRegistrationRequests(N uint64) []*protocol.Request {
 func TestRegisterDuplicateUserInOneEpoch(t *testing.T) {
 	server, teardown := startServer(t, 60, true, "")
 	defer teardown()
-	r0 := createMultiRegistrationRequests(1)[0]
-	r1 := createMultiRegistrationRequests(1)[0]
+	r0 := createMultiRegistrationRequests(1, server.dir.LatestSTR().Epoch)[0]
+	r1 := createMultiRegistrationRequests(1, server.dir.LatestSTR().Epoch)[0]
 	rev := server.handleOps(r0)
 	if rev.Error != protocol.ReqSuccess {
 		t.Fatal("Error while submitting registration request")
@@ -262,14 +263,15 @@ func TestRegisterDuplicateUserInOneEpoch(t *testing.T) {
 func TestRegisterDuplicateUserInDifferentEpoches(t *testing.T) {
 	server, teardown := startServer(t, 1, true, "")
 	defer teardown()
-	r0 := createMultiRegistrationRequests(1)[0]
+	r0 := createMultiRegistrationRequests(1, server.dir.LatestSTR().Epoch)[0]
 	rev := server.handleOps(r0)
 	if rev.Error != protocol.ReqSuccess {
 		t.Fatal("Error while submitting registration request")
 	}
 	timer := time.NewTimer(2 * time.Second)
 	<-timer.C
-	rev = server.handleOps(r0)
+	r1 := createMultiRegistrationRequests(1, server.dir.LatestSTR().Epoch)[0]
+	rev = server.handleOps(r1)
 	response, ok := rev.DirectoryResponse.(*protocol.DirectoryProof)
 	if !ok {
 		t.Fatal("Expect a directory proof response")

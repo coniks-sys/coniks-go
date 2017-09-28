@@ -128,8 +128,14 @@ func (d *ConiksDirectory) NewTB(name string, key []byte) *protocol.TemporaryBind
 // a message.NewErrorResponse(ErrDirectory).
 func (d *ConiksDirectory) Register(req *protocol.RegistrationRequest) *protocol.Response {
 	// make sure the request is well-formed
-	if len(req.Username) <= 0 || len(req.Key) <= 0 {
+	if len(req.Username) <= 0 || len(req.Key) <= 0 ||
+		req.Epoch > d.LatestSTR().Epoch {
 		return protocol.NewErrorResponse(protocol.ErrMalformedMessage)
+	}
+
+	// check whether this registration request happens in epoch
+	if req.Epoch < d.LatestSTR().Epoch {
+		return protocol.NewErrorResponse(protocol.ErrOutdatedEpoch)
 	}
 
 	// check whether the name already exists
