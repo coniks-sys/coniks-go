@@ -23,6 +23,7 @@ const (
 	ErrDirectory
 	ErrAuditLog
 	ErrMalformedMessage
+	ErrOutdatedEpoch
 )
 
 // These codes indicate the result
@@ -49,6 +50,7 @@ var Errors = map[error]bool{
 	ErrMalformedMessage: true,
 	ErrDirectory:        true,
 	ErrAuditLog:         true,
+	ErrOutdatedEpoch:    true,
 }
 
 var (
@@ -60,6 +62,7 @@ var (
 		ErrMalformedMessage: "[coniks] Malformed message",
 		ErrDirectory:        "[coniks] Directory error",
 		ErrAuditLog:         "[coniks] Audit log error",
+		ErrOutdatedEpoch:    "[coniks] The requested epoch is outdated",
 
 		CheckBadSignature:   "[coniks] Directory's signature on STR or TB is invalid",
 		CheckBadVRFProof:    "[coniks] Returned index is not valid for the given name",

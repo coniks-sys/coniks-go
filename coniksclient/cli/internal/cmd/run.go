@@ -155,6 +155,9 @@ func register(cc *client.ConsistencyChecks, conf *coniksclient.Config, name stri
 		switch response.Error {
 		case protocol.ReqNameExisted:
 			return (`Are you trying to update your binding? Unfortunately, KeyChange isn't supported yet.`)
+		case protocol.ErrOutdatedEpoch:
+			// FIXME
+			return (`You need to fetch the latest STR first. Unfortunately, we haven't implemented fetching STR functionality yet.`)
 		case protocol.ReqSuccess:
 			recvKey, err := response.GetKey()
 			if err != nil {

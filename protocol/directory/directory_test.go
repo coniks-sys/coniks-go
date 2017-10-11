@@ -13,6 +13,7 @@ func TestRegisterWithTB(t *testing.T) {
 	d, _ := NewTestDirectory(t, true)
 
 	res := d.Register(&protocol.RegistrationRequest{
+		Epoch:    d.LatestSTR().Epoch,
 		Username: "alice",
 		Key:      []byte("key")})
 	df := res.DirectoryResponse.(*protocol.DirectoryProof)
@@ -37,6 +38,7 @@ func TestRegisterWithTB(t *testing.T) {
 func TestRegisterExistedUserWithTB(t *testing.T) {
 	d, _ := NewTestDirectory(t, true)
 	res := d.Register(&protocol.RegistrationRequest{
+		Epoch:    d.LatestSTR().Epoch,
 		Username: "alice",
 		Key:      []byte("key")})
 	if res.Error != protocol.ReqSuccess {
@@ -47,6 +49,7 @@ func TestRegisterExistedUserWithTB(t *testing.T) {
 	// along with a TB of registering user
 	// and error ReqNameExisted
 	res = d.Register(&protocol.RegistrationRequest{
+		Epoch:    d.LatestSTR().Epoch,
 		Username: "alice",
 		Key:      []byte("key")})
 	df := res.DirectoryResponse.(*protocol.DirectoryProof)
@@ -65,6 +68,7 @@ func TestRegisterExistedUserWithTB(t *testing.T) {
 	// expect return a proof of inclusion
 	// and error ReqNameExisted
 	res = d.Register(&protocol.RegistrationRequest{
+		Epoch:    d.LatestSTR().Epoch,
 		Username: "alice",
 		Key:      []byte("key")})
 	df = res.DirectoryResponse.(*protocol.DirectoryProof)
@@ -76,6 +80,21 @@ func TestRegisterExistedUserWithTB(t *testing.T) {
 	}
 	if df.TB != nil {
 		t.Fatal("Expect returned TB is nil")
+	}
+}
+
+func TestRegisterInOutdatedEpoch(t *testing.T) {
+	// expect return a proof of absence
+	// along with a TB of registering user
+	d, _ := NewTestDirectory(t, true)
+	d.Update()
+
+	res := d.Register(&protocol.RegistrationRequest{
+		Epoch:    d.LatestSTR().Epoch - 1,
+		Username: "alice",
+		Key:      []byte("key")})
+	if res.Error != protocol.ErrOutdatedEpoch {
+		t.Fatal("Expect ", protocol.ErrOutdatedEpoch, "got", res.Error)
 	}
 }
 
@@ -93,6 +112,7 @@ func TestNewDirectoryPanicWithoutTB(t *testing.T) {
 func TestKeyLookupWithTB(t *testing.T) {
 	d, _ := NewTestDirectory(t, true)
 	res := d.Register(&protocol.RegistrationRequest{
+		Epoch:    d.LatestSTR().Epoch,
 		Username: "alice",
 		Key:      []byte("key")})
 	tb := res.DirectoryResponse.(*protocol.DirectoryProof).TB
@@ -134,6 +154,7 @@ func TestDirectoryMonitoring(t *testing.T) {
 
 	d, _ := NewTestDirectory(t, true)
 	d.Register(&protocol.RegistrationRequest{
+		Epoch:    d.LatestSTR().Epoch,
 		Username: "alice",
 		Key:      []byte("key")})
 
@@ -201,6 +222,7 @@ func TestDirectoryKeyLookupInEpoch(t *testing.T) {
 	}
 
 	d.Register(&protocol.RegistrationRequest{
+		Epoch:    d.LatestSTR().Epoch,
 		Username: "alice",
 		Key:      []byte("key")})
 	for i := 0; i < N; i++ {

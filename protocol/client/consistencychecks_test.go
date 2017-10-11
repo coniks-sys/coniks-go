@@ -17,6 +17,7 @@ var (
 func registerAndVerify(d *directory.ConiksDirectory, cc *ConsistencyChecks,
 	name string, key []byte) error {
 	request := &protocol.RegistrationRequest{
+		Epoch:    d.LatestSTR().Epoch,
 		Username: name,
 		Key:      key,
 	}
@@ -99,6 +100,21 @@ func TestVerifyRegistrationResponseWithTB(t *testing.T) {
 		t.Error(err)
 	}
 	if err := registerAndVerify(d, cc, alice, []byte{1, 2, 3}); err != protocol.CheckBindingsDiffer {
+		t.Error(err)
+	}
+}
+
+func TestRegistrationOutdatedEpoch(t *testing.T) {
+	d, pk := directory.NewTestDirectory(t, true)
+	cc := New(d.LatestSTR(), true, pk)
+	request := &protocol.RegistrationRequest{
+		Epoch:    d.LatestSTR().Epoch,
+		Username: alice,
+		Key:      key,
+	}
+	d.Update()
+	res := d.Register(request)
+	if err := cc.HandleResponse(protocol.RegistrationType, res, alice, key); err != protocol.ErrOutdatedEpoch {
 		t.Error(err)
 	}
 }

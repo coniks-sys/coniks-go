@@ -36,6 +36,7 @@ type Request struct {
 // The response to a successful request is a DirectoryProof with a TB for
 // the requested username and public key.
 type RegistrationRequest struct {
+	Epoch                  uint64
 	Username               string
 	Key                    []byte
 	AllowUnsignedKeychange bool `json:",omitempty"`
