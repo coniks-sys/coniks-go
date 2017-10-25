@@ -3,6 +3,7 @@ package auditlog
 import (
 	"testing"
 
+	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/protocol/directory"
 )
@@ -15,21 +16,22 @@ import (
 // STRs as it always includes the STR after the last directory update
 func NewTestAuditLog(t *testing.T, numEpochs int) (
 	*directory.ConiksDirectory, ConiksAuditLog, []*protocol.DirSTR) {
-	d, pk := directory.NewTestDirectory(t, true)
+	d := directory.NewTestDirectory(t)
 	aud := New()
 
-	var hist []*protocol.DirSTR
+	var snaps []*protocol.DirSTR
 	for ep := 0; ep < numEpochs; ep++ {
-		hist = append(hist, d.LatestSTR())
+		snaps = append(snaps, d.LatestSTR())
 		d.Update()
 	}
 	// always include the actual latest STR
-	hist = append(hist, d.LatestSTR())
+	snaps = append(snaps, d.LatestSTR())
 
-	err := aud.InitHistory("test-server", pk, hist)
+	pk, _ := crypto.StaticSigning(t).Public()
+	err := aud.InitHistory("test-server", pk, snaps)
 	if err != nil {
 		t.Fatalf("Error inserting a new history with %d STRs", numEpochs+1)
 	}
 
-	return d, aud, hist
+	return d, aud, snaps
 }

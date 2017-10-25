@@ -3,29 +3,16 @@ package directory
 import (
 	"testing"
 
-	"github.com/coniks-sys/coniks-go/crypto/sign"
-	"github.com/coniks-sys/coniks-go/crypto/vrf"
+	"github.com/coniks-sys/coniks-go/crypto"
+	"github.com/coniks-sys/coniks-go/merkletree"
 )
-
-// TODO: refactor the function signature after resolving #47
 
 // NewTestDirectory creates a ConiksDirectory used for testing server-side
 // CONIKS operations.
-func NewTestDirectory(t *testing.T, useTBs bool) (
-	*ConiksDirectory, sign.PublicKey) {
-
-	// FIXME: NewTestDirectory should use a fixed VRF and Signing keys.
-	vrfKey, err := vrf.GenerateKey(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	signKey, err := sign.GenerateKey(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pk, _ := signKey.Public()
-	// epDeadline merkletree.TimeStamp, vrfKey vrf.PrivateKey,
-	// signKey sign.PrivateKey, dirSize uint64, useTBs bool
-	d := New(1, vrfKey, signKey, 10, useTBs)
-	return d, pk
+func NewTestDirectory(t *testing.T) *ConiksDirectory {
+	vrfKey := crypto.StaticVRF(t)
+	signKey := crypto.StaticSigning(t)
+	d := New(1, vrfKey, signKey, 10, true)
+	d.pad = merkletree.StaticPAD(t, d.policies)
+	return d
 }

@@ -36,13 +36,13 @@ func TestUnmarshalMalformedErrorResponse(t *testing.T) {
 }
 
 func TestUnmarshalSampleMessage(t *testing.T) {
-	d, _ := directory.NewTestDirectory(t, true)
-	res := d.Register(&protocol.RegistrationRequest{
-		Username: "alice",
-		Key:      []byte("key")})
+	d := directory.NewTestDirectory(t)
+	res := d.GetSTRHistory(&protocol.STRHistoryRequest{
+		StartEpoch: 0,
+		EndEpoch:   0})
 	msg, _ := MarshalResponse(res)
-	response := UnmarshalResponse(protocol.RegistrationType, []byte(msg))
-	str := response.DirectoryResponse.(*protocol.DirectoryProof).STR[0]
+	response := UnmarshalResponse(protocol.STRType, []byte(msg))
+	str := response.DirectoryResponse.(*protocol.STRHistoryRange).STR[0]
 	if !bytes.Equal(d.LatestSTR().Serialize(), str.Serialize()) {
 		t.Error("Cannot unmarshal Associate Data properly")
 	}
