@@ -139,7 +139,7 @@ func (d *ConiksDirectory) Register(req *protocol.RegistrationRequest) *protocol.
 		return protocol.NewErrorResponse(protocol.ErrDirectory)
 	}
 	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
-		return protocol.NewRegistrationProof(ap, d.LatestSTR(), nil, protocol.ReqNameExisted)
+		return protocol.NewRegistrationProof(ap, nil, protocol.ReqNameExisted)
 	}
 
 	var tb *protocol.TemporaryBinding
@@ -148,7 +148,7 @@ func (d *ConiksDirectory) Register(req *protocol.RegistrationRequest) *protocol.
 		// also check the temporary bindings array
 		// currently the server allows only one registration/key change per epoch
 		if tb = d.tbs[req.Username]; tb != nil {
-			return protocol.NewRegistrationProof(ap, d.LatestSTR(), tb, protocol.ReqNameExisted)
+			return protocol.NewRegistrationProof(ap, tb, protocol.ReqNameExisted)
 		}
 		tb = d.NewTB(req.Username, req.Key)
 	}
@@ -160,7 +160,7 @@ func (d *ConiksDirectory) Register(req *protocol.RegistrationRequest) *protocol.
 	if tb != nil {
 		d.tbs[req.Username] = tb
 	}
-	return protocol.NewRegistrationProof(ap, d.LatestSTR(), tb, protocol.ReqSuccess)
+	return protocol.NewRegistrationProof(ap, tb, protocol.ReqSuccess)
 }
 
 // KeyLookup gets the public key for the username indicated in the
@@ -197,15 +197,15 @@ func (d *ConiksDirectory) KeyLookup(req *protocol.KeyLookupRequest) *protocol.Re
 	}
 
 	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
-		return protocol.NewKeyLookupProof(ap, d.LatestSTR(), nil, protocol.ReqSuccess)
+		return protocol.NewKeyLookupProof(ap, nil, protocol.ReqSuccess)
 	}
 	// if not found in the tree, do lookup in tb array
 	if d.useTBs {
 		if tb := d.tbs[req.Username]; tb != nil {
-			return protocol.NewKeyLookupProof(ap, d.LatestSTR(), tb, protocol.ReqSuccess)
+			return protocol.NewKeyLookupProof(ap, tb, protocol.ReqSuccess)
 		}
 	}
-	return protocol.NewKeyLookupProof(ap, d.LatestSTR(), nil, protocol.ReqNameNotFound)
+	return protocol.NewKeyLookupProof(ap, nil, protocol.ReqNameNotFound)
 }
 
 // KeyLookupInEpoch gets the public key for the username for a prior
@@ -241,23 +241,15 @@ func (d *ConiksDirectory) KeyLookupInEpoch(req *protocol.KeyLookupInEpochRequest
 		return protocol.NewErrorResponse(protocol.ErrMalformedMessage)
 	}
 
-	var strs []*protocol.DirSTR
-	startEp := req.Epoch
-	endEp := d.LatestSTR().Epoch
-
-	ap, err := d.pad.LookupInEpoch(req.Username, startEp)
+	ap, err := d.pad.LookupInEpoch(req.Username, req.Epoch)
 	if err != nil {
 		return protocol.NewErrorResponse(protocol.ErrDirectory)
 	}
-	for ep := startEp; ep <= endEp; ep++ {
-		str := protocol.NewDirSTR(d.pad.GetSTR(ep))
-		strs = append(strs, str)
-	}
 
 	if bytes.Equal(ap.LookupIndex, ap.Leaf.Index) {
-		return protocol.NewKeyLookupInEpochProof(ap, strs, protocol.ReqSuccess)
+		return protocol.NewKeyLookupInEpochProof(ap, protocol.ReqSuccess)
 	}
-	return protocol.NewKeyLookupInEpochProof(ap, strs, protocol.ReqNameNotFound)
+	return protocol.NewKeyLookupInEpochProof(ap, protocol.ReqNameNotFound)
 }
 
 // Monitor gets the directory proofs for the username for the range of
@@ -287,7 +279,6 @@ func (d *ConiksDirectory) Monitor(req *protocol.MonitoringRequest) *protocol.Res
 		return protocol.NewErrorResponse(protocol.ErrMalformedMessage)
 	}
 
-	var strs []*protocol.DirSTR
 	var aps []*merkletree.AuthenticationPath
 	startEp := req.StartEpoch
 	endEp := req.EndEpoch
@@ -300,11 +291,9 @@ func (d *ConiksDirectory) Monitor(req *protocol.MonitoringRequest) *protocol.Res
 			return protocol.NewErrorResponse(protocol.ErrDirectory)
 		}
 		aps = append(aps, ap)
-		str := protocol.NewDirSTR(d.pad.GetSTR(ep))
-		strs = append(strs, str)
 	}
 
-	return protocol.NewMonitoringProof(aps, strs)
+	return protocol.NewMonitoringProof(aps)
 }
 
 // GetSTRHistory gets the directory snapshots for the epoch range

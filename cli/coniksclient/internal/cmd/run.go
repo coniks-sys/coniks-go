@@ -2,16 +2,12 @@ package cmd
 
 import (
 	"log"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/coniks-sys/coniks-go/application"
 	clientapp "github.com/coniks-sys/coniks-go/application/client"
-	"github.com/coniks-sys/coniks-go/application/testutil"
 	"github.com/coniks-sys/coniks-go/cli"
-	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/protocol/client"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
@@ -106,109 +102,109 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func register(cc *client.ConsistencyChecks, conf *clientapp.Config, name string, key string) string {
-	req, err := clientapp.CreateRegistrationMsg(name, []byte(key))
-	if err != nil {
-		return ("Couldn't marshal registration request!")
-	}
+	// req, err := clientapp.CreateRegistrationMsg(name, []byte(key))
+	// if err != nil {
+	// 	return ("Couldn't marshal registration request!")
+	// }
 
-	var res []byte
-	regAddress := conf.RegAddress
-	if regAddress == "" {
-		// fallback to conf.Address if empty
-		regAddress = conf.Address
-	}
-	u, _ := url.Parse(regAddress)
-	switch u.Scheme {
-	case "tcp":
-		res, err = testutil.NewTCPClient(req, regAddress)
-		if err != nil {
-			return ("Error while receiving response: " + err.Error())
-		}
-	case "unix":
-		res, err = testutil.NewUnixClient(req, regAddress)
-		if err != nil {
-			return ("Error while receiving response: " + err.Error())
-		}
-	default:
-		return ("Invalid config!")
-	}
+	// var res []byte
+	// regAddress := conf.RegAddress
+	// if regAddress == "" {
+	// 	// fallback to conf.Address if empty
+	// 	regAddress = conf.Address
+	// }
+	// u, _ := url.Parse(regAddress)
+	// switch u.Scheme {
+	// case "tcp":
+	// 	res, err = testutil.NewTCPClient(req, regAddress)
+	// 	if err != nil {
+	// 		return ("Error while receiving response: " + err.Error())
+	// 	}
+	// case "unix":
+	// 	res, err = testutil.NewUnixClient(req, regAddress)
+	// 	if err != nil {
+	// 		return ("Error while receiving response: " + err.Error())
+	// 	}
+	// default:
+	// 	return ("Invalid config!")
+	// }
 
-	response := application.UnmarshalResponse(protocol.RegistrationType, res)
-	err = cc.HandleResponse(protocol.RegistrationType, response, name, []byte(key))
-	switch err {
-	case protocol.CheckBadSTR:
-		// FIXME: remove me
-		return ("Error: " + err.Error() + ". Maybe the client missed an epoch in between two commands, monitoring isn't supported yet.")
-	case nil:
-		switch response.Error {
-		case protocol.ReqSuccess:
-			return ("Succesfully registered name: " + name)
-		case protocol.ReqNameExisted:
-			return ("Name is already registered.")
-		}
-	case protocol.CheckBindingsDiffer:
-		switch response.Error {
-		case protocol.ReqNameExisted:
-			return (`Are you trying to update your binding? Unfortunately, KeyChange isn't supported yet.`)
-		case protocol.ReqSuccess:
-			recvKey, err := response.GetKey()
-			if err != nil {
-				return ("Oops! The server snuck in some other key. However, I cannot get the key from the response, error: " + err.Error())
-			}
-			return ("Oops! The server snuck in some other key. [" + string(recvKey) + "] was registered instead of [" + string(key) + "]")
-		}
-	default:
-		return ("Error: " + err.Error())
-	}
+	// response := application.UnmarshalResponse(protocol.RegistrationType, res)
+	// err = cc.HandleResponse(protocol.RegistrationType, response, name, []byte(key))
+	// switch err {
+	// case protocol.CheckBadSTR:
+	// 	// FIXME: remove me
+	// 	return ("Error: " + err.Error() + ". Maybe the client missed an epoch in between two commands, monitoring isn't supported yet.")
+	// case nil:
+	// 	switch response.Error {
+	// 	case protocol.ReqSuccess:
+	// 		return ("Succesfully registered name: " + name)
+	// 	case protocol.ReqNameExisted:
+	// 		return ("Name is already registered.")
+	// 	}
+	// case protocol.CheckBindingsDiffer:
+	// 	switch response.Error {
+	// 	case protocol.ReqNameExisted:
+	// 		return (`Are you trying to update your binding? Unfortunately, KeyChange isn't supported yet.`)
+	// 	case protocol.ReqSuccess:
+	// 		recvKey, err := response.GetKey()
+	// 		if err != nil {
+	// 			return ("Oops! The server snuck in some other key. However, I cannot get the key from the response, error: " + err.Error())
+	// 		}
+	// 		return ("Oops! The server snuck in some other key. [" + string(recvKey) + "] was registered instead of [" + string(key) + "]")
+	// 	}
+	// default:
+	// 	return ("Error: " + err.Error())
+	// }
 	return ""
 }
 
 func keyLookup(cc *client.ConsistencyChecks, conf *clientapp.Config, name string) string {
-	req, err := clientapp.CreateKeyLookupMsg(name)
-	if err != nil {
-		return ("Couldn't marshal key lookup request!")
-	}
+	// req, err := clientapp.CreateKeyLookupMsg(name)
+	// if err != nil {
+	// 	return ("Couldn't marshal key lookup request!")
+	// }
 
-	var res []byte
-	u, _ := url.Parse(conf.Address)
-	switch u.Scheme {
-	case "tcp":
-		res, err = testutil.NewTCPClient(req, conf.Address)
-		if err != nil {
-			return ("Error while receiving response: " + err.Error())
-		}
-	case "unix":
-		res, err = testutil.NewUnixClient(req, conf.Address)
-		if err != nil {
-			return ("Error while receiving response: " + err.Error())
-		}
-	default:
-		return ("Invalid config!")
-	}
+	// var res []byte
+	// u, _ := url.Parse(conf.Address)
+	// switch u.Scheme {
+	// case "tcp":
+	// 	res, err = testutil.NewTCPClient(req, conf.Address)
+	// 	if err != nil {
+	// 		return ("Error while receiving response: " + err.Error())
+	// 	}
+	// case "unix":
+	// 	res, err = testutil.NewUnixClient(req, conf.Address)
+	// 	if err != nil {
+	// 		return ("Error while receiving response: " + err.Error())
+	// 	}
+	// default:
+	// 	return ("Invalid config!")
+	// }
 
-	response := application.UnmarshalResponse(protocol.KeyLookupType, res)
-	if key, ok := cc.Bindings[name]; ok {
-		err = cc.HandleResponse(protocol.KeyLookupType, response, name, []byte(key))
-	} else {
-		err = cc.HandleResponse(protocol.KeyLookupType, response, name, nil)
-	}
-	switch err {
-	case protocol.CheckBadSTR:
-		// FIXME: remove me
-		return ("Error: " + err.Error() + ". Maybe the client missed an epoch in between two commands, monitoring isn't supported yet.")
-	case nil:
-		switch response.Error {
-		case protocol.ReqSuccess:
-			key, err := response.GetKey()
-			if err != nil {
-				return ("Cannot get the key from the response, error: " + err.Error())
-			}
-			return ("Found! Key bound to name is: [" + string(key) + "]")
-		case protocol.ReqNameNotFound:
-			return ("Name isn't registered.")
-		}
-	default:
-		return ("Error: " + err.Error())
-	}
+	// response := application.UnmarshalResponse(protocol.KeyLookupType, res)
+	// if key, ok := cc.Bindings[name]; ok {
+	// 	err = cc.HandleResponse(protocol.KeyLookupType, response, name, []byte(key))
+	// } else {
+	// 	err = cc.HandleResponse(protocol.KeyLookupType, response, name, nil)
+	// }
+	// switch err {
+	// case protocol.CheckBadSTR:
+	// 	// FIXME: remove me
+	// 	return ("Error: " + err.Error() + ". Maybe the client missed an epoch in between two commands, monitoring isn't supported yet.")
+	// case nil:
+	// 	switch response.Error {
+	// 	case protocol.ReqSuccess:
+	// 		key, err := response.GetKey()
+	// 		if err != nil {
+	// 			return ("Cannot get the key from the response, error: " + err.Error())
+	// 		}
+	// 		return ("Found! Key bound to name is: [" + string(key) + "]")
+	// 	case protocol.ReqNameNotFound:
+	// 		return ("Name isn't registered.")
+	// 	}
+	// default:
+	// 	return ("Error: " + err.Error())
+	// }
 	return ""
 }

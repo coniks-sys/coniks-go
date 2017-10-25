@@ -18,18 +18,20 @@ func StaticPAD(t *testing.T, ad AssocData) *PAD {
 	if err != nil {
 		t.Fatal(err)
 	}
-	str := NewSTR(pad.signKey, pad.ad, staticTree(t), 0, []byte{})
+	str := NewSTR(pad.signKey, pad.ad, StaticTree(t), 0, []byte{})
 	pad.latestSTR = str
 	pad.snapshots[0] = pad.latestSTR
 	return pad
 }
 
-func staticTree(t *testing.T) *MerkleTree {
+// StaticTree returns an empty tree with empty nonce for _tests_.
+func StaticTree(t *testing.T) *MerkleTree {
 	m, err := NewMerkleTree()
 	if err != nil {
 		t.Fatal(err)
 	}
 	m.nonce = []byte{}
+	m.recomputeHash()
 	return m
 }
 
