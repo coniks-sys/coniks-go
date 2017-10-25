@@ -8,7 +8,18 @@ an API for maintaining an auditable, privacy-preserving key directory on a
 server, as well as an API for checking the consistency of the directory
 at the client.
 
-Consistency Checks
+Auditlog
+
+This module implements a CONIKS audit log that a CONIKS auditor maintains.
+An audit log is a mirror of many CONIKS key directories' STR history,
+allowing CONIKS clients to audit the CONIKS directories.
+
+Auditor
+
+This module implements a generic CONIKS auditor, that is all the functionality
+that clients and auditors need to verify a server's STR history.
+
+Client
 
 This module implements all consistency checks performed by a CONIKS client
 on directory proofs received from a CONIKS server. These operations
@@ -23,6 +34,11 @@ privacy-preserving data structure that contains mappings from usernames
 to public keys. It currently supports registration of new mappings,
 latest-version key lookups, historical key lookups, and monitoring of
 mappings.
+
+Tests
+
+This module contains integration test cases for CONIKS directory, CONIKS client
+and CONIKS auditor modules.
 
 Error
 

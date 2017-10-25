@@ -10,7 +10,7 @@ import (
 
 func TestInsertEmptyHistory(t *testing.T) {
 	// create basic test directory and audit log with 1 STR
-	_, _, _ = NewTestAuditLog(t, 0)
+	NewTestAuditLog(t, 0)
 }
 
 func TestUpdateHistory(t *testing.T) {
@@ -32,7 +32,7 @@ func TestUpdateHistory(t *testing.T) {
 
 func TestInsertPriorHistory(t *testing.T) {
 	// create basic test directory and audit log with 11 STRs
-	_, _, _ = NewTestAuditLog(t, 10)
+	NewTestAuditLog(t, 10)
 }
 
 func TestInsertExistingHistory(t *testing.T) {
@@ -74,16 +74,16 @@ func TestAuditLogBadEpochRange(t *testing.T) {
 	dirInitHash := auditor.ComputeDirectoryIdentity(hist[0])
 	h, _ := aud.get(dirInitHash)
 
-	err1 := h.Audit(resp)
-	if err1 != nil {
-		t.Fatalf("Error occurred while auditing STR history: %s", err1.Error())
+	err := h.Audit(resp)
+	if err != nil {
+		t.Fatalf("Error occurred while auditing STR history: %s", err.Error())
 	}
 
 	// now try to audit the same range again: should fail because the
 	// verified epoch is at 1
-	err1 = h.Audit(resp)
-	if err1 != protocol.CheckBadSTR {
-		t.Fatalf("Expecting CheckBadSTR, got %s", err1.Error())
+	err = h.Audit(resp)
+	if err != protocol.CheckBadSTR {
+		t.Fatalf("Expecting CheckBadSTR, got %s", err.Error())
 	}
 }
 
@@ -172,8 +172,8 @@ func TestGetObservedSTRMultipleEpochs(t *testing.T) {
 	h, _ := aud.get(dirInitHash)
 	resp := protocol.NewSTRHistoryRange([]*protocol.DirSTR{d.LatestSTR()})
 
-	err1 := h.Audit(resp)
-	if err1 != nil {
+	err := h.Audit(resp)
+	if err != nil {
 		t.Fatal("Error occurred updating audit log after auditing request")
 	}
 
@@ -339,9 +339,9 @@ func TestSTRHistoryRequestLatest(t *testing.T) {
 	dirInitHash := auditor.ComputeDirectoryIdentity(hist[0])
 	h, _ := aud.get(dirInitHash)
 
-	err1 := h.Audit(resp)
-	if err1 != nil {
-		t.Fatalf("Error occurred auditing the latest STR: %s", err1.Error())
+	err := h.Audit(resp)
+	if err != nil {
+		t.Fatalf("Error occurred auditing the latest STR: %s", err.Error())
 	}
 }
 
@@ -375,9 +375,9 @@ func TestSTRHistoryRequestRangeLatest(t *testing.T) {
 	dirInitHash := auditor.ComputeDirectoryIdentity(hist[0])
 	h, _ := aud.get(dirInitHash)
 
-	err1 := h.Audit(resp)
-	if err1 != nil {
-		t.Fatalf("Error occurred auditing the latest STR: %s", err1.Error())
+	err := h.Audit(resp)
+	if err != nil {
+		t.Fatalf("Error occurred auditing the latest STR: %s", err.Error())
 	}
 }
 
@@ -411,8 +411,8 @@ func TestSTRHistoryRequestInEpoch(t *testing.T) {
 	dirInitHash := auditor.ComputeDirectoryIdentity(hist[0])
 	h, _ := aud.get(dirInitHash)
 
-	err1 := h.Audit(resp)
-	if err1 != nil {
-		t.Fatalf("Error occurred auditing the latest STR: %s", err1.Error())
+	err := h.Audit(resp)
+	if err != nil {
+		t.Fatalf("Error occurred auditing the latest STR: %s", err.Error())
 	}
 }
