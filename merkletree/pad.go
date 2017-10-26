@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/coniks-sys/coniks-go/crypto"
+	chasher "github.com/coniks-sys/coniks-go/crypto/hashers/coniks"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 )
@@ -63,7 +64,7 @@ func (pad *PAD) signTreeRoot(epoch uint64) {
 			panic(err)
 		}
 	} else {
-		prevHash = crypto.Digest(pad.latestSTR.Signature)
+		prevHash = chasher.New().Digest(pad.latestSTR.Signature)
 	}
 	pad.tree.recomputeHash()
 	m := pad.tree.Clone()

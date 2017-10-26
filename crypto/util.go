@@ -4,26 +4,20 @@ import (
 	"bytes"
 	"crypto/rand"
 
-	"golang.org/x/crypto/sha3"
+	"crypto/sha512"
 )
 
-const (
-	// HashSizeByte is the size of the hash output in bytes.
-	HashSizeByte = 32
-	// HashID identifies the used hash as a string.
-	HashID = "SHAKE128"
-)
+// DefaultHashSizeByte is the size of the hash function in bytes.
+const DefaultHashSizeByte = sha512.Size256
 
-// Digest hashes all passed byte slices.
+// digest hashes all passed byte slices.
 // The passed slices won't be mutated.
-func Digest(ms ...[]byte) []byte {
-	h := sha3.NewShake128()
+func digest(ms ...[]byte) []byte {
+	h := sha512.New512_256()
 	for _, m := range ms {
 		h.Write(m)
 	}
-	ret := make([]byte, HashSizeByte)
-	h.Read(ret)
-	return ret
+	return h.Sum(nil)
 }
 
 // MakeRand returns a random slice of bytes.
@@ -36,12 +30,12 @@ func Digest(ms ...[]byte) []byte {
 // as unpredictable as desired).
 // See https://trac.torproject.org/projects/tor/ticket/17694
 func MakeRand() ([]byte, error) {
-	r := make([]byte, HashSizeByte)
+	r := make([]byte, DefaultHashSizeByte)
 	if _, err := rand.Read(r); err != nil {
 		return nil, err
 	}
 	// Do not directly reveal bytes from rand.Read on the wire
-	return Digest(r), nil
+	return digest(r), nil
 }
 
 // Commit can be used to create a cryptographic commit to some value (use
@@ -64,12 +58,12 @@ func NewCommit(stuff ...[]byte) (*Commit, error) {
 	}
 	return &Commit{
 		Salt:  salt,
-		Value: Digest(append([][]byte{salt}, stuff...)...),
+		Value: digest(append([][]byte{salt}, stuff...)...),
 	}, nil
 }
 
 // Verify verifies that the underlying commit c was a commit to the passed
 // byte slices stuff (which won't be mutated).
 func (c *Commit) Verify(stuff ...[]byte) bool {
-	return bytes.Equal(c.Value, Digest(append([][]byte{c.Salt}, stuff...)...))
+	return bytes.Equal(c.Value, digest(append([][]byte{c.Salt}, stuff...)...))
 }

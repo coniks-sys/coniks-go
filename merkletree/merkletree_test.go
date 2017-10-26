@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
-	"github.com/coniks-sys/coniks-go/utils"
-	"golang.org/x/crypto/sha3"
 )
 
 var vrfPrivKey1, _ = vrf.GenerateKey(bytes.NewReader(
@@ -21,9 +19,6 @@ func TestOneEntry(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var commit [32]byte
-	var expect [32]byte
-
 	key := "key"
 	val := []byte("value")
 	index := vrfPrivKey1.Compute([]byte(key))
@@ -32,48 +27,10 @@ func TestOneEntry(t *testing.T) {
 	}
 	m.recomputeHash()
 
-	// Check empty node hash
-	h := sha3.NewShake128()
-	h.Write([]byte{EmptyBranchIdentifier})
-	h.Write(m.nonce)
-	h.Write(utils.ToBytes([]bool{true}))
-	h.Write(utils.UInt32ToBytes(1))
-	h.Read(expect[:])
-	if !bytes.Equal(m.root.rightHash, expect[:]) {
-		t.Error("Wrong righ hash!",
-			"expected", expect,
-			"get", m.root.rightHash)
-	}
-
 	r := m.Get(index)
-	if r.Leaf.Value == nil {
-		t.Error("Cannot find value of key:", key)
-		return
-	}
 	v := r.Leaf.Value
 	if !bytes.Equal(v, val) {
 		t.Errorf("Value mismatch %v / %v", v, val)
-	}
-
-	// Check leaf node hash
-	h.Reset()
-	h.Write(r.Leaf.Commitment.Salt)
-	h.Write([]byte(key))
-	h.Write(val)
-	h.Read(commit[:])
-
-	h.Reset()
-	h.Write([]byte{LeafIdentifier})
-	h.Write(m.nonce)
-	h.Write(index)
-	h.Write(utils.UInt32ToBytes(1))
-	h.Write(commit[:])
-	h.Read(expect[:])
-
-	if !bytes.Equal(m.root.leftHash, expect[:]) {
-		t.Error("Wrong left hash!",
-			"expected", expect,
-			"get", m.root.leftHash)
 	}
 
 	r = m.Get([]byte("abc"))
