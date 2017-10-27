@@ -4,17 +4,12 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/coniks-sys/coniks-go/crypto/vrf"
+	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/utils"
 	"golang.org/x/crypto/sha3"
 )
 
-var vrfPrivKey1, _ = vrf.GenerateKey(bytes.NewReader(
-	[]byte("deterministic tests need 256 bit")))
-
-var vrfPrivKey2, _ = vrf.GenerateKey(bytes.NewReader(
-	[]byte("deterministic tests need 32 byte")))
-
+// TODO: When #178 is merged, 3 tests below should be removed.
 func TestOneEntry(t *testing.T) {
 	m, err := NewMerkleTree()
 	if err != nil {
@@ -26,7 +21,7 @@ func TestOneEntry(t *testing.T) {
 
 	key := "key"
 	val := []byte("value")
-	index := vrfPrivKey1.Compute([]byte(key))
+	index := crypto.StaticVRF(t).Compute([]byte(key))
 	if err := m.Set(index, key, val); err != nil {
 		t.Fatal(err)
 	}
@@ -90,10 +85,10 @@ func TestTwoEntries(t *testing.T) {
 	}
 
 	key1 := "key1"
-	index1 := vrfPrivKey1.Compute([]byte(key1))
+	index1 := crypto.StaticVRF(t).Compute([]byte(key1))
 	val1 := []byte("value1")
 	key2 := "key2"
-	index2 := vrfPrivKey1.Compute([]byte(key2))
+	index2 := crypto.StaticVRF(t).Compute([]byte(key2))
 	val2 := []byte("value2")
 
 	if err := m.Set(index1, key1, val1); err != nil {
@@ -130,13 +125,13 @@ func TestThreeEntries(t *testing.T) {
 	}
 
 	key1 := "key1"
-	index1 := vrfPrivKey1.Compute([]byte(key1))
+	index1 := crypto.StaticVRF(t).Compute([]byte(key1))
 	val1 := []byte("value1")
 	key2 := "key2"
-	index2 := vrfPrivKey1.Compute([]byte(key2))
+	index2 := crypto.StaticVRF(t).Compute([]byte(key2))
 	val2 := []byte("value2")
 	key3 := "key3"
-	index3 := vrfPrivKey1.Compute([]byte(key3))
+	index3 := crypto.StaticVRF(t).Compute([]byte(key3))
 	val3 := []byte("value3")
 
 	if err := m.Set(index1, key1, val1); err != nil {
@@ -191,13 +186,10 @@ func TestThreeEntries(t *testing.T) {
 }
 
 func TestInsertExistedKey(t *testing.T) {
-	m, err := NewMerkleTree()
-	if err != nil {
-		t.Fatal(err)
-	}
+	m := newTestTree(t)
 
 	key1 := "key"
-	index1 := vrfPrivKey1.Compute([]byte(key1))
+	index1 := crypto.StaticVRF(t).Compute([]byte(key1))
 	val1 := append([]byte(nil), "value"...)
 
 	if err := m.Set(index1, key1, val1); err != nil {
@@ -241,10 +233,10 @@ func TestInsertExistedKey(t *testing.T) {
 
 func TestTreeClone(t *testing.T) {
 	key1 := "key1"
-	index1 := vrfPrivKey1.Compute([]byte(key1))
+	index1 := crypto.StaticVRF(t).Compute([]byte(key1))
 	val1 := []byte("value1")
 	key2 := "key2"
-	index2 := vrfPrivKey1.Compute([]byte(key2))
+	index2 := crypto.StaticVRF(t).Compute([]byte(key2))
 	val2 := []byte("value2")
 
 	m1, err := NewMerkleTree()

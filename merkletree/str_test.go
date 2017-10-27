@@ -1,23 +1,21 @@
 package merkletree
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/coniks-sys/coniks-go/crypto"
+)
 
 func TestVerifyHashChain(t *testing.T) {
 	var N uint64 = 100
 
-	keyPrefix := "key"
-	valuePrefix := []byte("value")
-	pad, err := NewPAD(TestAd{"abc"}, signKey, vrfPrivKey1, 10)
+	pad, err := NewPAD(TestAd{"abc"}, crypto.StaticSigning(t), crypto.StaticVRF(t), N)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	savedSTR := pad.LatestSTR()
-
-	pk, ok := pad.signKey.Public()
-	if !ok {
-		t.Fatal("Couldn't retrieve public-key.")
-	}
+	pk, _ := pad.signKey.Public()
 
 	for i := uint64(1); i < N; i++ {
 		key := keyPrefix + string(i)

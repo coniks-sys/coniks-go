@@ -2,192 +2,145 @@ package merkletree
 
 import (
 	"bytes"
+	"math/rand"
+	"strconv"
 	"testing"
+	"time"
 
+	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
-func TestVerifyProof(t *testing.T) {
-	m, err := NewMerkleTree()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	key1 := "key1"
-	index1 := vrfPrivKey1.Compute([]byte(key1))
-	val1 := []byte("value1")
-	key2 := "key2"
-	index2 := vrfPrivKey1.Compute([]byte(key2))
-	val2 := []byte("value2")
-	key3 := "key3"
-	index3 := vrfPrivKey1.Compute([]byte(key3))
-	val3 := []byte("value3")
-
-	if err := m.Set(index1, key1, val1); err != nil {
-		t.Fatal(err)
-	}
-	if err := m.Set(index2, key2, val2); err != nil {
-		t.Fatal(err)
-	}
-	if err := m.Set(index3, key3, val3); err != nil {
-		t.Fatal(err)
-	}
-
-	m.recomputeHash()
-
-	ap1 := m.Get(index1)
-	if ap1.Leaf.Value == nil {
-		t.Error("Cannot find key:", key1)
-		return
-	}
-	ap2 := m.Get(index2)
-	if ap2.Leaf.Value == nil {
-		t.Error("Cannot find key:", key2)
-		return
-	}
-	ap3 := m.Get(index3)
-	if ap3.Leaf.Value == nil {
-		t.Error("Cannot find key:", key3)
-		return
-	}
-
-	// proof of inclusion
-	proof := m.Get(index3)
-	if proof.Leaf.Value == nil {
-		t.Fatal("Expect returned leaf's value is not nil")
-	}
-	// ensure this is a proof of inclusion by comparing the returned indices
-	// and verifying the VRF index as well.
-	if !bytes.Equal(proof.LookupIndex, proof.Leaf.Index) ||
-		!bytes.Equal(vrfPrivKey1.Compute([]byte(key3)), proof.LookupIndex) {
-		t.Fatal("Expect a proof of inclusion")
-	}
-	// verify auth path
-	if proof.Verify([]byte(key3), val3, m.hash) != nil {
-		t.Error("Proof of inclusion verification failed.")
-	}
-
-	// proof of absence
-	absentIndex := vrfPrivKey1.Compute([]byte("123"))
-	proof = m.Get(absentIndex) // shares the same prefix with an empty node
-	if proof.Leaf.Value != nil {
-		t.Fatal("Expect returned leaf's value is nil")
-	}
-	// ensure this is a proof of absence
-	if bytes.Equal(proof.LookupIndex, proof.Leaf.Index) ||
-		!bytes.Equal(vrfPrivKey1.Compute([]byte("123")), proof.LookupIndex) {
-		t.Fatal("Expect a proof of absence")
-	}
-	if proof.Verify([]byte("123"), nil, m.hash) != nil {
-		t.Error("Proof of absence verification failed.")
-	}
+type mockTest struct {
+	key   string
+	value []byte
+	index []byte
+	want  ProofType
 }
 
-func TestVerifyProofSamePrefix(t *testing.T) {
-	m, err := NewMerkleTree()
-	if err != nil {
-		t.Fatal(err)
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
+)
+
+var src = rand.NewSource(time.Now().UnixNano())
+
+// Credit: https://stackoverflow.com/a/31832326
+func RandStringBytesMaskImprSrc(n int) string {
+	b := make([]byte, n)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			b[i] = letterBytes[idx]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
 	}
 
-	key1 := "key1"
-	index1 := vrfPrivKey1.Compute([]byte(key1))
-	val1 := []byte("value1")
-	if err := m.Set(index1, key1, val1); err != nil {
-		t.Fatal(err)
+	return string(b)
+}
+
+var N uint64 = 3 // number of inclusions.
+
+func setup(t *testing.T) (*MerkleTree, []*mockTest) {
+	m := newTestTree(t)
+
+	tuple := []*mockTest{}
+	for i := uint64(0); i < uint64(N); i++ {
+		key := keyPrefix + strconv.FormatUint(i, 10)
+		val := append(valuePrefix, byte(i))
+		index := crypto.StaticVRF(t).Compute([]byte(key))
+		if err := m.Set(index, key, val); err != nil {
+			t.Fatal(err)
+		}
+		tuple = append(tuple, &mockTest{key, val, index, ProofOfInclusion})
 	}
+
+	sharedPrefix := tuple[0].index
+	var absentKey string
+	var absentIndex []byte
+	for {
+		absentKey = RandStringBytesMaskImprSrc(3)
+		absentIndex = crypto.StaticVRF(t).Compute([]byte(absentKey))
+		proof := m.Get(absentIndex)
+		// assert these indices share the same prefix in the first bit
+		if bytes.Equal(utils.ToBytes(utils.ToBits(sharedPrefix)[:proof.Leaf.Level]),
+			utils.ToBytes(utils.ToBits(absentIndex)[:proof.Leaf.Level])) {
+			break
+		}
+	}
+
+	tuple = append(tuple, &mockTest{absentKey, nil, absentIndex, ProofOfAbsence})
 	m.recomputeHash()
-	absentIndex := vrfPrivKey1.Compute([]byte("a"))
-	proof := m.Get(absentIndex) // shares the same prefix with leaf node key1
-	if proof.Leaf.Value != nil {
-		t.Fatal("Expect returned leaf's value is nil")
-	}
-	// ensure this is a proof of absence
-	if bytes.Equal(proof.LookupIndex, proof.Leaf.Index) ||
-		!bytes.Equal(vrfPrivKey1.Compute([]byte("a")), proof.LookupIndex) {
-		t.Fatal("Expect a proof of absence")
-	}
-	// assert these indices share the same prefix in the first bit
-	if !bytes.Equal(utils.ToBytes(utils.ToBits(index1)[:proof.Leaf.Level]),
-		utils.ToBytes(utils.ToBits(absentIndex)[:proof.Leaf.Level])) {
-		t.Fatal("Expect these indices share the same prefix in the first bit")
-	}
-	if proof.Verify([]byte("a"), nil, m.hash) != nil {
-		t.Error("Proof of absence verification failed.")
-	}
+	return m, tuple
+}
 
-	// re-get proof of inclusion
-	// for testing the commitment assignment
-	proof = m.Get(index1)
-	if proof.Leaf.Value == nil {
-		t.Fatal("Expect returned leaf's value is not nil")
-	}
-	// ensure this is a proof of inclusion by comparing the returned indices
-	// and verifying the VRF index as well.
-	if !bytes.Equal(proof.LookupIndex, proof.Leaf.Index) ||
-		!bytes.Equal(vrfPrivKey1.Compute([]byte(key1)), proof.LookupIndex) {
-		t.Fatal("Expect a proof of inclusion")
-	}
-	// step 2. verify auth path
-	if proof.Verify([]byte(key1), val1, m.hash) != nil {
-		t.Error("Proof of inclusion verification failed.")
+func TestVerifyProof(t *testing.T) {
+	m, tests := setup(t)
+
+	for _, tt := range tests {
+		proof := m.Get(tt.index)
+		if got, want := proof.ProofType(), tt.want; got != want {
+			t.Error("TestVerifyProof() failed with tuple(", tt.key, tt.value, ")")
+		}
+		if proof.Verify([]byte(tt.key), tt.value, m.hash) != nil {
+			t.Error("TestVerifyProof() failed with tuple(", tt.key, tt.value, ")")
+		}
 	}
 }
 
 func TestProofVerificationErrors(t *testing.T) {
-	m, err := NewMerkleTree()
-	if err != nil {
-		t.Fatal(err)
-	}
+	m, tuple := setup(t)
 
-	key1 := "key1"
-	index1 := vrfPrivKey1.Compute([]byte(key1))
-	val1 := []byte("value1")
-	if err := m.Set(index1, key1, val1); err != nil {
-		t.Fatal(err)
-	}
-	m.recomputeHash()
-	absentIndex := vrfPrivKey1.Compute([]byte("a"))
+	index, key, value := tuple[0].index, tuple[0].key, tuple[0].value
 
 	// ProofOfInclusion
 	// assert proof of inclusion
-	proof1 := m.Get(index1)
+	proof1 := m.Get(index)
 	if proof1.ProofType() != ProofOfInclusion {
 		t.Fatal("Expect a proof of inclusion")
 	}
 	// - ErrBindingsDiffer
 	proof1.Leaf.Value[0] += 1
-	if err := proof1.Verify([]byte(key1), val1, m.hash); err != ErrBindingsDiffer {
+	if err := proof1.Verify([]byte(key), value, m.hash); err != ErrBindingsDiffer {
 		t.Error("Expect", ErrBindingsDiffer, "got", err)
 	}
 	// - ErrUnverifiableCommitment
 	proof1.Leaf.Value[0] -= 1
 	proof1.Leaf.Commitment.Salt[0] += 1
-	if err := proof1.Verify([]byte(key1), val1, m.hash); err != ErrUnverifiableCommitment {
+	if err := proof1.Verify([]byte(key), value, m.hash); err != ErrUnverifiableCommitment {
 		t.Error("Expect", ErrUnverifiableCommitment, "got", err)
 	}
 	// ErrUnequalTreeHashes
 	hash := append([]byte{}, m.hash...)
 	hash[0] += 1
 	proof1.Leaf.Commitment.Salt[0] -= 1
-	if err := proof1.Verify([]byte(key1), val1, hash); err != ErrUnequalTreeHashes {
+	if err := proof1.Verify([]byte(key), value, hash); err != ErrUnequalTreeHashes {
 		t.Error("Expect", ErrUnequalTreeHashes, "got", err)
 	}
 
 	// ProofOfAbsence
-	proof2 := m.Get(absentIndex) // shares the same prefix with leaf node key1
+	index, key, value = tuple[N].index, tuple[N].key, tuple[N].value
+	proof2 := m.Get(index) // shares the same prefix with leaf node key1
 	// assert proof of absence
 	if proof2.ProofType() != ProofOfAbsence {
 		t.Fatal("Expect a proof of absence")
 	}
 	// - ErrBindingsDiffer
 	proof2.Leaf.Value = make([]byte, 1)
-	if err := proof2.Verify([]byte("a"), nil, m.hash); err != ErrBindingsDiffer {
+	if err := proof2.Verify([]byte(key), value, m.hash); err != ErrBindingsDiffer {
 		t.Error("Expect", ErrBindingsDiffer, "got", err)
 	}
 	// - ErrIndicesMismatch
 	proof2.Leaf.Value = nil
 	proof2.Leaf.Index[0] &= 0x01
-	if err := proof2.Verify([]byte("a"), nil, m.hash); err != ErrIndicesMismatch {
+	if err := proof2.Verify([]byte(key), value, m.hash); err != ErrIndicesMismatch {
 		t.Error("Expect", ErrIndicesMismatch, "got", err)
 	}
 }

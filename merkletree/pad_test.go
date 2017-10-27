@@ -2,6 +2,7 @@ package merkletree
 
 import (
 	"bytes"
+	"strconv"
 	"testing"
 
 	"crypto/rand"
@@ -10,13 +11,19 @@ import (
 	"io"
 
 	"github.com/coniks-sys/coniks-go/crypto/sign"
+	"github.com/coniks-sys/coniks-go/crypto/vrf"
 )
 
 var signKey sign.PrivateKey
+var vrfKey vrf.PrivateKey
 
 func init() {
 	var err error
 	signKey, err = sign.GenerateKey(nil)
+	if err != nil {
+		panic(err)
+	}
+	vrfKey, err = vrf.GenerateKey(nil)
 	if err != nil {
 		panic(err)
 	}
@@ -35,48 +42,29 @@ func (t TestAd) Serialize() []byte {
 // 3rd: epoch = 2 (key1, key2)
 // 4th: epoch = 3 (key1, key2, key3) (latest STR)
 func TestPADHashChain(t *testing.T) {
-	key1 := "key"
-	val1 := []byte("value")
-
-	key2 := "key2"
-	val2 := []byte("value2")
-
-	key3 := "key3"
-	val3 := []byte("value3")
-
+	N := uint64(3)
 	treeHashes := make(map[uint64][]byte)
 
-	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey1, 10)
+	afterCreate := func(pad *PAD) {
+		treeHashes[0] = append([]byte{}, pad.tree.hash...)
+	}
+	afterInsert := func(i uint64, pad *PAD) {
+		pad.Update(nil)
+		treeHashes[i+1] = append([]byte{}, pad.tree.hash...)
+	}
+
+	pad, err := createPad(N, keyPrefix, valuePrefix, 10, afterCreate, afterInsert)
 	if err != nil {
 		t.Fatal(err)
 	}
-	treeHashes[0] = append([]byte{}, pad.tree.hash...)
 
-	if err := pad.Set(key1, val1); err != nil {
-		t.Fatal(err)
-	}
-	pad.Update(nil)
-	treeHashes[1] = append([]byte{}, pad.tree.hash...)
-
-	if err := pad.Set(key2, val2); err != nil {
-		t.Fatal(err)
-	}
-	pad.Update(nil)
-	treeHashes[2] = append([]byte{}, pad.tree.hash...)
-
-	if err := pad.Set(key3, val3); err != nil {
-		t.Fatal(err)
-	}
-	pad.Update(nil)
-	treeHashes[3] = append([]byte{}, pad.tree.hash...)
-
-	for i := 0; i < 4; i++ {
+	for i := uint64(0); i < N; i++ {
 		str := pad.GetSTR(uint64(i))
 		if str == nil {
 			t.Fatal("Cannot get STR #", i)
 		}
 		if !bytes.Equal(str.TreeHash, treeHashes[uint64(i)]) {
-			t.Fatal("Malformed PAD Update")
+			t.Fatal("Malformed PAD Update:", i)
 		}
 
 		if str.Epoch != uint64(i) {
@@ -93,66 +81,38 @@ func TestPADHashChain(t *testing.T) {
 		t.Error("Got invalid STR", "want", 3, "got", str.Epoch)
 	}
 
-	// lookup
-	ap, _ := pad.Lookup(key1)
-	if ap.Leaf.Value == nil {
-		t.Error("Cannot find key:", key1)
-		return
-	}
-	if !bytes.Equal(ap.Leaf.Value, val1) {
-		t.Error(key1, "value mismatch")
+	for i := uint64(0); i < N; i++ {
+		key := keyPrefix + strconv.FormatUint(i, 10)
+		val := append(valuePrefix, byte(i))
+		ap, _ := pad.Lookup(key)
+		if ap.Leaf.Value == nil {
+			t.Fatal("Cannot find key:", key)
+		}
+		if !bytes.Equal(ap.Leaf.Value, val) {
+			t.Error(key, "value mismatch")
+		}
+
 	}
 
-	ap, _ = pad.Lookup(key2)
-	if ap.Leaf.Value == nil {
-		t.Error("Cannot find key:", key2)
-		return
-	}
-	if !bytes.Equal(ap.Leaf.Value, val2) {
-		t.Error(key2, "value mismatch")
-	}
-
-	ap, _ = pad.Lookup(key3)
-	if ap.Leaf.Value == nil {
-		t.Error("Cannot find key:", key3)
-		return
-	}
-	if !bytes.Equal(ap.Leaf.Value, val3) {
-		t.Error(key3, "value mismatch")
-	}
-
-	ap, err = pad.LookupInEpoch(key2, 1)
-	if err != nil {
-		t.Error(err)
-	} else if ap.Leaf.Value != nil {
-		t.Error("Found unexpected key", key2, "in STR #", 1)
-	}
-	ap, err = pad.LookupInEpoch(key2, 2)
-	if err != nil {
-		t.Error(err)
-	} else if ap.Leaf.Value == nil {
-		t.Error("Cannot find key", key2, "in STR #", 2)
-	}
-
-	ap, err = pad.LookupInEpoch(key3, 2)
-	if err != nil {
-		t.Error(err)
-	} else if ap.Leaf.Value != nil {
-		t.Error("Found unexpected key", key3, "in STR #", 2)
-	}
-
-	ap, err = pad.LookupInEpoch(key3, 3)
-	if err != nil {
-		t.Error(err)
-	} else if ap.Leaf.Value == nil {
-		t.Error("Cannot find key", key3, "in STR #", 3)
+	for epoch := uint64(0); epoch < N; epoch++ {
+		for keyNum := uint64(0); keyNum < N; keyNum++ {
+			key := keyPrefix + strconv.FormatUint(keyNum, 10)
+			ap, err := pad.LookupInEpoch(key, epoch)
+			if err != nil {
+				t.Error(err)
+			} else if keyNum < epoch && ap.Leaf.Value == nil {
+				t.Error("Cannot find key", key, "in STR #", epoch)
+			} else if keyNum >= epoch && ap.Leaf.Value != nil {
+				t.Error("Found unexpected key", key, "in STR #", epoch)
+			}
+		}
 	}
 }
 
 func TestHashChainExceedsMaximumSize(t *testing.T) {
 	var hashChainLimit uint64 = 4
 
-	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey2, hashChainLimit)
+	pad, err := NewPAD(TestAd{""}, signKey, vrfKey, hashChainLimit)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,7 +153,7 @@ func TestAssocDataChange(t *testing.T) {
 	key3 := "key3"
 	val3 := []byte("value3")
 
-	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey1, 10)
+	pad, err := NewPAD(TestAd{""}, signKey, vrfKey, 10)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,16 +216,15 @@ func TestNewPADMissingAssocData(t *testing.T) {
 			t.Fatal("Expected NewPAD to panic if ad are missing.")
 		}
 	}()
-	if _, err := NewPAD(nil, signKey, vrfPrivKey1, 10); err != nil {
+	if _, err := NewPAD(nil, signKey, vrfKey, 10); err != nil {
 		t.Fatal("Expected NewPAD to panic but got error.")
 	}
 }
 
-// TODO move the following to some (internal?) testutils package
 type testErrorRandReader struct{}
 
 func (er testErrorRandReader) Read([]byte) (int, error) {
-	return 0, errors.New("Not enough entropy!")
+	return 0, errors.New("not enough entropy")
 }
 
 func mockRandReadWithErroringReader() (orig io.Reader) {
@@ -282,7 +241,7 @@ func TestNewPADErrorWhileCreatingTree(t *testing.T) {
 	origRand := mockRandReadWithErroringReader()
 	defer unMockRandReader(origRand)
 
-	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey1, 3)
+	pad, err := NewPAD(TestAd{""}, signKey, vrfKey, 3)
 	if err == nil || pad != nil {
 		t.Fatal("NewPad should return an error in case the tree creation failed")
 	}
@@ -295,14 +254,11 @@ func BenchmarkCreateLargePAD(b *testing.B) {
 
 	// total number of entries in tree:
 	NumEntries := uint64(1000000)
-	// tree.Clone and update STR every:
-	noUpdate := uint64(NumEntries + 1)
 
 	b.ResetTimer()
 	// benchmark creating a large tree (don't Update tree)
 	for n := 0; n < b.N; n++ {
-		_, err := createPad(NumEntries, keyPrefix, valuePrefix, snapLen,
-			noUpdate)
+		_, err := createPadSimple(NumEntries, keyPrefix, valuePrefix, snapLen)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -327,9 +283,8 @@ func benchPADUpdate(b *testing.B, entries uint64) {
 	keyPrefix := "key"
 	valuePrefix := []byte("value")
 	snapLen := uint64(10)
-	noUpdate := uint64(entries + 1)
 	// This takes a lot of time for a large number of entries:
-	pad, err := createPad(uint64(entries), keyPrefix, valuePrefix, snapLen, noUpdate)
+	pad, err := createPadSimple(uint64(entries), keyPrefix, valuePrefix, snapLen)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -374,9 +329,13 @@ func benchPADLookup(b *testing.B, entries uint64) {
 	snapLen := uint64(10)
 	keyPrefix := "key"
 	valuePrefix := []byte("value")
-	updateOnce := uint64(entries - 1)
-	pad, err := createPad(entries, keyPrefix, valuePrefix, snapLen,
-		updateOnce)
+	updateOnce := func(iteration uint64, pad *PAD) {
+		if iteration == entries-1 {
+			pad.Update(nil)
+		}
+	}
+
+	pad, err := createPad(entries, keyPrefix, valuePrefix, snapLen, nil, updateOnce)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -407,22 +366,31 @@ func benchPADLookup(b *testing.B, entries uint64) {
 // The STR will get updated every epoch defined by every multiple of
 // `updateEvery`. If `updateEvery > N` createPAD won't update the STR.
 func createPad(N uint64, keyPrefix string, valuePrefix []byte, snapLen uint64,
-	updateEvery uint64) (*PAD, error) {
-	pad, err := NewPAD(TestAd{""}, signKey, vrfPrivKey1, snapLen)
+	afterCreateCB func(pad *PAD),
+	afterInsertCB func(iteration uint64, pad *PAD)) (*PAD, error) {
+	pad, err := NewPAD(TestAd{""}, signKey, vrfKey, snapLen)
 	if err != nil {
 		return nil, err
 	}
+	if afterCreateCB != nil {
+		afterCreateCB(pad)
+	}
 
 	for i := uint64(0); i < N; i++ {
-		key := keyPrefix + string(i)
+		key := keyPrefix + strconv.FormatUint(i, 10)
 		value := append(valuePrefix, byte(i))
 		if err := pad.Set(key, value); err != nil {
 			return nil, fmt.Errorf("Couldn't set key=%s and value=%s. Error: %v",
 				key, value, err)
 		}
-		if i != 0 && (i%updateEvery == 0) {
-			pad.Update(nil)
+		if afterInsertCB != nil {
+			afterInsertCB(i, pad)
 		}
 	}
 	return pad, nil
+}
+
+func createPadSimple(N uint64, keyPrefix string, valuePrefix []byte,
+	snapLen uint64) (*PAD, error) {
+	return createPad(N, keyPrefix, valuePrefix, snapLen, nil, nil)
 }
