@@ -13,6 +13,10 @@ import (
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/protocol"
+<<<<<<< HEAD:application/server/server_test.go
+=======
+	"github.com/coniks-sys/coniks-go/utils/binutils"
+>>>>>>> 5a6db3d... Add auditor config and encoding:coniksserver/server_test.go
 )
 
 var registrationMsg = `
@@ -83,8 +87,20 @@ func newTestServer(t *testing.T, epDeadline protocol.Timestamp, useBot bool,
 		},
 		LoadedHistoryLength: 100,
 		Addresses:           addrs,
+<<<<<<< HEAD:application/server/server_test.go
 		Policies: NewPolicies(epDeadline, "", "", vrfKey,
 			signKey),
+=======
+		Policies: &ServerPolicies{
+			EpochDeadline: epDeadline,
+			vrfKey:        vrfKey,
+			signKey:       signKey,
+		},
+		Logger: &binutils.LoggerConfig{
+			Environment: "development",
+			Path:        path.Join(dir, "coniksserver.log"),
+		},
+>>>>>>> 5a6db3d... Add auditor config and encoding:coniksserver/server_test.go
 	}
 
 	return NewConiksServer(conf), conf

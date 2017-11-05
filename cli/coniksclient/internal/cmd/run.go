@@ -13,6 +13,7 @@ import (
 	"github.com/coniks-sys/coniks-go/cli"
 	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/protocol/client"
+	"github.com/coniks-sys/coniks-go/utils"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 )
