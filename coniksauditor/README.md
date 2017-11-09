@@ -34,7 +34,7 @@ Use "coniksauditor [command] --help" for more information about a command.
 
 - Make sure you have at least one running CONIKS directory for your
 auditor to track. For information on setting up a CONIKS directory,
-see our [CONIKS server setup guide](https://github.com/coniks-sys/coniks-go/tree/master/coniksserver/README.md).
+see our [CONIKS server setup guide](https://github.com/coniks-sys/coniks-go/blob/master/coniksserver/README.md).
 
 - Generate the configuration file:
 ```
@@ -55,9 +55,9 @@ we currently only  configure the test auditor with a single directory for simplc
 ⇒  coniksauditor test  # this will open a REPL
 ```
 
-##### Retrieve and verify the latest STR history from the given directory
+##### Update the auditor with the latest STR history from the given directory
 ```
-> getlatest [dir]
+> update [dir]
 # The auditor should display something like this if the request is successful
 [+] Valid! The auditor is up-to-date on the STR history of [dir]
 ```

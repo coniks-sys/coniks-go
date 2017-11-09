@@ -2,8 +2,10 @@ package binutils
 
 import (
 	"encoding/json"
+	"log"
 
 	"github.com/coniks-sys/coniks-go/protocol"
+	"github.com/coniks-sys/coniks-go/utils"
 )
 
 // MarshalResponse returns a JSON encoding of the server's response.
@@ -64,5 +66,19 @@ func UnmarshalResponse(t int, msg []byte) *protocol.Response {
 		}
 	default:
 		panic("Unknown request type")
+	}
+}
+
+// MarshalSTRToFile serializes the given STR to the given path.
+func MarshalSTRToFile(str *protocol.DirSTR, path string) {
+	strBytes, err := json.Marshal(str)
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	if err := utils.WriteFile(path, strBytes, 0600); err != nil {
+		log.Println(err)
+		return
 	}
 }

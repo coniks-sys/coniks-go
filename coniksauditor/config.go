@@ -36,7 +36,6 @@ type Config []*DirectoryConfig
 // If there is any parsing or IO-error it returns an error (and the returned
 // config will be nil).
 func LoadConfig(file string) (*Config, error) {
-
 	var conf Config
 	// FIXME: Currently assuming there is only one tracked directory
 	// Add a loop here to iterate over multiple directory
