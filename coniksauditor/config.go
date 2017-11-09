@@ -1,14 +1,14 @@
 package coniksauditor
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"encoding/json"
 
 	"github.com/BurntSushi/toml"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
-	"github.com/coniks-sys/coniks-go/utils"
 	"github.com/coniks-sys/coniks-go/protocol"
+	"github.com/coniks-sys/coniks-go/utils"
 )
 
 // DirectoryConfig contains the auditor's configuration needed to send a
@@ -18,10 +18,10 @@ import (
 // the server's address for receiving STR history requests.
 type DirectoryConfig struct {
 	SignPubkeyPath string `toml:"sign_pubkey_path"`
-	SigningPubKey sign.PublicKey
+	SigningPubKey  sign.PublicKey
 
 	InitSTRPath string `toml:"init_str_path"`
-	InitSTR *protocol.DirSTR
+	InitSTR     *protocol.DirSTR
 
 	Address string `toml:"address"`
 }
