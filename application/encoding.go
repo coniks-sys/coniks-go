@@ -11,7 +11,7 @@ import (
 )
 
 // MarshalRequest returns a JSON encoding of the client's request.
-func MarshalRequest(reqType int, request *protocol.Request) ([]byte, error) {
+func MarshalRequest(reqType int, request interface{}) ([]byte, error) {
 	return json.Marshal(&protocol.Request{
 		Type:    reqType,
 		Request: request,
