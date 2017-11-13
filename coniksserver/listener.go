@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/protocol"
 )
 
@@ -61,7 +62,7 @@ func (server *ConiksServer) acceptClient(conn net.Conn, handler func(req *protoc
 	}
 
 	// unmarshalling
-	req, err := UnmarshalRequest(buf.Bytes())
+	req, err := application.UnmarshalRequest(buf.Bytes())
 	if err != nil {
 		response = malformedClientMsg(err)
 	} else {
@@ -73,7 +74,7 @@ func (server *ConiksServer) acceptClient(conn net.Conn, handler func(req *protoc
 	}
 
 	// marshalling
-	res, e := MarshalResponse(response)
+	res, e := application.MarshalResponse(response)
 	if e != nil {
 		panic(e)
 	}

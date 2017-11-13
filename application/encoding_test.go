@@ -1,11 +1,10 @@
-package coniksclient
+package application
 
 import (
 	"bytes"
 	"encoding/json"
 	"testing"
 
-	"github.com/coniks-sys/coniks-go/coniksserver"
 	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/protocol/directory"
 )
@@ -41,7 +40,7 @@ func TestUnmarshalSampleMessage(t *testing.T) {
 	res := d.Register(&protocol.RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
-	msg, _ := coniksserver.MarshalResponse(res)
+	msg, _ := MarshalResponse(res)
 	response := UnmarshalResponse(protocol.RegistrationType, []byte(msg))
 	str := response.DirectoryResponse.(*protocol.DirectoryProof).STR[0]
 	if !bytes.Equal(d.LatestSTR().Serialize(), str.Serialize()) {

@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/coniks-sys/coniks-go/application"
+	"github.com/coniks-sys/coniks-go/application/client"
 	"github.com/coniks-sys/coniks-go/coniksclient"
 	"github.com/coniks-sys/coniks-go/coniksserver/testutil"
 	"github.com/coniks-sys/coniks-go/protocol"
@@ -111,7 +113,7 @@ func run(cmd *cobra.Command) {
 }
 
 func register(cc *client.ConsistencyChecks, conf *coniksclient.Config, name string, key string) string {
-	req, err := coniksclient.CreateRegistrationMsg(name, []byte(key))
+	req, err := client.CreateRegistrationMsg(name, []byte(key))
 	if err != nil {
 		return ("Couldn't marshal registration request!")
 	}
@@ -138,7 +140,7 @@ func register(cc *client.ConsistencyChecks, conf *coniksclient.Config, name stri
 		return ("Invalid config!")
 	}
 
-	response := coniksclient.UnmarshalResponse(protocol.RegistrationType, res)
+	response := application.UnmarshalResponse(protocol.RegistrationType, res)
 	err = cc.HandleResponse(protocol.RegistrationType, response, name, []byte(key))
 	switch err {
 	case protocol.CheckBadSTR:
@@ -169,7 +171,7 @@ func register(cc *client.ConsistencyChecks, conf *coniksclient.Config, name stri
 }
 
 func keyLookup(cc *client.ConsistencyChecks, conf *coniksclient.Config, name string) string {
-	req, err := coniksclient.CreateKeyLookupMsg(name)
+	req, err := client.CreateKeyLookupMsg(name)
 	if err != nil {
 		return ("Couldn't marshal key lookup request!")
 	}
@@ -191,7 +193,7 @@ func keyLookup(cc *client.ConsistencyChecks, conf *coniksclient.Config, name str
 		return ("Invalid config!")
 	}
 
-	response := coniksclient.UnmarshalResponse(protocol.KeyLookupType, res)
+	response := application.UnmarshalResponse(protocol.KeyLookupType, res)
 	if key, ok := cc.Bindings[name]; ok {
 		err = cc.HandleResponse(protocol.KeyLookupType, response, name, []byte(key))
 	} else {
