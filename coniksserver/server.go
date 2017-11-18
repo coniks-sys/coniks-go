@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/protocol"
@@ -30,8 +31,8 @@ type ServerConfig struct {
 	// Policies contains the server's CONIKS policies configuration.
 	Policies *ServerPolicies `toml:"policies"`
 	// Addresses contains the server's connections configuration.
-	Addresses      []*Address          `toml:"addresses"`
-	Logger         *utils.LoggerConfig `toml:"logger"`
+	Addresses      []*Address                `toml:"addresses"`
+	Logger         *application.LoggerConfig `toml:"logger"`
 	configFilePath string
 }
 
@@ -82,7 +83,7 @@ type ServerPolicies struct {
 // a mechanism to update the underlying ConiksDirectory automatically
 // at regular time intervals.
 type ConiksServer struct {
-	logger *utils.Logger
+	logger *application.Logger
 
 	sync.RWMutex
 	dir *directory.ConiksDirectory
@@ -145,7 +146,7 @@ func LoadServerConfig(file string) (*ServerConfig, error) {
 func NewConiksServer(conf *ServerConfig) *ConiksServer {
 	// create server instance
 	server := new(ConiksServer)
-	server.logger = utils.NewLogger(conf.Logger)
+	server.logger = application.NewLogger(conf.Logger)
 	server.dir = directory.New(
 		conf.Policies.EpochDeadline,
 		conf.Policies.vrfKey,

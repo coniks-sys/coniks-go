@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/coniksserver/testutil"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/protocol"
-	"github.com/coniks-sys/coniks-go/utils"
 )
 
 var registrationMsg = `
@@ -72,7 +72,7 @@ func startServer(t *testing.T, epDeadline protocol.Timestamp, useBot bool, polic
 			vrfKey:        vrfKey,
 			signKey:       signKey,
 		},
-		Logger: &utils.LoggerConfig{
+		Logger: &application.LoggerConfig{
 			Environment: "development",
 			Path:        path.Join(dir, "coniksserver.log"),
 		},

@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/BurntSushi/toml"
+	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/coniksserver"
 	"github.com/coniks-sys/coniks-go/coniksserver/testutil"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
@@ -60,7 +61,7 @@ func mkConfig(dir string) {
 			VRFKeyPath:    "vrf.priv",
 			SignKeyPath:   "sign.priv",
 		},
-		Logger: &utils.LoggerConfig{
+		Logger: &application.LoggerConfig{
 			EnableStacktrace: true,
 			Environment:      "development",
 			Path:             "coniksserver.log",
