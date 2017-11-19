@@ -8,7 +8,7 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/coniks-sys/coniks-go/coniksserver"
+	"github.com/coniks-sys/coniks-go/application/server"
 	"github.com/spf13/cobra"
 )
 
@@ -39,11 +39,11 @@ func init() {
 }
 
 func run(confPath string) {
-	conf, err := coniksserver.LoadServerConfig(confPath)
+	conf, err := server.LoadServerConfig(confPath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	serv := coniksserver.NewConiksServer(conf)
+	serv := server.NewConiksServer(conf)
 
 	// run the server until receiving an interrupt signal
 	serv.Run(conf.Addresses)

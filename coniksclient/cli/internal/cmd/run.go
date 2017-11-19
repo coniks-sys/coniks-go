@@ -9,8 +9,8 @@ import (
 
 	"github.com/coniks-sys/coniks-go/application"
 	clientapp "github.com/coniks-sys/coniks-go/application/client"
+	"github.com/coniks-sys/coniks-go/application/testutil"
 	"github.com/coniks-sys/coniks-go/coniksclient"
-	"github.com/coniks-sys/coniks-go/coniksserver/testutil"
 	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/protocol/client"
 	"github.com/spf13/cobra"

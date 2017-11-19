@@ -96,3 +96,11 @@ func UnmarshalResponse(t int, msg []byte) *protocol.Response {
 		panic("Unknown request type")
 	}
 }
+
+func malformedClientMsg(err error) *protocol.Response {
+	// check if we're just propagating a message
+	if err == nil {
+		err = protocol.ErrMalformedMessage
+	}
+	return protocol.NewErrorResponse(protocol.ErrMalformedMessage)
+}

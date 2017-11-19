@@ -8,8 +8,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/coniks-sys/coniks-go/application"
-	"github.com/coniks-sys/coniks-go/coniksserver"
-	"github.com/coniks-sys/coniks-go/coniksserver/testutil"
+	"github.com/coniks-sys/coniks-go/application/server"
+	"github.com/coniks-sys/coniks-go/application/testutil"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/utils"
@@ -42,29 +42,35 @@ func init() {
 
 func mkConfig(dir string) {
 	file := path.Join(dir, "config.toml")
-	addrs := []*coniksserver.Address{
-		&coniksserver.Address{
-			Address:           "unix:///tmp/coniks.sock",
+	addrs := []*server.Address{
+		&server.Address{
+			ServerAddress: &application.ServerAddress{
+				Address: "unix:///tmp/coniks.sock",
+			},
 			AllowRegistration: true,
 		},
-		&coniksserver.Address{
-			Address:     "tcp://0.0.0.0:3000",
-			TLSCertPath: "server.pem",
-			TLSKeyPath:  "server.key",
+		&server.Address{
+			ServerAddress: &application.ServerAddress{
+				Address:     "tcp://0.0.0.0:3000",
+				TLSCertPath: "server.pem",
+				TLSKeyPath:  "server.key",
+			},
 		},
 	}
-	var conf = coniksserver.ServerConfig{
+	var conf = server.Config{
+		ServerBaseConfig: &application.ServerBaseConfig{
+			Logger: &application.LoggerConfig{
+				EnableStacktrace: true,
+				Environment:      "development",
+				Path:             "coniksserver.log",
+			},
+		},
 		LoadedHistoryLength: 1000000,
 		Addresses:           addrs,
-		Policies: &coniksserver.ServerPolicies{
+		Policies: &server.Policies{
 			EpochDeadline: 60,
 			VRFKeyPath:    "vrf.priv",
 			SignKeyPath:   "sign.priv",
-		},
-		Logger: &application.LoggerConfig{
-			EnableStacktrace: true,
-			Environment:      "development",
-			Path:             "coniksserver.log",
 		},
 	}
 

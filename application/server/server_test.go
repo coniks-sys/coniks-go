@@ -1,4 +1,4 @@
-package coniksserver
+package server
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/coniks-sys/coniks-go/application"
-	"github.com/coniks-sys/coniks-go/coniksserver/testutil"
+	"github.com/coniks-sys/coniks-go/application/testutil"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/protocol"
@@ -36,9 +36,19 @@ var keylookupMsg = `
 }
 `
 
-func startServer(t *testing.T, epDeadline protocol.Timestamp, useBot bool, policiesPath string) (*ConiksServer, func()) {
-	dir, teardown := testutil.CreateTLSCertForTest(t)
+func newTestTCPAddress(dir string) *application.ServerAddress {
+	return &application.ServerAddress{
+		Address:     testutil.PublicConnection,
+		TLSCertPath: path.Join(dir, "server.pem"),
+		TLSKeyPath:  path.Join(dir, "server.key"),
+	}
+}
 
+// NewTestServer initializes a test CONIKS key server with the given
+// epoch deadline, registration bot usage useBot,
+// policies path, and directory.
+func newTestServer(t *testing.T, epDeadline protocol.Timestamp, useBot bool,
+	policiesPath, dir string) (*ConiksServer, *Config) {
 	signKey, err := sign.GenerateKey(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -51,34 +61,39 @@ func startServer(t *testing.T, epDeadline protocol.Timestamp, useBot bool, polic
 
 	addrs := []*Address{
 		&Address{
-			Address:           testutil.PublicConnection,
-			TLSCertPath:       path.Join(dir, "server.pem"),
-			TLSKeyPath:        path.Join(dir, "server.key"),
+			ServerAddress:     newTestTCPAddress(dir),
 			AllowRegistration: !useBot,
 		},
 	}
 	if useBot {
 		addrs = append(addrs, &Address{
-			Address:           testutil.LocalConnection,
+			ServerAddress: &application.ServerAddress{
+				Address: testutil.LocalConnection,
+			},
 			AllowRegistration: useBot,
 		})
 	}
 
-	conf := &ServerConfig{
+	conf := &Config{
+		ServerBaseConfig: &application.ServerBaseConfig{
+			Logger: &application.LoggerConfig{
+				Environment: "development",
+				Path:        path.Join(dir, "coniksserver.log"),
+			},
+		},
 		LoadedHistoryLength: 100,
 		Addresses:           addrs,
-		Policies: &ServerPolicies{
-			EpochDeadline: epDeadline,
-			vrfKey:        vrfKey,
-			signKey:       signKey,
-		},
-		Logger: &application.LoggerConfig{
-			Environment: "development",
-			Path:        path.Join(dir, "coniksserver.log"),
-		},
+		Policies: NewPolicies(epDeadline, "", "", vrfKey,
+			signKey),
 	}
 
-	server := NewConiksServer(conf)
+	return NewConiksServer(conf), conf
+}
+
+func startServer(t *testing.T, epDeadline protocol.Timestamp, useBot bool, policiesPath string) (*ConiksServer, func()) {
+	dir, teardown := testutil.CreateTLSCertForTest(t)
+
+	server, conf := newTestServer(t, epDeadline, useBot, policiesPath, dir)
 	server.Run(conf.Addresses)
 	return server, func() {
 		server.Shutdown()
@@ -89,45 +104,6 @@ func startServer(t *testing.T, epDeadline protocol.Timestamp, useBot bool, polic
 func TestServerStartStop(t *testing.T) {
 	_, teardown := startServer(t, 60, true, "")
 	defer teardown()
-}
-
-func TestResolveAddresses(t *testing.T) {
-	dir, teardown := testutil.CreateTLSCertForTest(t)
-	defer teardown()
-
-	// test TCP network
-	addr := &Address{
-		Address:     testutil.PublicConnection,
-		TLSCertPath: path.Join(dir, "server.pem"),
-		TLSKeyPath:  path.Join(dir, "server.key"),
-	}
-	ln, _, perms := resolveAndListen(addr)
-	defer ln.Close()
-	if perms[protocol.RegistrationType] != false {
-		t.Error("Expect disallowing registration permission.")
-	}
-
-	// test Unix network
-	addr = &Address{
-		Address:           testutil.LocalConnection,
-		AllowRegistration: true,
-	}
-	ln, _, perms = resolveAndListen(addr)
-	defer ln.Close()
-	if perms[protocol.RegistrationType] != true {
-		t.Error("Expect allowing registration permission.")
-	}
-
-	// test unknown network scheme
-	addr = &Address{
-		Address: testutil.PublicConnection,
-	}
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatal("Expected resolveAndListen to panic.")
-		}
-	}()
-	resolveAndListen(addr)
 }
 
 func TestServerReloadPoliciesWithError(t *testing.T) {
@@ -204,7 +180,7 @@ func TestUpdateDirectory(t *testing.T) {
 	str0 := server.dir.LatestSTR()
 	rs := createMultiRegistrationRequests(10)
 	for i := range rs {
-		req := server.handleOps(rs[i])
+		req := server.HandleRequests(rs[i])
 		if req.Error != protocol.ReqSuccess {
 			t.Fatal("Error while submitting registration request number", i, "to server")
 		}
@@ -239,11 +215,11 @@ func TestRegisterDuplicateUserInOneEpoch(t *testing.T) {
 	defer teardown()
 	r0 := createMultiRegistrationRequests(1)[0]
 	r1 := createMultiRegistrationRequests(1)[0]
-	rev := server.handleOps(r0)
+	rev := server.HandleRequests(r0)
 	if rev.Error != protocol.ReqSuccess {
 		t.Fatal("Error while submitting registration request")
 	}
-	rev = server.handleOps(r1)
+	rev = server.HandleRequests(r1)
 	response, ok := rev.DirectoryResponse.(*protocol.DirectoryProof)
 	if !ok {
 		t.Fatal("Expect a directory proof response")
@@ -263,13 +239,13 @@ func TestRegisterDuplicateUserInDifferentEpoches(t *testing.T) {
 	server, teardown := startServer(t, 1, true, "")
 	defer teardown()
 	r0 := createMultiRegistrationRequests(1)[0]
-	rev := server.handleOps(r0)
+	rev := server.HandleRequests(r0)
 	if rev.Error != protocol.ReqSuccess {
 		t.Fatal("Error while submitting registration request")
 	}
 	timer := time.NewTimer(2 * time.Second)
 	<-timer.C
-	rev = server.handleOps(r0)
+	rev = server.HandleRequests(r0)
 	response, ok := rev.DirectoryResponse.(*protocol.DirectoryProof)
 	if !ok {
 		t.Fatal("Expect a directory proof response")
