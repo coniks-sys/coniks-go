@@ -2,14 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path"
 
-	"bytes"
-	"os"
-
-	"github.com/BurntSushi/toml"
-	"github.com/coniks-sys/coniks-go/coniksclient"
-	"github.com/coniks-sys/coniks-go/utils"
+	"github.com/coniks-sys/coniks-go/application"
+	"github.com/coniks-sys/coniks-go/application/client"
 	"github.com/spf13/cobra"
 )
 
@@ -40,21 +37,12 @@ func init() {
 
 func mkConfigOrExit(dir string) {
 	file := path.Join(dir, "config.toml")
-	var conf = coniksclient.Config{
-		SignPubkeyPath: "../../keyserver/coniksserver/sign.pub",
-		RegAddress:     "tcp://127.0.0.1:3000",
-		Address:        "tcp://127.0.0.1:3000",
-	}
 
-	var confBuf bytes.Buffer
-	enc := toml.NewEncoder(&confBuf)
-	if err := enc.Encode(conf); err != nil {
-		fmt.Println("Coulnd't encode config. Error message: [" +
-			err.Error() + "]")
-		os.Exit(-1)
-	}
-	if err := utils.WriteFile(file, confBuf.Bytes(), 0644); err != nil {
-		fmt.Println("Coulnd't write config. Error message: [" +
+	conf := client.NewConfig("../../keyserver/coniksserver/sign.pub",
+		"tcp://127.0.0.1:3000", "tcp://127.0.0.1:3000")
+
+	if err := application.SaveConfig(file, conf); err != nil {
+		fmt.Println("Couldn't save config. Error message: [" +
 			err.Error() + "]")
 		os.Exit(-1)
 	}

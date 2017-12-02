@@ -10,7 +10,6 @@ import (
 	"github.com/coniks-sys/coniks-go/application"
 	clientapp "github.com/coniks-sys/coniks-go/application/client"
 	"github.com/coniks-sys/coniks-go/application/testutil"
-	"github.com/coniks-sys/coniks-go/coniksclient"
 	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/protocol/client"
 	"github.com/spf13/cobra"
@@ -112,7 +111,7 @@ func run(cmd *cobra.Command) {
 	}
 }
 
-func register(cc *client.ConsistencyChecks, conf *coniksclient.Config, name string, key string) string {
+func register(cc *client.ConsistencyChecks, conf *clientapp.Config, name string, key string) string {
 	req, err := clientapp.CreateRegistrationMsg(name, []byte(key))
 	if err != nil {
 		return ("Couldn't marshal registration request!")
@@ -170,7 +169,7 @@ func register(cc *client.ConsistencyChecks, conf *coniksclient.Config, name stri
 	return ""
 }
 
-func keyLookup(cc *client.ConsistencyChecks, conf *coniksclient.Config, name string) string {
+func keyLookup(cc *client.ConsistencyChecks, conf *clientapp.Config, name string) string {
 	req, err := clientapp.CreateKeyLookupMsg(name)
 	if err != nil {
 		return ("Couldn't marshal key lookup request!")

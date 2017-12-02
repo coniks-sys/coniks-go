@@ -39,7 +39,8 @@ func init() {
 }
 
 func run(confPath string) {
-	conf, err := server.LoadServerConfig(confPath)
+	var conf *server.Config = &server.Config{}
+	err := conf.InitConfig(confPath)
 	if err != nil {
 		log.Fatal(err)
 	}

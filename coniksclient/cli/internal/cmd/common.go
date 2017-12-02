@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/coniks-sys/coniks-go/coniksclient"
+	"github.com/coniks-sys/coniks-go/application/client"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -27,9 +27,10 @@ specify where to look for the config with the --config flag. For example:
  testclient init --dir /etc/coniks/
 `
 
-func loadConfigOrExit(cmd *cobra.Command) *coniksclient.Config {
+func loadConfigOrExit(cmd *cobra.Command) *client.Config {
 	config := cmd.Flag("config").Value.String()
-	conf, err := coniksclient.LoadConfig(config)
+	var conf *client.Config = &client.Config{}
+	err := conf.InitConfig(config)
 	if err != nil {
 		fmt.Println(err)
 		fmt.Print(configMissingUsage)

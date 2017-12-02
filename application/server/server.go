@@ -1,17 +1,11 @@
 package server
 
 import (
-	"fmt"
-	"io/ioutil"
 	"time"
 
-	"github.com/BurntSushi/toml"
 	"github.com/coniks-sys/coniks-go/application"
-	"github.com/coniks-sys/coniks-go/crypto/sign"
-	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/protocol/directory"
-	"github.com/coniks-sys/coniks-go/utils"
 )
 
 // An Address describes a server's connection.
@@ -30,20 +24,6 @@ type Address struct {
 	AllowRegistration bool `toml:"allow_registration,omitempty"`
 }
 
-// A Config contains configuration values
-// which are read at initialization time from
-// a TOML format configuration file.
-type Config struct {
-	*application.ServerBaseConfig
-	// LoadedHistoryLength is the maximum number of
-	// snapshots kept in memory.
-	LoadedHistoryLength uint64 `toml:"loaded_history_length"`
-	// Policies contains the server's CONIKS policies configuration.
-	Policies *Policies `toml:"policies"`
-	// Addresses contains the server's connections configuration.
-	Addresses []*Address `toml:"addresses"`
-}
-
 // A ConiksServer represents a CONIKS key server.
 // It wraps a ConiksDirectory with a network layer which
 // handles requests/responses and their encoding/decoding.
@@ -57,50 +37,6 @@ type ConiksServer struct {
 }
 
 var _ application.Server = (*ConiksServer)(nil)
-
-// LoadServerConfig loads the ServerConfig for the server from the
-// corresponding config file. It reads the siging key pair and the VRF key
-// pair into the ServerConfig instance and updates the path of
-// TLS certificate files of each Address to absolute path.
-func LoadServerConfig(file string) (*Config, error) {
-	var conf Config
-	if _, err := toml.DecodeFile(file, &conf); err != nil {
-		return nil, fmt.Errorf("Failed to load config: %v", err)
-	}
-
-	// load signing key
-	signPath := utils.ResolvePath(conf.Policies.SignKeyPath, file)
-	signKey, err := ioutil.ReadFile(signPath)
-	if err != nil {
-		return nil, fmt.Errorf("Cannot read signing key: %v", err)
-	}
-	if len(signKey) != sign.PrivateKeySize {
-		return nil, fmt.Errorf("Signing key must be 64 bytes (got %d)", len(signKey))
-	}
-
-	// load VRF key
-	vrfPath := utils.ResolvePath(conf.Policies.VRFKeyPath, file)
-	vrfKey, err := ioutil.ReadFile(vrfPath)
-	if err != nil {
-		return nil, fmt.Errorf("Cannot read VRF key: %v", err)
-	}
-	if len(vrfKey) != vrf.PrivateKeySize {
-		return nil, fmt.Errorf("VRF key must be 64 bytes (got %d)", len(vrfKey))
-	}
-
-	conf.ConfigFilePath = file
-	conf.Policies.vrfKey = vrfKey
-	conf.Policies.signKey = signKey
-	// also update path for TLS cert files
-	for _, addr := range conf.Addresses {
-		addr.TLSCertPath = utils.ResolvePath(addr.TLSCertPath, file)
-		addr.TLSKeyPath = utils.ResolvePath(addr.TLSKeyPath, file)
-	}
-	// logger config
-	conf.Logger.Path = utils.ResolvePath(conf.Logger.Path, file)
-
-	return &conf, nil
-}
 
 // NewConiksServer creates a new reference implementation of
 // a CONIKS key server.
@@ -220,7 +156,7 @@ func (server *ConiksServer) updatePolicies() {
 			return
 		case <-server.ReloadChan():
 			// read server policies from config file
-			conf, err := LoadServerConfig(server.ConfigFilePath())
+			tmp, err := application.LoadConfig(server.ConfigFilePath())
 			if err != nil {
 				// error occured while reading server config
 				// simply abort the reloading policies
@@ -228,6 +164,7 @@ func (server *ConiksServer) updatePolicies() {
 				server.Logger().Error(err.Error())
 				return
 			}
+			conf := tmp.(*Config)
 			server.Lock()
 			server.dir.SetPolicies(conf.Policies.EpochDeadline)
 			server.Unlock()

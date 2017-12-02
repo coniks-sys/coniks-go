@@ -1,12 +1,8 @@
-package coniksclient
+package client
 
 import (
-	"fmt"
-	"io/ioutil"
-
-	"github.com/BurntSushi/toml"
+	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
-	"github.com/coniks-sys/coniks-go/utils"
 )
 
 // Config contains the client's configuration needed to send a request to a
@@ -26,27 +22,36 @@ type Config struct {
 	Address    string `toml:"address"`
 }
 
-// LoadConfig returns a client's configuration read from the given filename.
-// It reads the signing public-key file and parses the actual key.
-// If there is any parsing or IO-error it returns an error (and the returned
-// config will be nil).
-func LoadConfig(file string) (*Config, error) {
-	var conf Config
-	if _, err := toml.DecodeFile(file, &conf); err != nil {
-		return nil, fmt.Errorf("Failed to load config: %v", err)
+var _ application.AppConfig = (*Config)(nil)
+
+// NewConfig initializes a new client configuration with the given
+// server signing public key path, registration address, and
+// server address.
+func NewConfig(signPubkeyPath, regAddr, serverAddr string) *Config {
+	var conf = Config{
+		SignPubkeyPath: signPubkeyPath,
+		RegAddress:     regAddr,
+		Address:        serverAddr,
 	}
+
+	return &conf
+}
+
+// InitConfig initializes a client's configuration from the given file.
+// It reads the signing public-key file and parses the actual key.
+func (conf *Config) InitConfig(file string) error {
+	tmp, err := application.LoadConfig(file)
+	if err != nil {
+		return err
+	}
+	conf = tmp.(*Config)
 
 	// load signing key
-	signPath := utils.ResolvePath(conf.SignPubkeyPath, file)
-	signPubKey, err := ioutil.ReadFile(signPath)
+	signPubKey, err := application.LoadSigningPubKey(conf.SignPubkeyPath, file)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot read signing key: %v", err)
+		return err
 	}
-	if len(signPubKey) != sign.PublicKeySize {
-		return nil, fmt.Errorf("Signing public-key must be 32 bytes (got %d)", len(signPubKey))
-	}
-
 	conf.SigningPubKey = signPubKey
 
-	return &conf, nil
+	return nil
 }

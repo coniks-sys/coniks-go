@@ -1,13 +1,11 @@
 package cmd
 
 import (
-	"bytes"
 	"log"
 	"path"
 
-	"github.com/BurntSushi/toml"
+	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/application/bots"
-	"github.com/coniks-sys/coniks-go/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -29,24 +27,17 @@ func init() {
 
 func mkBotConfig(dir string) {
 	file := path.Join(dir, "botconfig.toml")
-	var conf = bots.TwitterConfig{
-		CONIKSAddress: "/tmp/coniks.sock",
-		Handle:        "ConiksTorMess",
-		TwitterOAuth: bots.TwitterOAuth{
-			ConsumerKey:    "secret",
-			ConsumerSecret: "secret",
-			AccessToken:    "secret",
-			AccessSecret:   "secret",
-		},
+
+	oauth := bots.TwitterOAuth{
+		ConsumerKey:    "secret",
+		ConsumerSecret: "secret",
+		AccessToken:    "secret",
+		AccessSecret:   "secret",
 	}
 
-	var confBuf bytes.Buffer
-
-	e := toml.NewEncoder(&confBuf)
-	err := e.Encode(conf)
-	if err != nil {
+	conf := bots.NewTwitterConfig("/tmp/coniks.sock", "ConiksTorMess",
+		oauth)
+	if err := application.SaveConfig(file, conf); err != nil {
 		log.Print(err)
-		return
 	}
-	utils.WriteFile(file, confBuf.Bytes(), 0644)
 }

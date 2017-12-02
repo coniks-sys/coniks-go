@@ -1,12 +1,10 @@
 package cmd
 
 import (
-	"bytes"
 	"log"
 	"path"
 	"strconv"
 
-	"github.com/BurntSushi/toml"
 	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/application/server"
 	"github.com/coniks-sys/coniks-go/application/testutil"
@@ -57,32 +55,25 @@ func mkConfig(dir string) {
 			},
 		},
 	}
-	var conf = server.Config{
-		ServerBaseConfig: &application.ServerBaseConfig{
-			Logger: &application.LoggerConfig{
-				EnableStacktrace: true,
-				Environment:      "development",
-				Path:             "coniksserver.log",
-			},
-		},
-		LoadedHistoryLength: 1000000,
-		Addresses:           addrs,
-		Policies: &server.Policies{
-			EpochDeadline: 60,
-			VRFKeyPath:    "vrf.priv",
-			SignKeyPath:   "sign.priv",
-		},
+
+	logger := &application.LoggerConfig{
+		EnableStacktrace: true,
+		Environment:      "development",
+		Path:             "coniksserver.log",
 	}
 
-	var confBuf bytes.Buffer
+	policies := &server.Policies{
+		EpochDeadline: 60,
+		VRFKeyPath:    "vrf.priv",
+		SignKeyPath:   "sign.priv",
+	}
 
-	e := toml.NewEncoder(&confBuf)
-	err := e.Encode(conf)
+	conf := server.NewConfig(addrs, logger, 1000000, policies)
+	err := application.SaveConfig(file, conf)
+
 	if err != nil {
 		log.Println(err)
-		return
 	}
-	utils.WriteFile(file, confBuf.Bytes(), 0644)
 }
 
 func mkSigningKey(dir string) {

@@ -1,4 +1,4 @@
-package coniksclient
+package client
 
 import (
 	"github.com/coniks-sys/coniks-go/application"

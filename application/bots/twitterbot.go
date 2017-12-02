@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/BurntSushi/toml"
 	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/dghubble/go-twitter/twitter"
@@ -34,28 +33,6 @@ type TwitterBot struct {
 
 var _ Bot = (*TwitterBot)(nil)
 
-// A TwitterConfig contains the address of the named UNIX socket
-// through which the bot and the CONIKS server communicate,
-// the OAuth information needed to authenticate the bot with Twitter,
-// and the bot's reserved Twitter handle. These values are specified
-// in a configuration file, which is read at initialization time.
-type TwitterConfig struct {
-	CONIKSAddress string `toml:"coniks_address"`
-	TwitterOAuth  `toml:"twitter_oauth"`
-	Handle        string `toml:"twitter_bot_handle"`
-}
-
-// A TwitterOAuth contains the four secret values needed to authenticate
-// the bot with Twitter. These values are unique to each application
-// that uses the Twitter API to access an account's feed and direct
-// messages, and must be generated via Twitter's developer portal.
-type TwitterOAuth struct {
-	ConsumerKey    string
-	ConsumerSecret string
-	AccessToken    string
-	AccessSecret   string
-}
-
 // NewTwitterBot constructs a new account verification bot for Twitter
 // accounts that implements the Bot interface.
 //
@@ -66,16 +43,15 @@ type TwitterOAuth struct {
 // tuple. Otherwise, it returns a TwitterBot struct
 // with the appropriate values obtained during the setup.
 func NewTwitterBot(path string) (Bot, error) {
-	var conf TwitterConfig
-	if _, err := toml.DecodeFile(path, &conf); err != nil {
-		return nil, fmt.Errorf("Failed to load config: %v", err)
+	var conf *TwitterConfig = &TwitterConfig{}
+	if err := conf.InitConfig(path); err != nil {
+		return nil, err
 	}
 
 	// Notify if the CONIKS key server is down
 	if _, err := os.Stat(conf.CONIKSAddress); os.IsNotExist(err) {
 		return nil, fmt.Errorf("CONIKS Key Server is down")
 	}
-
 	auth := conf.TwitterOAuth
 	config := oauth1.NewConfig(auth.ConsumerKey, auth.ConsumerSecret)
 	token := oauth1.NewToken(auth.AccessToken, auth.AccessSecret)
