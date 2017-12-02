@@ -1,7 +1,7 @@
 // A registration proxy for Twitter accounts that implements the
 // CONIKS account verification Bot interface.
 
-package coniksbots
+package bots
 
 import (
 	"fmt"

@@ -4,7 +4,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/coniks-sys/coniks-go/coniksbots"
+	"github.com/coniks-sys/coniks-go/application/bots"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +29,7 @@ func init() {
 }
 
 func run(confPath string) {
-	bot, err := coniksbots.NewTwitterBot(confPath)
+	bot, err := bots.NewTwitterBot(confPath)
 	if err != nil {
 		panic(err)
 	}

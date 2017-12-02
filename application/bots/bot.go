@@ -3,7 +3,7 @@
 // Currently, this interface is used to implement a Twitter account
 // verification bot.
 
-package coniksbots
+package bots
 
 import (
 	"bytes"

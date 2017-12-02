@@ -6,7 +6,7 @@ import (
 	"path"
 
 	"github.com/BurntSushi/toml"
-	"github.com/coniks-sys/coniks-go/coniksbots"
+	"github.com/coniks-sys/coniks-go/application/bots"
 	"github.com/coniks-sys/coniks-go/utils"
 	"github.com/spf13/cobra"
 )
@@ -29,10 +29,10 @@ func init() {
 
 func mkBotConfig(dir string) {
 	file := path.Join(dir, "botconfig.toml")
-	var conf = coniksbots.TwitterConfig{
+	var conf = bots.TwitterConfig{
 		CONIKSAddress: "/tmp/coniks.sock",
 		Handle:        "ConiksTorMess",
-		TwitterOAuth: coniksbots.TwitterOAuth{
+		TwitterOAuth: bots.TwitterOAuth{
 			ConsumerKey:    "secret",
 			ConsumerSecret: "secret",
 			AccessToken:    "secret",

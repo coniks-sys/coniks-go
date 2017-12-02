@@ -1,4 +1,4 @@
-package coniksbots
+package bots
 
 import (
 	"encoding/json"
