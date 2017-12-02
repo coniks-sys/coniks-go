@@ -178,7 +178,7 @@ func (server *ConiksServer) HandleRequests(req *protocol.Request) *protocol.Resp
 // permissions.
 func (server *ConiksServer) Run(addrs []*Address) {
 	server.WaitStopAdd()
-	server.EpochUpdate()
+	go server.EpochUpdate()
 
 	hasRegistrationPerm := false
 	for i := 0; i < len(addrs); i++ {
@@ -196,7 +196,7 @@ func (server *ConiksServer) Run(addrs []*Address) {
 	}
 
 	server.WaitStopAdd()
-	server.ConfigHotReload()
+	go server.ConfigHotReload()
 }
 
 func (server *ConiksServer) epochUpdate() {
