@@ -10,6 +10,7 @@ import (
 	"github.com/coniks-sys/coniks-go/application"
 	clientapp "github.com/coniks-sys/coniks-go/application/client"
 	"github.com/coniks-sys/coniks-go/application/testutil"
+	"github.com/coniks-sys/coniks-go/cli"
 	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/protocol/client"
 	"github.com/spf13/cobra"
@@ -29,14 +30,7 @@ const help = "- register [name] [key]:\r\n" +
 	"- exit, q:\r\n" +
 	"	Close the REPL and exit the client."
 
-var runCmd = &cobra.Command{
-	Use:   "run",
-	Short: "Run the test client.",
-	Long:  "Run gives you a REPL, so that you can invoke commands to perform CONIKS operations including registration and key lookup. Currently, it supports:\n" + help,
-	Run: func(cmd *cobra.Command, args []string) {
-		run(cmd)
-	},
-}
+var runCmd = cli.NewRunCommand("CONIKS test client", "Run gives you a REPL, so that you can invoke commands to perform CONIKS operations including registration and key lookup. Currently, it supports:\n"+help, run)
 
 func init() {
 	RootCmd.AddCommand(runCmd)
@@ -45,7 +39,7 @@ func init() {
 	runCmd.Flags().BoolP("debug", "d", false, "Turn on debugging mode")
 }
 
-func run(cmd *cobra.Command) {
+func run(cmd *cobra.Command, args []string) {
 	isDebugging, _ := strconv.ParseBool(cmd.Flag("debug").Value.String())
 	conf := loadConfigOrExit(cmd)
 	cc := client.New(nil, true, conf.SigningPubKey)

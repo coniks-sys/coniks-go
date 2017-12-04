@@ -5,7 +5,7 @@ __Do not use your real public key or private key with this test client.__
 
 ##### Install the test client
 ```
-⇒  go install github.com/coniks-sys/coniks-go/coniksclient/cli
+⇒  go install github.com/coniks-sys/coniks-go/cli/coniksclient
 ⇒  coniksclient -h
 ________  _______  __    _  ___  ___   _  _______
 |       ||       ||  |  | ||   ||   | | ||       |
@@ -19,8 +19,9 @@ Usage:
   coniksclient [command]
 
 Available Commands:
-  init        Creates a config file for the client.
-  run         Run the test client.
+  init        Create a configuration file for a CONIKS test client.
+  run         Run a CONIKS test client instance.
+  version     Print the version number of coniksclient.
 
 Use "coniksclient [command] --help" for more information about a command.
 ```

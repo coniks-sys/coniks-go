@@ -14,7 +14,12 @@ import (
 )
 
 // runCmd represents the run command
-var runCmd = cli.NewRunCommand("CONIKS server", run)
+var runCmd = cli.NewRunCommand("CONIKS server",
+	`Run a CONIKS server instance.
+
+This will look for config files with default names
+in the current directory if not specified differently.
+	`, run)
 
 func init() {
 	RootCmd.AddCommand(runCmd)

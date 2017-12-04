@@ -7,7 +7,7 @@ import (
 
 // RootCmd represents the base "coniksserver" command when called without any subcommands.
 var RootCmd = cli.NewRootCommand("coniksserver",
-	"CONIKS reference implementation in Go",
+	"CONIKS server reference implementation in Go",
 	`
 ________  _______  __    _  ___  ___   _  _______
 |       ||       ||  |  | ||   ||   | | ||       |
