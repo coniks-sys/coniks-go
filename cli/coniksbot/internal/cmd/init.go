@@ -6,26 +6,20 @@ import (
 
 	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/application/bots"
+	"github.com/coniks-sys/coniks-go/cli"
 	"github.com/spf13/cobra"
 )
 
 // initCmd represents the init command
-var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Create a configuration file for CONIKS bot",
-	Long:  `Create a configuration file for CONIKS bot`,
-	Run: func(cmd *cobra.Command, args []string) {
-		dir := cmd.Flag("dir").Value.String()
-		mkBotConfig(dir)
-	},
-}
+var initCmd = cli.NewInitCommand("CONIKS bot", mkBotConfig)
 
 func init() {
 	RootCmd.AddCommand(initCmd)
 	initCmd.Flags().StringP("dir", "d", ".", "Location of directory for storing generated files")
 }
 
-func mkBotConfig(dir string) {
+func mkBotConfig(cmd *cobra.Command, args []string) {
+	dir := cmd.Flag("dir").Value.String()
 	file := path.Join(dir, "botconfig.toml")
 
 	oauth := bots.TwitterOAuth{

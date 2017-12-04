@@ -5,30 +5,20 @@ import (
 	"os/signal"
 
 	"github.com/coniks-sys/coniks-go/application/bots"
+	"github.com/coniks-sys/coniks-go/cli"
 	"github.com/spf13/cobra"
 )
 
 // runCmd represents the run command
-var runCmd = &cobra.Command{
-	Use:   "run",
-	Short: "Run a CONIKS bot instance",
-	Long: `Run a CONIKS bot instance
-
-This will look for config files with default names (botconfig.toml)
-in the current directory if not specified differently.
-	`,
-	Run: func(cmd *cobra.Command, args []string) {
-		config := cmd.Flag("config").Value.String()
-		run(config)
-	},
-}
+var runCmd = cli.NewRunCommand("CONIKS bot", run)
 
 func init() {
 	RootCmd.AddCommand(runCmd)
 	runCmd.Flags().StringP("config", "c", "botconfig.toml", "Path to bot configuration file")
 }
 
-func run(confPath string) {
+func run(cmd *cobra.Command, args []string) {
+	confPath := cmd.Flag("config").Value.String()
 	bot, err := bots.NewTwitterBot(confPath)
 	if err != nil {
 		panic(err)

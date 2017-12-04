@@ -2,15 +2,16 @@
 
 ## Usage
 ```
-⇒  go install github.com/coniks-sys/coniks-go/coniksbots/cli
+⇒  go install github.com/coniks-sys/coniks-go/cli/coniksbot
 ⇒  coniksbot -h
 
 Usage:
   coniksbot [command]
 
 Available Commands:
-  init        Create a configuration file
-  run         Run a CONIKS bot instance
+  init        Create a configuration file for CONIKS bot.
+  run         Run a CONIKS bot instance.
+  version     Print the version number of coniksbot
 
 Flags:
   -h, --help          help for coniksbot
