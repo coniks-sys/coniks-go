@@ -29,8 +29,8 @@ func NewInitCommand(appName string, runFunc func(cmd *cobra.Command, args []stri
 func (initCmd *initCommand) Build() *cobra.Command {
 	cmd := cobra.Command{
 		Use:   "init",
-		Short: "Create a configuration file for " + initCmd.appName + ".",
-		Long:  `Create a configuration file for ` + initCmd.appName + `.`,
+		Short: "Create a configuration file for a " + initCmd.appName + ".",
+		Long:  `Create a configuration file for a ` + initCmd.appName + `.`,
 		Run:   initCmd.runFunc,
 	}
 	return &cmd

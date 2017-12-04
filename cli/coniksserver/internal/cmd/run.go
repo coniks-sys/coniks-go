@@ -9,28 +9,12 @@ import (
 	"strconv"
 
 	"github.com/coniks-sys/coniks-go/application/server"
+	"github.com/coniks-sys/coniks-go/cli"
 	"github.com/spf13/cobra"
 )
 
 // runCmd represents the run command
-var runCmd = &cobra.Command{
-	Use:   "run",
-	Short: "Run a CONIKS server instance",
-	Long: `Run a CONIKS server instance
-
-This will look for config files with default names (config.toml)
-in the current directory if not specified differently.
-	`,
-	Run: func(cmd *cobra.Command, args []string) {
-		config := cmd.Flag("config").Value.String()
-		pid, _ := strconv.ParseBool(cmd.Flag("pid").Value.String())
-		// ignore the error here since it is handled by the flag parser.
-		if pid {
-			writePID()
-		}
-		run(config)
-	},
-}
+var runCmd = cli.NewRunCommand("CONIKS server", run)
 
 func init() {
 	RootCmd.AddCommand(runCmd)
@@ -38,7 +22,13 @@ func init() {
 	runCmd.Flags().BoolP("pid", "p", false, "Write down the process id to coniks.pid in the current working directory")
 }
 
-func run(confPath string) {
+func run(cmd *cobra.Command, args []string) {
+	confPath := cmd.Flag("config").Value.String()
+	pid, _ := strconv.ParseBool(cmd.Flag("pid").Value.String())
+	// ignore the error here since it is handled by the flag parser.
+	if pid {
+		writePID()
+	}
 	var conf *server.Config = &server.Config{}
 	err := conf.InitConfig(confPath)
 	if err != nil {

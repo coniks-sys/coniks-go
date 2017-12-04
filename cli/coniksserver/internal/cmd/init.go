@@ -8,6 +8,7 @@ import (
 	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/application/server"
 	"github.com/coniks-sys/coniks-go/application/testutil"
+	"github.com/coniks-sys/coniks-go/cli"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/utils"
@@ -15,27 +16,24 @@ import (
 )
 
 // initCmd represents the init command
-var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Create a configuration file and generate all keys",
-	Long:  `Create a configuration file and generate all keys for signing and VRF`,
-	Run: func(cmd *cobra.Command, args []string) {
-		dir := cmd.Flag("dir").Value.String()
-		mkConfig(dir)
-		mkSigningKey(dir)
-		mkVrfKey(dir)
-
-		cert, err := strconv.ParseBool(cmd.Flag("cert").Value.String())
-		if err == nil && cert {
-			testutil.CreateTLSCert(dir)
-		}
-	},
-}
+var initCmd = cli.NewInitCommand("CONIKS key server", initRunFunc)
 
 func init() {
 	RootCmd.AddCommand(initCmd)
 	initCmd.Flags().StringP("dir", "d", ".", "Location of directory for storing generated files")
 	initCmd.Flags().BoolP("cert", "c", false, "Generate self-signed ssl keys/cert with sane defaults")
+}
+
+func initRunFunc(cmd *cobra.Command, args []string) {
+	dir := cmd.Flag("dir").Value.String()
+	mkConfig(dir)
+	mkSigningKey(dir)
+	mkVrfKey(dir)
+
+	cert, err := strconv.ParseBool(cmd.Flag("cert").Value.String())
+	if err == nil && cert {
+		testutil.CreateTLSCert(dir)
+	}
 }
 
 func mkConfig(dir string) {

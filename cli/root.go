@@ -39,9 +39,9 @@ func (rootCmd *rootCommand) Build() *cobra.Command {
 	return &cmd
 }
 
-// ExecuteRoot adds all subcommands (i.e. "init" and "run") to the RootCmd
+// Execute adds all subcommands (i.e. "init" and "run") to the RootCmd
 // and sets their flags appropriately.
-func ExecuteRoot(rootCmd *cobra.Command) {
+func Execute(rootCmd *cobra.Command) {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(-1)

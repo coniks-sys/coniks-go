@@ -2,8 +2,11 @@
 // usage instructions.
 package main
 
-import "github.com/coniks-sys/coniks-go/cli/coniksbot/internal/cmd"
+import (
+	"github.com/coniks-sys/coniks-go/cli"
+	"github.com/coniks-sys/coniks-go/cli/coniksbot/internal/cmd"
+)
 
 func main() {
-	cmd.Execute()
+	cli.Execute(cmd.RootCmd)
 }

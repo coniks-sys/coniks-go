@@ -9,9 +9,9 @@ Usage:
   coniksbot [command]
 
 Available Commands:
-  init        Create a configuration file for CONIKS bot.
+  init        Create a configuration file for a CONIKS bot.
   run         Run a CONIKS bot instance.
-  version     Print the version number of coniksbot
+  version     Print the version number of coniksbot.
 
 Flags:
   -h, --help          help for coniksbot

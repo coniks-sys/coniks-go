@@ -10,9 +10,3 @@ import (
 var RootCmd = cli.NewRootCommand("coniksbot",
 	"CONIKS bot for third-party account verification",
 	`CONIKS bot for third-party account verification`)
-
-// Execute adds all subcommands (i.e. "init" and "run") to the RootCmd
-// and sets their flags appropriately.
-func Execute() {
-	cli.ExecuteRoot(RootCmd)
-}

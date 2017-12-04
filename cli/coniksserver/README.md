@@ -2,7 +2,7 @@
 
 ## Usage
 ```
-⇒  go install github.com/coniks-sys/coniks-go/coniksserver/cli
+⇒  go install github.com/coniks-sys/coniks-go/cli/coniksserver
 ⇒  coniksserver -h
  _______  _______  __    _  ___  ___   _  _______
 |       ||       ||  |  | ||   ||   | | ||       |
@@ -16,8 +16,9 @@ Usage:
   coniksserver [command]
 
 Available Commands:
-  init        Create a configuration file and generate all keys
-  run         Run a CONIKS server instance
+  init        Create a configuration file for a CONIKS server.
+  run         Run a CONIKS server instance.
+  version     Print the version number of coniksserver.
 
 Flags:
   -h, --help   help for coniksserver
