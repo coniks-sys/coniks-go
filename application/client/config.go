@@ -37,9 +37,9 @@ func NewConfig(signPubkeyPath, regAddr, serverAddr string) *Config {
 	return &conf
 }
 
-// InitConfig initializes a client's configuration from the given file.
+// Load initializes a client's configuration from the given file.
 // It reads the signing public-key file and parses the actual key.
-func (conf *Config) InitConfig(file string) error {
+func (conf *Config) Load(file string) error {
 	tmp, err := application.LoadConfig(file)
 	if err != nil {
 		return err

@@ -14,7 +14,7 @@ import (
 // any kind of CONIKS application-level executable (e.g. key server,
 // client etc.).
 type AppConfig interface {
-	InitConfig(file string) error
+	Load(file string) error
 }
 
 // LoadSigningPubKey loads a public signing key at the given path

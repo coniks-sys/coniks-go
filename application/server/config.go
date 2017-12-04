@@ -43,11 +43,11 @@ func NewConfig(addrs []*Address, logConfig *application.LoggerConfig,
 	return &conf
 }
 
-// InitConfig initializes a server configuration from the
+// Load initializes a server configuration from the
 // corresponding config file. It reads the siging key pair and the VRF key
 // pair into the Config instance and updates the path of
 // TLS certificate files of each Address to absolute path.
-func (conf *Config) InitConfig(file string) error {
+func (conf *Config) Load(file string) error {
 	tmp, err := application.LoadConfig(file)
 	if err != nil {
 		return err

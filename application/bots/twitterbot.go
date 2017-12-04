@@ -44,7 +44,7 @@ var _ Bot = (*TwitterBot)(nil)
 // with the appropriate values obtained during the setup.
 func NewTwitterBot(path string) (Bot, error) {
 	var conf *TwitterConfig = &TwitterConfig{}
-	if err := conf.InitConfig(path); err != nil {
+	if err := conf.Load(path); err != nil {
 		return nil, err
 	}
 

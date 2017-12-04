@@ -35,7 +35,7 @@ func run(cmd *cobra.Command, args []string) {
 		writePID()
 	}
 	var conf *server.Config = &server.Config{}
-	err := conf.InitConfig(confPath)
+	err := conf.Load(confPath)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -40,9 +40,9 @@ func NewTwitterConfig(addr, handle string, oauth TwitterOAuth) *TwitterConfig {
 	return &conf
 }
 
-// InitConfig initializes a Twitter registration proxy configuration from the
+// Load initializes a Twitter registration proxy configuration from the
 // corresponding config file.
-func (conf *TwitterConfig) InitConfig(file string) error {
+func (conf *TwitterConfig) Load(file string) error {
 	tmp, err := application.LoadConfig(file)
 	if err != nil {
 		return err
