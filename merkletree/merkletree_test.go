@@ -186,7 +186,7 @@ func TestThreeEntries(t *testing.T) {
 }
 
 func TestInsertExistedKey(t *testing.T) {
-	m := newTestTree(t)
+	m := newEmptyTreeForTest(t)
 
 	key1 := "key"
 	index1 := crypto.StaticVRF(t).Compute([]byte(key1))

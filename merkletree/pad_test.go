@@ -365,6 +365,8 @@ func benchPADLookup(b *testing.B, entries uint64) {
 // for i = 0,...,N
 // The STR will get updated every epoch defined by every multiple of
 // `updateEvery`. If `updateEvery > N` createPAD won't update the STR.
+// `afterCreateCB` and `afterInsertCB` are 2 callbacks which would be called
+// before creating the PAD and after every inserting, respectively.
 func createPad(N uint64, keyPrefix string, valuePrefix []byte, snapLen uint64,
 	afterCreateCB func(pad *PAD),
 	afterInsertCB func(iteration uint64, pad *PAD)) (*PAD, error) {
@@ -390,6 +392,7 @@ func createPad(N uint64, keyPrefix string, valuePrefix []byte, snapLen uint64,
 	return pad, nil
 }
 
+// createPadSimple calls `createPad` without any callback.
 func createPadSimple(N uint64, keyPrefix string, valuePrefix []byte,
 	snapLen uint64) (*PAD, error) {
 	return createPad(N, keyPrefix, valuePrefix, snapLen, nil, nil)

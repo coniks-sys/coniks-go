@@ -15,24 +15,23 @@ func TestComputeDirectoryIdentity(t *testing.T) {
 	d.Update()
 	str1 := d.LatestSTR()
 
-	tests := []struct {
+	for _, tc := range []struct {
 		name string
 		str  *protocol.DirSTR
 		want []byte
 	}{
-		{"normal", str0, dh("fd0584f79054f8113f21e5450e0ad21c9221fc159334c7bc1644e3e2a0fb5060")},
+		{"normal", str0, hex2bin("fd0584f79054f8113f21e5450e0ad21c9221fc159334c7bc1644e3e2a0fb5060")},
 		{"panic", str1, []byte{}},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.name == "panic" {
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.name == "panic" {
 				defer func() {
 					if r := recover(); r == nil {
 						t.Errorf("The code did not panic")
 					}
 				}()
 			}
-			if got, want := ComputeDirectoryIdentity(tt.str), tt.want; !bytes.Equal(got[:], want) {
+			if got, want := ComputeDirectoryIdentity(tc.str), tc.want; !bytes.Equal(got[:], want) {
 				t.Errorf("ComputeDirectoryIdentity() = %#v, want %#v", got, want)
 			}
 		})
@@ -40,7 +39,7 @@ func TestComputeDirectoryIdentity(t *testing.T) {
 }
 
 // decode hex string to byte array
-func dh(h string) []byte {
+func hex2bin(h string) []byte {
 	result, err := hex.DecodeString(h)
 	if err != nil {
 		panic(err)

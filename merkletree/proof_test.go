@@ -11,13 +11,15 @@ import (
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
-type mockTest struct {
+type mockProof struct {
 	key   string
 	value []byte
 	index []byte
 	want  ProofType
 }
 
+// These characters are used to generate a random string containing only
+// the uppercase and lowercase letters of the English alphabet.
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const (
 	letterIdxBits = 6                    // 6 bits to represent a letter index
@@ -27,6 +29,7 @@ const (
 
 var src = rand.NewSource(time.Now().UnixNano())
 
+// RandStringBytesMaskImprSrc generates a random string of fixed length.
 // Credit: https://stackoverflow.com/a/31832326
 func RandStringBytesMaskImprSrc(n int) string {
 	b := make([]byte, n)
@@ -48,10 +51,12 @@ func RandStringBytesMaskImprSrc(n int) string {
 
 var N uint64 = 3 // number of inclusions.
 
-func setup(t *testing.T) (*MerkleTree, []*mockTest) {
-	m := newTestTree(t)
+// setupTestProofs creates a MerkleTree with `N` inclusions and
+// searchs for a random index which shares the same prefix with an inclusion.
+func setupTestProofs(t *testing.T) (*MerkleTree, []*mockProof) {
+	m := newEmptyTreeForTest(t)
 
-	tuple := []*mockTest{}
+	tuple := []*mockProof{}
 	for i := uint64(0); i < uint64(N); i++ {
 		key := keyPrefix + strconv.FormatUint(i, 10)
 		val := append(valuePrefix, byte(i))
@@ -59,7 +64,7 @@ func setup(t *testing.T) (*MerkleTree, []*mockTest) {
 		if err := m.Set(index, key, val); err != nil {
 			t.Fatal(err)
 		}
-		tuple = append(tuple, &mockTest{key, val, index, ProofOfInclusion})
+		tuple = append(tuple, &mockProof{key, val, index, ProofOfInclusion})
 	}
 
 	sharedPrefix := tuple[0].index
@@ -76,13 +81,13 @@ func setup(t *testing.T) (*MerkleTree, []*mockTest) {
 		}
 	}
 
-	tuple = append(tuple, &mockTest{absentKey, nil, absentIndex, ProofOfAbsence})
+	tuple = append(tuple, &mockProof{absentKey, nil, absentIndex, ProofOfAbsence})
 	m.recomputeHash()
 	return m, tuple
 }
 
 func TestVerifyProof(t *testing.T) {
-	m, tests := setup(t)
+	m, tests := setupTestProofs(t)
 
 	for _, tt := range tests {
 		proof := m.Get(tt.index)
@@ -96,7 +101,7 @@ func TestVerifyProof(t *testing.T) {
 }
 
 func TestProofVerificationErrors(t *testing.T) {
-	m, tuple := setup(t)
+	m, tuple := setupTestProofs(t)
 
 	index, key, value := tuple[0].index, tuple[0].key, tuple[0].value
 

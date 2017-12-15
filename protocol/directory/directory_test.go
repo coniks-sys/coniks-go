@@ -35,7 +35,7 @@ func TestPoliciesChanges(t *testing.T) {
 
 func TestDirectoryKeyLookupInEpochBadEpoch(t *testing.T) {
 	d := NewTestDirectory(t)
-	tests := []struct {
+	for _, tc := range []struct {
 		name     string
 		userName string
 		ep       uint64
@@ -43,14 +43,13 @@ func TestDirectoryKeyLookupInEpochBadEpoch(t *testing.T) {
 	}{
 		{"invalid username", "", 0, protocol.ErrMalformedMessage},
 		{"bad end epoch", "Alice", 2, protocol.ErrMalformedMessage},
-	}
-	for _, tt := range tests {
+	} {
 		res := d.KeyLookupInEpoch(&protocol.KeyLookupInEpochRequest{
-			Username: tt.userName,
-			Epoch:    tt.ep,
+			Username: tc.userName,
+			Epoch:    tc.ep,
 		})
-		if res.Error != tt.want {
-			t.Errorf("Expect ErrMalformedMessage for %s", tt.name)
+		if res.Error != tc.want {
+			t.Errorf("Expect ErrMalformedMessage for %s", tc.name)
 		}
 	}
 }
@@ -58,7 +57,7 @@ func TestDirectoryKeyLookupInEpochBadEpoch(t *testing.T) {
 func TestBadRequestMonitoring(t *testing.T) {
 	d := NewTestDirectory(t)
 
-	tests := []struct {
+	for _, tc := range []struct {
 		name     string
 		userName string
 		startEp  uint64
@@ -68,15 +67,14 @@ func TestBadRequestMonitoring(t *testing.T) {
 		{"invalid username", "", 0, 0, protocol.ErrMalformedMessage},
 		{"bad end epoch", "Alice", 4, 2, protocol.ErrMalformedMessage},
 		{"out-of-bounds", "Alice", 2, d.LatestSTR().Epoch, protocol.ErrMalformedMessage},
-	}
-	for _, tt := range tests {
+	} {
 		res := d.Monitor(&protocol.MonitoringRequest{
-			Username:   tt.userName,
-			StartEpoch: tt.startEp,
-			EndEpoch:   tt.endEp,
+			Username:   tc.userName,
+			StartEpoch: tc.startEp,
+			EndEpoch:   tc.endEp,
 		})
-		if res.Error != tt.want {
-			t.Errorf("Expect ErrMalformedMessage for %s", tt.name)
+		if res.Error != tc.want {
+			t.Errorf("Expect ErrMalformedMessage for %s", tc.name)
 		}
 	}
 }
@@ -85,7 +83,7 @@ func TestBadRequestGetSTRHistory(t *testing.T) {
 	d := NewTestDirectory(t)
 	d.Update()
 
-	tests := []struct {
+	for _, tc := range []struct {
 		name    string
 		startEp uint64
 		endEp   uint64
@@ -93,14 +91,13 @@ func TestBadRequestGetSTRHistory(t *testing.T) {
 	}{
 		{"bad end epoch", 4, 2, protocol.ErrMalformedMessage},
 		{"out-of-bounds", 6, d.LatestSTR().Epoch, protocol.ErrMalformedMessage},
-	}
-	for _, tt := range tests {
+	} {
 		res := d.GetSTRHistory(&protocol.STRHistoryRequest{
-			StartEpoch: tt.startEp,
-			EndEpoch:   tt.endEp,
+			StartEpoch: tc.startEp,
+			EndEpoch:   tc.endEp,
 		})
-		if res.Error != tt.want {
-			t.Errorf("Expect ErrMalformedMessage for %s", tt.name)
+		if res.Error != tc.want {
+			t.Errorf("Expect ErrMalformedMessage for %s", tc.name)
 		}
 	}
 }

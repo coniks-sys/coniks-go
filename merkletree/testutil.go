@@ -30,7 +30,7 @@ func staticTree(t *testing.T) *MerkleTree {
 	return m
 }
 
-func newTestTree(t *testing.T) *MerkleTree {
+func newEmptyTreeForTest(t *testing.T) *MerkleTree {
 	m, err := NewMerkleTree()
 	if err != nil {
 		t.Fatal(err)
