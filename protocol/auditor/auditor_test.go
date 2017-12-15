@@ -8,9 +8,11 @@ import (
 	"github.com/coniks-sys/coniks-go/protocol/directory"
 )
 
+var staticSigningKey = crypto.NewStaticTestSigningKey()
+
 func TestAuditBadSTRSignature(t *testing.T) {
 	d := directory.NewTestDirectory(t)
-	pk, _ := crypto.StaticSigning(t).Public()
+	pk, _ := staticSigningKey.Public()
 
 	// create a generic auditor state
 	aud := New(pk, d.LatestSTR())
@@ -37,7 +39,7 @@ func TestAuditBadSTRSignature(t *testing.T) {
 // used to be TestVerifyWithError in consistencychecks_test.go
 func TestAuditBadSameEpoch(t *testing.T) {
 	d := directory.NewTestDirectory(t)
-	pk, _ := crypto.StaticSigning(t).Public()
+	pk, _ := staticSigningKey.Public()
 
 	// create a generic auditor state
 	aud := New(pk, d.LatestSTR())
@@ -59,7 +61,7 @@ func TestAuditBadSameEpoch(t *testing.T) {
 
 func TestAuditBadNewSTREpoch(t *testing.T) {
 	d := directory.NewTestDirectory(t)
-	pk, _ := crypto.StaticSigning(t).Public()
+	pk, _ := staticSigningKey.Public()
 
 	// create a generic auditor state
 	aud := New(pk, d.LatestSTR())
@@ -97,7 +99,7 @@ func TestAuditBadNewSTREpoch(t *testing.T) {
 
 func TestAuditMalformedSTRRange(t *testing.T) {
 	d := directory.NewTestDirectory(t)
-	pk, _ := crypto.StaticSigning(t).Public()
+	pk, _ := staticSigningKey.Public()
 
 	// create a generic auditor state
 	aud := New(pk, d.LatestSTR())

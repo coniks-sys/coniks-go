@@ -9,9 +9,12 @@ import (
 var keyPrefix = "key"
 var valuePrefix = []byte("value")
 
+var staticSigningKey = crypto.NewStaticTestSigningKey()
+var staticVRFKey = crypto.NewStaticTestVRFKey()
+
 // StaticPAD returns a pad with a static initial STR for _tests_.
 func StaticPAD(t *testing.T, ad AssocData) *PAD {
-	pad, err := NewPAD(ad, crypto.StaticSigning(t), crypto.StaticVRF(t), 10)
+	pad, err := NewPAD(ad, staticSigningKey, staticVRFKey, 10)
 	if err != nil {
 		t.Fatal(err)
 	}

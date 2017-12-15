@@ -8,6 +8,8 @@ import (
 	"github.com/coniks-sys/coniks-go/protocol/directory"
 )
 
+var staticSigningKey = crypto.NewStaticTestSigningKey()
+
 // NewTestAuditLog creates a ConiksAuditLog and corresponding
 // ConiksDirectory used for testing auditor-side CONIKS operations.
 // The new audit log can be initialized with the number of epochs
@@ -27,7 +29,7 @@ func NewTestAuditLog(t *testing.T, numEpochs int) (
 	// always include the actual latest STR
 	snaps = append(snaps, d.LatestSTR())
 
-	pk, _ := crypto.StaticSigning(t).Public()
+	pk, _ := staticSigningKey.Public()
 	err := aud.InitHistory("test-server", pk, snaps)
 	if err != nil {
 		t.Fatalf("Error inserting a new history with %d STRs", numEpochs+1)

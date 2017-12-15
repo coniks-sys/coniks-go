@@ -2,14 +2,12 @@ package merkletree
 
 import (
 	"testing"
-
-	"github.com/coniks-sys/coniks-go/crypto"
 )
 
 func TestVerifyHashChain(t *testing.T) {
 	var N uint64 = 100
 
-	pad, err := NewPAD(TestAd{"abc"}, crypto.StaticSigning(t), crypto.StaticVRF(t), N)
+	pad, err := NewPAD(TestAd{"abc"}, staticSigningKey, staticVRFKey, N)
 	if err != nil {
 		t.Fatal(err)
 	}

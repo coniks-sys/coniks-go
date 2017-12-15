@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/utils"
 	"golang.org/x/crypto/sha3"
 )
@@ -21,7 +20,7 @@ func TestOneEntry(t *testing.T) {
 
 	key := "key"
 	val := []byte("value")
-	index := crypto.StaticVRF(t).Compute([]byte(key))
+	index := staticVRFKey.Compute([]byte(key))
 	if err := m.Set(index, key, val); err != nil {
 		t.Fatal(err)
 	}
@@ -85,10 +84,10 @@ func TestTwoEntries(t *testing.T) {
 	}
 
 	key1 := "key1"
-	index1 := crypto.StaticVRF(t).Compute([]byte(key1))
+	index1 := staticVRFKey.Compute([]byte(key1))
 	val1 := []byte("value1")
 	key2 := "key2"
-	index2 := crypto.StaticVRF(t).Compute([]byte(key2))
+	index2 := staticVRFKey.Compute([]byte(key2))
 	val2 := []byte("value2")
 
 	if err := m.Set(index1, key1, val1); err != nil {
@@ -125,13 +124,13 @@ func TestThreeEntries(t *testing.T) {
 	}
 
 	key1 := "key1"
-	index1 := crypto.StaticVRF(t).Compute([]byte(key1))
+	index1 := staticVRFKey.Compute([]byte(key1))
 	val1 := []byte("value1")
 	key2 := "key2"
-	index2 := crypto.StaticVRF(t).Compute([]byte(key2))
+	index2 := staticVRFKey.Compute([]byte(key2))
 	val2 := []byte("value2")
 	key3 := "key3"
-	index3 := crypto.StaticVRF(t).Compute([]byte(key3))
+	index3 := staticVRFKey.Compute([]byte(key3))
 	val3 := []byte("value3")
 
 	if err := m.Set(index1, key1, val1); err != nil {
@@ -189,7 +188,7 @@ func TestInsertExistedKey(t *testing.T) {
 	m := newEmptyTreeForTest(t)
 
 	key1 := "key"
-	index1 := crypto.StaticVRF(t).Compute([]byte(key1))
+	index1 := staticVRFKey.Compute([]byte(key1))
 	val1 := append([]byte(nil), "value"...)
 
 	if err := m.Set(index1, key1, val1); err != nil {
@@ -233,10 +232,10 @@ func TestInsertExistedKey(t *testing.T) {
 
 func TestTreeClone(t *testing.T) {
 	key1 := "key1"
-	index1 := crypto.StaticVRF(t).Compute([]byte(key1))
+	index1 := staticVRFKey.Compute([]byte(key1))
 	val1 := []byte("value1")
 	key2 := "key2"
-	index2 := crypto.StaticVRF(t).Compute([]byte(key2))
+	index2 := staticVRFKey.Compute([]byte(key2))
 	val2 := []byte("value2")
 
 	m1, err := NewMerkleTree()

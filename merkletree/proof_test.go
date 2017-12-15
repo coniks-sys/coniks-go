@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coniks-sys/coniks-go/crypto"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
@@ -60,7 +59,7 @@ func setupTestProofs(t *testing.T) (*MerkleTree, []*mockProof) {
 	for i := uint64(0); i < uint64(N); i++ {
 		key := keyPrefix + strconv.FormatUint(i, 10)
 		val := append(valuePrefix, byte(i))
-		index := crypto.StaticVRF(t).Compute([]byte(key))
+		index := staticVRFKey.Compute([]byte(key))
 		if err := m.Set(index, key, val); err != nil {
 			t.Fatal(err)
 		}
@@ -72,7 +71,7 @@ func setupTestProofs(t *testing.T) (*MerkleTree, []*mockProof) {
 	var absentIndex []byte
 	for {
 		absentKey = RandStringBytesMaskImprSrc(3)
-		absentIndex = crypto.StaticVRF(t).Compute([]byte(absentKey))
+		absentIndex = staticVRFKey.Compute([]byte(absentKey))
 		proof := m.Get(absentIndex)
 		// assert these indices share the same prefix in the first bit
 		if bytes.Equal(utils.ToBytes(utils.ToBits(sharedPrefix)[:proof.Leaf.Level]),
