@@ -250,26 +250,37 @@ func (sb *ServerBase) acceptClient(addr *ServerAddress, conn net.Conn,
 	}
 }
 
+// TODO: Remove/refactor these getters. We would be happier if we didn't
+// have to expose the WaitGroup to the server/auditor at all, and maybe
+// we can export some of these other fields.
+
+// WaitStopAdd increments the server base's waitgroup counter.
 func (sb *ServerBase) WaitStopAdd() {
 	sb.waitStop.Add(1)
 }
 
+// WaitStopDone is a wrapper around waitgroup's Done(), which
+// decrements the WaitGroup counter by one.
 func (sb *ServerBase) WaitStopDone() {
 	sb.waitStop.Done()
 }
 
+// Stop returns the server base's stop channel.
 func (sb *ServerBase) Stop() chan struct{} {
 	return sb.stop
 }
 
+// ReloadChan returns the server base's configuration reload channel.
 func (sb *ServerBase) ReloadChan() chan os.Signal {
 	return sb.reloadChan
 }
 
+// Logger returns the server base's logger instance.
 func (sb *ServerBase) Logger() *Logger {
 	return sb.logger
 }
 
+// ConfigFilePath returns the server base's config file path.
 func (sb *ServerBase) ConfigFilePath() string {
 	return sb.configFilePath
 }
