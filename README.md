@@ -27,10 +27,9 @@ proxy using this library.
 The packages in this library implement the various components of the CONIKS
 system and may be imported individually.
 
-- `bots`: Registration proxies for user account verification
-- `client`: A reference implementation of a CONIKS client
+- `application`: CONIKS application-layer library.
+- `cli`: CONIKS command-line tools (registration bots, key server, and test client).
 - `crypto`: Cryptographic algorithms and operations
-- `keyserver`: A reference implementation of a CONIKS key server
 - `merkletree`: Merkle prefix tree and related data structures
 - `utils`: Utility functions
 - `protocol`: CONIKS protocols implementation/library
