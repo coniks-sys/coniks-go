@@ -43,8 +43,8 @@ If Golang is set up correctly, you can simply run:
 go get github.com/coniks-sys/coniks-go
 ```
 
-For usage instructions, see the documentation in their respective packages: [CONIKS-server](keyserver), a
-simple command-line [client](client), and the [registration-proxy](bots).
+For usage instructions, see the documentation in their respective packages: [CONIKS-server](cli/coniksserver), a
+simple command-line [client](cli/coniksclient), and the [registration-proxy](cli/coniksbot).
 
 ## Disclaimer
 
