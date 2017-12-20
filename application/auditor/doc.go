@@ -1,9 +1,9 @@
 /*
-Package coniksauditor provides an executable of
-an auditor for the CONIKS key management system.
+Package auditor implements the CONIKS auditor service
+protocol.
 
 Note: The auditor can current only be used in
 interactive test mode with a server, and does not
 accept auditing requests from CONIKS clients.
 */
-package coniksauditor
+package auditor

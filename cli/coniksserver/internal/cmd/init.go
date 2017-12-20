@@ -12,7 +12,6 @@ import (
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
 	"github.com/coniks-sys/coniks-go/utils"
-	"github.com/coniks-sys/coniks-go/utils/binutils"
 	"github.com/spf13/cobra"
 )
 

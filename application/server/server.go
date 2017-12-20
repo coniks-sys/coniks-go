@@ -6,6 +6,7 @@ import (
 	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/protocol/directory"
+	"github.com/coniks-sys/coniks-go/utils"
 )
 
 // An Address describes a server's connection.
@@ -67,6 +68,11 @@ func NewConiksServer(conf *Config) *ConiksServer {
 			true),
 		epochTimer: time.NewTimer(time.Duration(conf.Policies.EpochDeadline) * time.Second),
 	}
+
+	// save the initial STR to be used for initializing auditors
+	initSTRPath := utils.ResolvePath(conf.InitSTRPath,
+		conf.ConfigFilePath)
+	application.MarshalSTRToFile(server.dir.LatestSTR(), initSTRPath)
 
 	return server
 }

@@ -20,6 +20,8 @@ type Config struct {
 	LoadedHistoryLength uint64 `toml:"loaded_history_length"`
 	// Policies contains the server's CONIKS policies configuration.
 	Policies *Policies `toml:"policies"`
+	// Path to store the initial STR
+	InitSTRPath string `toml:"init_str_path"`
 	// Addresses contains the server's connections configuration.
 	Addresses []*Address `toml:"addresses"`
 }
