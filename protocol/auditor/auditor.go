@@ -91,10 +91,6 @@ func (a *AudState) CheckSTRAgainstVerified(str *protocol.DirSTR) error {
 	// Maybe it has something to do w/ #81 and client
 	// transitioning between epochs.
 	// Try to verify w/ what's been saved
-
-	// FIXME: we are returning the error immediately
-	// without saving the inconsistent STR
-	// see: https://github.com/coniks-sys/coniks-go/pull/74#commitcomment-19804686
 	switch {
 	case str.Epoch == a.verifiedSTR.Epoch:
 		// Checking an STR in the same epoch
