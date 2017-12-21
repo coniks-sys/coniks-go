@@ -23,7 +23,7 @@ func TestCannotUnmarshallRequest(t *testing.T) {
 func TestInvalidRequestType(t *testing.T) {
 	username := "alice"
 	request, _ := json.Marshal(&protocol.Request{
-		Type: protocol.KeyLookupType,
+		Type: protocol.KeyLookupInEpochType,
 		Request: &protocol.RegistrationRequest{
 			Username: username + "@twitter",
 			Key:      []byte{1, 2, 3},

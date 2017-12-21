@@ -68,9 +68,9 @@ func TestUnmarshalSampleClientMessage(t *testing.T) {
 		Key:      []byte("key")})
 	msg, _ := MarshalResponse(res)
 	response := UnmarshalResponse(protocol.RegistrationType, []byte(msg))
-	str := response.DirectoryResponse.(*protocol.DirectoryProof).STR[0]
+  str := response.DirectoryResponse.(*protocol.DirectoryProof).STR[0]
 	if !bytes.Equal(d.LatestSTR().Serialize(), str.Serialize()) {
-		t.Error("Cannot unmarshal Associate Data properly")
+		t.Error("Cannot unmarshal Associated Data properly")
 	}
 }
 
@@ -83,6 +83,6 @@ func TestUnmarshalSampleAuditorMessage(t *testing.T) {
 	response := UnmarshalResponse(protocol.STRType, []byte(msg))
 	str := response.DirectoryResponse.(*protocol.STRHistoryRange).STR[0]
 	if !bytes.Equal(d.LatestSTR().Serialize(), str.Serialize()) {
-		t.Error("Cannot unmarshal Associate Data properly")
+		t.Error("Cannot unmarshal Associated Data properly")
 	}
 }

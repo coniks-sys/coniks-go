@@ -73,14 +73,15 @@ func UnmarshalResponse(t int, msg []byte) *protocol.Response {
 	// DirectoryResponse is omitempty for the places
 	// where Error is in Errors
 	if res.DirectoryResponse == nil {
-		if !protocol.Errors[res.Error] {
+		response := &protocol.Response{
+			Error: res.Error,
+		}
+		if err := response.Validate(); err != nil {
 			return &protocol.Response{
 				Error: protocol.ErrMalformedMessage,
 			}
 		}
-		return &protocol.Response{
-			Error: res.Error,
-		}
+		return response
 	}
 
 	switch t {

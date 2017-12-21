@@ -269,8 +269,12 @@ func NewSTRHistoryRange(str []*DirSTR) *Response {
 // Validate returns immediately if the message includes an error code.
 // Otherwise, it verifies whether the message has proper format.
 func (msg *Response) Validate() error {
-	if Errors[msg.Error] {
+	if errors[msg.Error] {
 		return msg.Error
+	}
+
+	if msg.DirectoryResponse == nil {
+		return ErrMalformedMessage
 	}
 	switch df := msg.DirectoryResponse.(type) {
 	case *DirectoryProof:

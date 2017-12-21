@@ -40,12 +40,12 @@ const (
 	CheckBrokenPromise
 )
 
-// Errors contains codes indicating the client
+// errors contains codes indicating the client
 // should skip the consistency checks. These errors indicate
 // that either a client request could not be processed due to
 // a malformed client request, an internal server error or
 // due to a malformed server response.
-var Errors = map[error]bool{
+var errors = map[error]bool{
 	ErrMalformedMessage: true,
 	ErrDirectory:        true,
 	ErrAuditLog:         true,
