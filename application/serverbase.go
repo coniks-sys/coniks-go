@@ -15,22 +15,19 @@ import (
 	"github.com/coniks-sys/coniks-go/protocol"
 )
 
-// A Server is a generic interface used to implement CONIKS key servers
-// and auditors.
-// CONIKS server's must implement a request handler, an epoch update
-// procedure, and hot-reloading the configuration.
-type Server interface {
-	EpochUpdate()
-	ConfigHotReload()
-	HandleRequests(*protocol.Request) *protocol.Response
-}
-
 // A ServerBaseConfig contains configuration values
 // which are read at initialization time from
 // a TOML format configuration file.
 type ServerBaseConfig struct {
-	Logger         *LoggerConfig `toml:"logger"`
-	ConfigFilePath string
+	Logger         *LoggerConfig      `toml:"logger"`
+	ConfigFilePath string             `toml:"config_file_path"`
+	EpochDeadline  protocol.Timestamp `toml:"epoch_deadline"`
+}
+
+// EpochTimer consists of a `time.Timer` and the epoch deadline value.
+type EpochTimer struct {
+	*time.Timer
+	duration time.Duration
 }
 
 // A ServerBase represents the base features needed to implement
@@ -41,6 +38,8 @@ type ServerBaseConfig struct {
 type ServerBase struct {
 	Verb           string
 	acceptableReqs map[*ServerAddress]map[int]bool
+
+	epochTimer *EpochTimer
 
 	logger *Logger
 	sync.RWMutex
@@ -78,6 +77,10 @@ func NewServerBase(conf *ServerBaseConfig, listenVerb string,
 	sb := new(ServerBase)
 	sb.Verb = listenVerb
 	sb.acceptableReqs = perms
+	sb.epochTimer = &EpochTimer{
+		Timer:    time.NewTimer(time.Duration(conf.EpochDeadline) * time.Second),
+		duration: time.Duration(conf.EpochDeadline) * time.Second,
+	}
 	sb.logger = NewLogger(conf.Logger)
 	sb.stop = make(chan struct{})
 	sb.configFilePath = conf.ConfigFilePath
@@ -250,29 +253,45 @@ func (sb *ServerBase) acceptClient(addr *ServerAddress, conn net.Conn,
 	}
 }
 
-// TODO: Remove/refactor these getters. We would be happier if we didn't
-// have to expose the WaitGroup to the server/auditor at all, and maybe
-// we can export some of these other fields.
-
-// WaitStopAdd increments the server base's waitgroup counter.
-func (sb *ServerBase) WaitStopAdd() {
+// RunInBackground creates a new goroutine that calls function `f`.
+// It automatically increments the counter `sync.WaitGroup` of the `ServerBase`
+// and calls `Done` when the function execution is finished.
+func (sb *ServerBase) RunInBackground(f func()) {
 	sb.waitStop.Add(1)
+	go func() {
+		f()
+		sb.waitStop.Done()
+	}()
 }
 
-// WaitStopDone is a wrapper around waitgroup's Done(), which
-// decrements the WaitGroup counter by one.
-func (sb *ServerBase) WaitStopDone() {
-	sb.waitStop.Done()
+// EpochUpdate runs function `f` supposed to be a CONIK's epoch update procedure
+// every epoch.
+func (sb *ServerBase) EpochUpdate(f func()) {
+	for {
+		select {
+		case <-sb.stop:
+			return
+		case <-sb.epochTimer.C:
+			sb.Lock()
+			f()
+			sb.epochTimer.Reset(sb.epochTimer.duration)
+			sb.Unlock()
+		}
+	}
 }
 
-// Stop returns the server base's stop channel.
-func (sb *ServerBase) Stop() chan struct{} {
-	return sb.stop
-}
-
-// ReloadChan returns the server base's configuration reload channel.
-func (sb *ServerBase) ReloadChan() chan os.Signal {
-	return sb.reloadChan
+// HotReload implements hot-reloading by listening for SIGUSR2 signal.
+func (sb *ServerBase) HotReload(f func()) {
+	for {
+		select {
+		case <-sb.stop:
+			return
+		case <-sb.reloadChan:
+			sb.Lock()
+			f()
+			sb.Unlock()
+		}
+	}
 }
 
 // Logger returns the server base's logger instance.

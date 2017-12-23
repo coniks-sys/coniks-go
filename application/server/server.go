@@ -1,8 +1,6 @@
 package server
 
 import (
-	"time"
-
 	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/protocol/directory"
@@ -32,11 +30,8 @@ type Address struct {
 // at regular time intervals.
 type ConiksServer struct {
 	*application.ServerBase
-	dir        *directory.ConiksDirectory
-	epochTimer *time.Timer
+	dir *directory.ConiksDirectory
 }
-
-var _ application.Server = (*ConiksServer)(nil)
 
 // NewConiksServer creates a new reference implementation of
 // a CONIKS key server.
@@ -65,23 +60,9 @@ func NewConiksServer(conf *Config) *ConiksServer {
 			conf.Policies.signKey,
 			conf.LoadedHistoryLength,
 			true),
-		epochTimer: time.NewTimer(time.Duration(conf.Policies.EpochDeadline) * time.Second),
 	}
 
 	return server
-}
-
-// EpochUpdate runs a CONIKS key server's directory epoch update procedure.
-func (server *ConiksServer) EpochUpdate() {
-	server.epochUpdate()
-	server.WaitStopDone()
-}
-
-// ConfigHotReload implements hot-reloading the configuration by
-// listening for SIGUSR2 signal.
-func (server *ConiksServer) ConfigHotReload() {
-	server.updatePolicies()
-	server.WaitStopDone()
 }
 
 // HandleRequests validates the request message and passes it to the
@@ -113,8 +94,9 @@ func (server *ConiksServer) HandleRequests(req *protocol.Request) *protocol.Resp
 // It listens for all declared connections with corresponding
 // permissions.
 func (server *ConiksServer) Run(addrs []*Address) {
-	server.WaitStopAdd()
-	go server.EpochUpdate()
+	server.RunInBackground(func() {
+		server.EpochUpdate(server.dir.Update)
+	})
 
 	hasRegistrationPerm := false
 	for i := 0; i < len(addrs); i++ {
@@ -131,44 +113,22 @@ func (server *ConiksServer) Run(addrs []*Address) {
 		server.Logger().Warn("None of the addresses permit registration")
 	}
 
-	server.WaitStopAdd()
-	go server.ConfigHotReload()
-}
-
-func (server *ConiksServer) epochUpdate() {
-	for {
-		select {
-		case <-server.Stop():
-			return
-		case <-server.epochTimer.C:
-			server.Lock()
-			server.dir.Update()
-			server.epochTimer.Reset(time.Duration(server.dir.EpochDeadline()) * time.Second)
-			server.Unlock()
-		}
-	}
+	server.RunInBackground(func() {
+		server.HotReload(server.updatePolicies)
+	})
 }
 
 func (server *ConiksServer) updatePolicies() {
-	for {
-		select {
-		case <-server.Stop():
-			return
-		case <-server.ReloadChan():
-			// read server policies from config file
-			tmp, err := application.LoadConfig(server.ConfigFilePath())
-			if err != nil {
-				// error occured while reading server config
-				// simply abort the reloading policies
-				// process
-				server.Logger().Error(err.Error())
-				return
-			}
-			conf := tmp.(*Config)
-			server.Lock()
-			server.dir.SetPolicies(conf.Policies.EpochDeadline)
-			server.Unlock()
-			server.Logger().Info("Policies reloaded!")
-		}
+	// read server policies from config file
+	tmp, err := application.LoadConfig(server.ConfigFilePath())
+	if err != nil {
+		// error occured while reading server config
+		// simply abort the reloading policies
+		// process
+		server.Logger().Error(err.Error())
+		return
 	}
+	conf := tmp.(*Config)
+	server.dir.SetPolicies(conf.Policies.EpochDeadline)
+	server.Logger().Info("Policies reloaded!")
 }
