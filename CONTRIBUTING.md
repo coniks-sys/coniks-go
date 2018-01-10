@@ -17,7 +17,7 @@ Pull Request with a fix.
 Run the following commands to install the prerequisites needed to
 complete your pull request submission:
 
-Download dependencies: `dep ensure`  (How to use `dep`: https://github.com/golang/dep).
+* Download dependencies: `dep ensure`  (How to use `dep`: https://github.com/golang/dep).
 
 ### <a name="submit"></a> Submission Guidelines
 Before you submit your pull request consider the following guidelines:
@@ -44,7 +44,7 @@ That's it! Thank you for your contribution!
 
 #### After your pull request is merged
 
-After your pull request is merged, you can safely delete your branch and pull the changes
+You can safely delete your branch and pull the changes
 from the main (upstream) repository.
 
 ## <a name="rules"></a> Coding Rules
