@@ -6,6 +6,8 @@ go:
   - 1.9
   - tip
 
+# TODO: Run `dep ensure` in Travis
+# see: https://github.com/coniks-sys/coniks-go/pull/201
 before_install:
   - go get github.com/mattn/goveralls
   - go get golang.org/x/tools/cmd/cover
