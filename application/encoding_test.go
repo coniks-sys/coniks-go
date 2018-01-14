@@ -62,7 +62,7 @@ func TestUnmarshalMalformedSTRHistoryRange(t *testing.T) {
 }
 
 func TestUnmarshalSampleClientMessage(t *testing.T) {
-	d, _ := directory.NewTestDirectory(t, true)
+	d := directory.NewTestDirectory(t)
 	res := d.Register(&protocol.RegistrationRequest{
 		Username: "alice",
 		Key:      []byte("key")})
@@ -75,7 +75,7 @@ func TestUnmarshalSampleClientMessage(t *testing.T) {
 }
 
 func TestUnmarshalSampleAuditorMessage(t *testing.T) {
-	d, _ := directory.NewTestDirectory(t, true)
+	d := directory.NewTestDirectory(t)
 	res := d.GetSTRHistory(&protocol.STRHistoryRequest{
 		StartEpoch: uint64(0),
 		EndEpoch:   uint64(1)})

@@ -77,8 +77,12 @@ func UnmarshalResponse(t int, msg []byte) *protocol.Response {
 			Error: res.Error,
 		}
 		if err := response.Validate(); err != nil {
-			return &protocol.Response{
-				Error: protocol.ErrMalformedMessage,
+			// we don't want to return an ErrMalformedMessage
+			// if Error is in errors
+			if err == protocol.ErrMalformedMessage {
+				return &protocol.Response{
+					Error: protocol.ErrMalformedMessage,
+				}
 			}
 		}
 		return response
