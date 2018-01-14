@@ -49,7 +49,7 @@ func NewConiksServer(conf *Config) *ConiksServer {
 	}
 
 	// create server instance
-	sb := application.NewServerBase(conf.ServerBaseConfig, "Listen",
+	sb := application.NewServerBase(conf.CommonConfig, "Listen",
 		perms)
 
 	server := &ConiksServer{
@@ -120,15 +120,14 @@ func (server *ConiksServer) Run(addrs []*Address) {
 
 func (server *ConiksServer) updatePolicies() {
 	// read server policies from config file
-	tmp, err := application.LoadConfig(server.ConfigFilePath())
-	if err != nil {
+	conf := &Config{}
+	if err := conf.Load(server.ConfigInfo()); err != nil {
 		// error occured while reading server config
 		// simply abort the reloading policies
 		// process
 		server.Logger().Error(err.Error())
 		return
 	}
-	conf := tmp.(*Config)
 	server.dir.SetPolicies(conf.Policies.EpochDeadline)
 	server.Logger().Info("Policies reloaded!")
 }

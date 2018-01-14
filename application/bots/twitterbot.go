@@ -36,18 +36,12 @@ var _ Bot = (*TwitterBot)(nil)
 // NewTwitterBot constructs a new account verification bot for Twitter
 // accounts that implements the Bot interface.
 //
-// NewTwitterBot loads the TwitterConfig for this bot from the
-// corresponding config file, checks that the CONIKS key server
+// NewTwitterBot checks that the CONIKS key server
 // is live, and authenticates the bot's Twitter client via OAuth.
 // If any of these steps fail, NewTwitterBot returns a (nil, error)
 // tuple. Otherwise, it returns a TwitterBot struct
 // with the appropriate values obtained during the setup.
-func NewTwitterBot(path string) (Bot, error) {
-	var conf *TwitterConfig = &TwitterConfig{}
-	if err := conf.Load(path); err != nil {
-		return nil, err
-	}
-
+func NewTwitterBot(conf *TwitterConfig) (Bot, error) {
 	// Notify if the CONIKS key server is down
 	if _, err := os.Stat(conf.CONIKSAddress); os.IsNotExist(err) {
 		return nil, fmt.Errorf("CONIKS Key Server is down")

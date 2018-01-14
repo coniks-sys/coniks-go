@@ -10,10 +10,13 @@ import (
 // and the bot's reserved Twitter handle. These values are specified
 // in a configuration file, which is read at initialization time.
 type TwitterConfig struct {
+	*application.CommonConfig
 	CONIKSAddress string `toml:"coniks_address"`
 	TwitterOAuth  `toml:"twitter_oauth"`
 	Handle        string `toml:"twitter_bot_handle"`
 }
+
+var _ application.AppConfig = (*TwitterConfig)(nil)
 
 // A TwitterOAuth contains the four secret values needed to authenticate
 // the bot with Twitter. These values are unique to each application
@@ -26,12 +29,13 @@ type TwitterOAuth struct {
 	AccessSecret   string
 }
 
-var _ application.AppConfig = (*TwitterConfig)(nil)
-
 // NewTwitterConfig initializes a new Twitter registration bot configuration
-// with the given server address, Twitter handle, and OAuth credentials.
-func NewTwitterConfig(addr, handle string, oauth TwitterOAuth) *TwitterConfig {
+// at the given file path, with the config encoding, server address, Twitter handle,
+// OAuth credentials.
+func NewTwitterConfig(file, encoding, addr, handle string,
+	oauth TwitterOAuth) *TwitterConfig {
 	var conf = TwitterConfig{
+		CommonConfig:  application.NewCommonConfig(file, encoding, nil),
 		CONIKSAddress: addr,
 		Handle:        handle,
 		TwitterOAuth:  oauth,
@@ -40,13 +44,20 @@ func NewTwitterConfig(addr, handle string, oauth TwitterOAuth) *TwitterConfig {
 	return &conf
 }
 
-// Load initializes a Twitter registration proxy configuration from the
-// corresponding config file.
-func (conf *TwitterConfig) Load(file string) error {
-	tmp, err := application.LoadConfig(file)
-	if err != nil {
-		return err
-	}
-	conf = tmp.(*TwitterConfig)
-	return nil
+// Load initializes a Twitter registration proxy configuration
+// at the given file path using the given encoding.
+func (conf *TwitterConfig) Load(file, encoding string) error {
+	conf.CommonConfig = application.NewCommonConfig(file, encoding, nil)
+	return conf.GetLoader().Decode(conf)
+}
+
+// Save writes a Twitter registration proxy configuration
+// using the given encoding.
+func (conf *TwitterConfig) Save() error {
+	return conf.GetLoader().Encode(conf)
+}
+
+// Path returns the Twitter configuration's file path.
+func (conf *TwitterConfig) GetPath() string {
+	return conf.Path
 }

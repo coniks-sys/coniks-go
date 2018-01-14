@@ -76,7 +76,7 @@ func newTestServer(t *testing.T, epDeadline protocol.Timestamp, useBot bool,
 	}
 
 	conf := &Config{
-		ServerBaseConfig: &application.ServerBaseConfig{
+		CommonConfig: &application.CommonConfig{
 			Logger: &application.LoggerConfig{
 				Environment: "development",
 				Path:        path.Join(dir, "coniksserver.log"),

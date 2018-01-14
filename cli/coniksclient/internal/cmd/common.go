@@ -29,9 +29,8 @@ specify where to look for the config with the --config flag. For example:
 
 func loadConfigOrExit(cmd *cobra.Command) *client.Config {
 	config := cmd.Flag("config").Value.String()
-	var conf *client.Config = &client.Config{}
-	err := conf.Load(config)
-	if err != nil {
+	conf := &client.Config{}
+	if err := conf.Load(config, "toml"); err != nil {
 		fmt.Println(err)
 		fmt.Print(configMissingUsage)
 		os.Exit(-1)

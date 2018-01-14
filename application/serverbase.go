@@ -19,9 +19,19 @@ import (
 // which are read at initialization time from
 // a TOML format configuration file.
 type ServerBaseConfig struct {
-	Logger         *LoggerConfig      `toml:"logger"`
-	ConfigFilePath string             `toml:"config_file_path"`
+	*CommonConfig
 	EpochDeadline  protocol.Timestamp `toml:"epoch_deadline"`
+}
+
+// NewServerBaseConfig initializes a server's config file path,
+// its loader for the given config encoding, the logger configuration,
+// and its epoch deadline.
+func NewServerBaseConfig(file, encoding string, logger *LoggerConfig,
+	epDeadline protocol.Timestamp) *ServerBaseConfig {
+	return &ServerBaseConfig{
+		CommonConfig: NewCommonConfig(file, encoding, logger),
+		EpochDeadline: epDeadline,
+	}
 }
 
 // EpochTimer consists of a `time.Timer` and the epoch deadline value.
@@ -49,6 +59,7 @@ type ServerBase struct {
 	waitCloseConn sync.WaitGroup
 
 	configFilePath string
+	configEncoding string
 	reloadChan     chan os.Signal
 }
 
@@ -83,7 +94,8 @@ func NewServerBase(conf *ServerBaseConfig, listenVerb string,
 	}
 	sb.logger = NewLogger(conf.Logger)
 	sb.stop = make(chan struct{})
-	sb.configFilePath = conf.ConfigFilePath
+	sb.configFilePath = conf.Path
+	sb.configEncoding = conf.Encoding
 	sb.reloadChan = make(chan os.Signal, 1)
 	signal.Notify(sb.reloadChan, syscall.SIGUSR2)
 	return sb
@@ -254,8 +266,8 @@ func (sb *ServerBase) acceptClient(addr *ServerAddress, conn net.Conn,
 }
 
 // RunInBackground creates a new goroutine that calls function `f`.
-// It automatically increments the counter `sync.WaitGroup` of the `ServerBase`
-// and calls `Done` when the function execution is finished.
+// It automatically increments the counter `sync.WaitGroup` of the
+// `ServerBase` and calls `Done` when the function execution is finished.
 func (sb *ServerBase) RunInBackground(f func()) {
 	sb.waitStop.Add(1)
 	go func() {
@@ -264,8 +276,8 @@ func (sb *ServerBase) RunInBackground(f func()) {
 	}()
 }
 
-// EpochUpdate runs function `f` supposed to be a CONIK's epoch update procedure
-// every epoch.
+// EpochUpdate runs function `f` supposed to be a CONIK's epoch update
+// procedure every epoch.
 func (sb *ServerBase) EpochUpdate(f func()) {
 	for {
 		select {
@@ -299,9 +311,9 @@ func (sb *ServerBase) Logger() *Logger {
 	return sb.logger
 }
 
-// ConfigFilePath returns the server base's config file path.
-func (sb *ServerBase) ConfigFilePath() string {
-	return sb.configFilePath
+// ConfigInfo returns the server base's config file path and encoding.
+func (sb *ServerBase) ConfigInfo() (string, string) {
+	return sb.configFilePath, sb.configEncoding
 }
 
 // Shutdown closes all of the server's connections and shuts down the server.
