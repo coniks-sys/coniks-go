@@ -30,7 +30,8 @@ type Address struct {
 // at regular time intervals.
 type ConiksServer struct {
 	*application.ServerBase
-	dir *directory.ConiksDirectory
+	dir        *directory.ConiksDirectory
+	epochTimer *application.EpochTimer
 }
 
 // NewConiksServer creates a new reference implementation of
@@ -49,7 +50,7 @@ func NewConiksServer(conf *Config) *ConiksServer {
 	}
 
 	// create server instance
-	sb := application.NewServerBase(conf.ServerBaseConfig, "Listen",
+	sb := application.NewServerBase(conf.CommonConfig, "Listen",
 		perms)
 
 	server := &ConiksServer{
@@ -60,6 +61,7 @@ func NewConiksServer(conf *Config) *ConiksServer {
 			conf.Policies.signKey,
 			conf.LoadedHistoryLength,
 			true),
+		epochTimer: application.NewEpochTimer(conf.EpochDeadline),
 	}
 
 	return server
@@ -95,7 +97,7 @@ func (server *ConiksServer) HandleRequests(req *protocol.Request) *protocol.Resp
 // permissions.
 func (server *ConiksServer) Run(addrs []*Address) {
 	server.RunInBackground(func() {
-		server.EpochUpdate(server.dir.Update)
+		server.EpochUpdate(server.epochTimer, server.dir.Update)
 	})
 
 	hasRegistrationPerm := false
@@ -120,15 +122,14 @@ func (server *ConiksServer) Run(addrs []*Address) {
 
 func (server *ConiksServer) updatePolicies() {
 	// read server policies from config file
-	tmp, err := application.LoadConfig(server.ConfigFilePath())
-	if err != nil {
+	conf := &Config{}
+	if err := conf.Load(server.ConfigInfo()); err != nil {
 		// error occured while reading server config
 		// simply abort the reloading policies
 		// process
 		server.Logger().Error(err.Error())
 		return
 	}
-	conf := tmp.(*Config)
 	server.dir.SetPolicies(conf.Policies.EpochDeadline)
 	server.Logger().Info("Policies reloaded!")
 }

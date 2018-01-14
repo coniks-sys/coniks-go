@@ -76,17 +76,17 @@ func newTestServer(t *testing.T, epDeadline protocol.Timestamp, useBot bool,
 	}
 
 	conf := &Config{
-		ServerBaseConfig: &application.ServerBaseConfig{
+		CommonConfig: &application.CommonConfig{
 			Logger: &application.LoggerConfig{
 				Environment: "development",
 				Path:        path.Join(dir, "coniksserver.log"),
 			},
-			EpochDeadline: epDeadline,
 		},
 		LoadedHistoryLength: 100,
 		Addresses:           addrs,
 		Policies: NewPolicies(epDeadline, "", "", vrfKey,
 			signKey),
+		EpochDeadline: epDeadline,
 	}
 
 	return NewConiksServer(conf), conf

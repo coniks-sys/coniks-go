@@ -34,9 +34,9 @@ func run(cmd *cobra.Command, args []string) {
 	if pid {
 		writePID()
 	}
+
 	conf := &server.Config{}
-	err := conf.Load(confPath)
-	if err != nil {
+	if err := conf.Load(confPath, "toml"); err != nil {
 		log.Fatal(err)
 	}
 	serv := server.NewConiksServer(conf)
