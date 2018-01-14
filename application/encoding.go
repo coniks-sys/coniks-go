@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 
 	"github.com/coniks-sys/coniks-go/protocol"
+	"github.com/coniks-sys/coniks-go/utils"
 )
 
 // MarshalRequest returns a JSON encoding of the client's request.
@@ -115,4 +116,18 @@ func malformedClientMsg(err error) *protocol.Response {
 		err = protocol.ErrMalformedMessage
 	}
 	return protocol.NewErrorResponse(protocol.ErrMalformedMessage)
+}
+
+// MarshalSTRToFile serializes the given STR to the given path.
+func MarshalSTRToFile(str *protocol.DirSTR, path string) error {
+	strBytes, err := json.Marshal(str)
+	if err != nil {
+		return err
+	}
+
+	if err := utils.WriteFile(path, strBytes, 0600); err != nil {
+		return err
+	}
+
+	return nil
 }

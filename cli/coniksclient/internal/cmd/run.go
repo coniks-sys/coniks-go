@@ -42,7 +42,10 @@ func init() {
 func run(cmd *cobra.Command, args []string) {
 	isDebugging, _ := strconv.ParseBool(cmd.Flag("debug").Value.String())
 	conf := loadConfigOrExit(cmd)
-	cc := client.New(nil, true, conf.SigningPubKey)
+
+	// FIXME: right now we're passing the initSTR, but we should really
+	// be passing the latest pinned STR here
+	cc := client.New(conf.InitSTR, true, conf.SigningPubKey)
 
 	state, err := terminal.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {

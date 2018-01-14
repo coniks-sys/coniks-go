@@ -20,6 +20,8 @@ type Config struct {
 	LoadedHistoryLength uint64 `toml:"loaded_history_length"`
 	// Policies contains the server's CONIKS policies configuration.
 	Policies *Policies `toml:"policies"`
+	// Path to store the initial STR
+	InitSTRPath string `toml:"init_str_path"`
 	// Addresses contains the server's connections configuration.
 	Addresses []*Address `toml:"addresses"`
 }
@@ -30,7 +32,8 @@ var _ application.AppConfig = (*Config)(nil)
 // server addresses, logger configuration, loaded history length and
 // server application policies.
 func NewConfig(addrs []*Address, logConfig *application.LoggerConfig,
-	loadedHistLen uint64, policies *Policies) *Config {
+	loadedHistLen uint64, policies *Policies,
+	initSTRPath string) *Config {
 	var conf = Config{
 		ServerBaseConfig: &application.ServerBaseConfig{
 			Logger: logConfig,
@@ -38,6 +41,7 @@ func NewConfig(addrs []*Address, logConfig *application.LoggerConfig,
 		LoadedHistoryLength: loadedHistLen,
 		Addresses:           addrs,
 		Policies:            policies,
+		InitSTRPath:         initSTRPath,
 	}
 
 	return &conf
