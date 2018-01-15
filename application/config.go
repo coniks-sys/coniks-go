@@ -35,7 +35,7 @@ func LoadSigningPubKey(path, file string) (sign.PublicKey, error) {
 	return signPubKey, nil
 }
 
-// LoadIinitSTR loads an initial STR at the given path
+// LoadInitSTR loads an initial STR at the given path
 // specified in the given config file.
 // If there is any parsing error or the STR is malformed,
 // LoadInitSTR() returns an error with a nil STR.
@@ -53,6 +53,20 @@ func LoadInitSTR(path, file string) (*protocol.DirSTR, error) {
 		return nil, fmt.Errorf("Initial STR epoch must be 0 (got %d)", initSTR.Epoch)
 	}
 	return initSTR, nil
+}
+
+// SaveSTR serializes the given STR to the given file.
+func SaveSTR(file string, str *protocol.DirSTR) error {
+	strBytes, err := json.Marshal(str)
+	if err != nil {
+		return err
+	}
+
+	if err := utils.WriteFile(file, strBytes, 0600); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // LoadConfig loads an application configuration from the given toml-encoded

@@ -72,7 +72,7 @@ func NewConiksServer(conf *Config) *ConiksServer {
 	// save the initial STR to be used for initializing auditors
 	initSTRPath := utils.ResolvePath(conf.InitSTRPath,
 		conf.ConfigFilePath)
-	application.MarshalSTRToFile(server.dir.LatestSTR(), initSTRPath)
+	application.SaveSTR(initSTRPath, server.dir.LatestSTR())
 
 	return server
 }
