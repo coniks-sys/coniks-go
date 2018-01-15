@@ -4,7 +4,6 @@ import (
 	"log"
 	"path"
 
-	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/application/bots"
 	"github.com/coniks-sys/coniks-go/cli"
 	"github.com/spf13/cobra"
@@ -31,7 +30,7 @@ func mkBotConfig(cmd *cobra.Command, args []string) {
 
 	conf := bots.NewTwitterConfig("/tmp/coniks.sock", "ConiksTorMess",
 		oauth)
-	if err := application.SaveConfig(file, conf); err != nil {
+	if err := conf.Save(file); err != nil {
 		log.Print(err)
 	}
 }

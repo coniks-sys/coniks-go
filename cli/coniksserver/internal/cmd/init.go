@@ -67,7 +67,7 @@ func mkConfig(dir string) {
 	}
 
 	conf := server.NewConfig(addrs, logger, 1000000, policies)
-	err := application.SaveConfig(file, conf)
+	err := conf.Save(file)
 
 	if err != nil {
 		log.Println(err)

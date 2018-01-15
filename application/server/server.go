@@ -156,15 +156,14 @@ func (server *ConiksServer) updatePolicies() {
 			return
 		case <-server.ReloadChan():
 			// read server policies from config file
-			tmp, err := application.LoadConfig(server.ConfigFilePath())
-			if err != nil {
+			conf := &Config{}
+			if err := conf.Load(server.ConfigFilePath()); err != nil {
 				// error occured while reading server config
 				// simply abort the reloading policies
 				// process
 				server.Logger().Error(err.Error())
 				return
 			}
-			conf := tmp.(*Config)
 			server.Lock()
 			server.dir.SetPolicies(conf.Policies.EpochDeadline)
 			server.Unlock()

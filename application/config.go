@@ -15,6 +15,43 @@ import (
 // client etc.).
 type AppConfig interface {
 	Load(file string) error
+	Save(file string) error
+}
+
+// ConfigService provides an abstraction of the underlying encoding format
+// for the configs.
+type ConfigService struct {
+	app AppConfig
+}
+
+// NewConfigService initializes the ConfigService for the given app-specific
+// config. This should be called in each method implementation of AppConfig.
+func NewConfigService(conf AppConfig) *ConfigService {
+	return &ConfigService{
+		app: conf,
+	}
+}
+
+// Load reads an application configuration from the given toml-encoded
+// file. If there is any decoding error, Load() returns an error
+// with a nil config.
+func (conf *ConfigService) Load(file string) error {
+	if _, err := toml.DecodeFile(file, conf.app); err != nil {
+		return fmt.Errorf("Failed to load config: %v", err)
+	}
+	return nil
+}
+
+// Save stores the given configuration conf in the given
+// file using toml encoding.
+// If there is any encoding or IO error, Save() returns an error.
+func (conf *ConfigService) Save(file string) error {
+	var confBuf bytes.Buffer
+	e := toml.NewEncoder(&confBuf)
+	if err := e.Encode(conf.app); err != nil {
+		return err
+	}
+	return utils.WriteFile(file, confBuf.Bytes(), 0644)
 }
 
 // LoadSigningPubKey loads a public signing key at the given path
@@ -31,31 +68,4 @@ func LoadSigningPubKey(path, file string) (sign.PublicKey, error) {
 		return nil, fmt.Errorf("Signing public-key must be 32 bytes (got %d)", len(signPubKey))
 	}
 	return signPubKey, nil
-}
-
-// LoadConfig loads an application configuration from the given toml-encoded
-// file. If there is any decoding error, an LoadConfig() returns an error
-// with a nil config.
-func LoadConfig(file string) (AppConfig, error) {
-	var conf AppConfig
-	if _, err := toml.DecodeFile(file, &conf); err != nil {
-		return nil, fmt.Errorf("Failed to load config: %v", err)
-	}
-	return conf, nil
-}
-
-// SaveConfig stores the given configuration conf in the given
-// file using toml encoding.
-// If there is any encoding or IO error, SaveConfig() returns an error.
-func SaveConfig(file string, conf AppConfig) error {
-	var confBuf bytes.Buffer
-
-	e := toml.NewEncoder(&confBuf)
-	if err := e.Encode(conf); err != nil {
-		return err
-	}
-	if err := utils.WriteFile(file, confBuf.Bytes(), 0644); err != nil {
-		return err
-	}
-	return nil
 }

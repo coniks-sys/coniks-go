@@ -14,6 +14,8 @@ import (
 // Note that if RegAddress is empty, the client falls back to using Address
 // for all request types.
 type Config struct {
+	*application.ConfigService
+
 	SignPubkeyPath string `toml:"sign_pubkey_path"`
 
 	SigningPubKey sign.PublicKey
@@ -40,11 +42,10 @@ func NewConfig(signPubkeyPath, regAddr, serverAddr string) *Config {
 // Load initializes a client's configuration from the given file.
 // It reads the signing public-key file and parses the actual key.
 func (conf *Config) Load(file string) error {
-	tmp, err := application.LoadConfig(file)
-	if err != nil {
+	conf.ConfigService = application.NewConfigService(conf)
+	if err := conf.ConfigService.Load(file); err != nil {
 		return err
 	}
-	conf = tmp.(*Config)
 
 	// load signing key
 	signPubKey, err := application.LoadSigningPubKey(conf.SignPubkeyPath, file)
@@ -54,4 +55,10 @@ func (conf *Config) Load(file string) error {
 	conf.SigningPubKey = signPubKey
 
 	return nil
+}
+
+// Save writes a client's configuration to the given config file.
+func (conf *Config) Save(file string) error {
+	conf.ConfigService = application.NewConfigService(conf)
+	return conf.ConfigService.Save(file)
 }

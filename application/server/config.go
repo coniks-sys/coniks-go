@@ -14,6 +14,7 @@ import (
 // which are read at initialization time from
 // a TOML format configuration file.
 type Config struct {
+	*application.ConfigService
 	*application.ServerBaseConfig
 	// LoadedHistoryLength is the maximum number of
 	// snapshots kept in memory.
@@ -48,11 +49,10 @@ func NewConfig(addrs []*Address, logConfig *application.LoggerConfig,
 // pair into the Config instance and updates the path of
 // TLS certificate files of each Address to absolute path.
 func (conf *Config) Load(file string) error {
-	tmp, err := application.LoadConfig(file)
-	if err != nil {
+	conf.ConfigService = application.NewConfigService(conf)
+	if err := conf.ConfigService.Load(file); err != nil {
 		return err
 	}
-	conf = tmp.(*Config)
 
 	// load signing key
 	signPath := utils.ResolvePath(conf.Policies.SignKeyPath, file)
@@ -86,4 +86,10 @@ func (conf *Config) Load(file string) error {
 	conf.Logger.Path = utils.ResolvePath(conf.Logger.Path, file)
 
 	return nil
+}
+
+// Save writes a server's configuration to the given config file.
+func (conf *Config) Save(file string) error {
+	conf.ConfigService = application.NewConfigService(conf)
+	return conf.ConfigService.Save(file)
 }
