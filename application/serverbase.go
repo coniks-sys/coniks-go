@@ -25,14 +25,6 @@ type Server interface {
 	HandleRequests(*protocol.Request) *protocol.Response
 }
 
-// A ServerBaseConfig contains configuration values
-// which are read at initialization time from
-// a TOML format configuration file.
-type ServerBaseConfig struct {
-	Logger         *LoggerConfig `toml:"logger"`
-	ConfigFilePath string
-}
-
 // A ServerBase represents the base features needed to implement
 // a CONIKS key server or auditor.
 // It wraps a ConiksDirectory or AuditLog with a network layer which
@@ -72,7 +64,7 @@ type ServerAddress struct {
 }
 
 // NewServerBase creates a new generic CONIKS-ready server base.
-func NewServerBase(conf *ServerBaseConfig, listenVerb string,
+func NewServerBase(conf *ConfigService, listenVerb string,
 	perms map[*ServerAddress]map[int]bool) *ServerBase {
 	// create server instance
 	sb := new(ServerBase)
@@ -80,7 +72,7 @@ func NewServerBase(conf *ServerBaseConfig, listenVerb string,
 	sb.acceptableReqs = perms
 	sb.logger = NewLogger(conf.Logger)
 	sb.stop = make(chan struct{})
-	sb.configFilePath = conf.ConfigFilePath
+	sb.configFilePath = conf.Path
 	sb.reloadChan = make(chan os.Signal, 1)
 	signal.Notify(sb.reloadChan, syscall.SIGUSR2)
 	return sb

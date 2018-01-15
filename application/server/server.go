@@ -54,7 +54,7 @@ func NewConiksServer(conf *Config) *ConiksServer {
 	}
 
 	// create server instance
-	sb := application.NewServerBase(conf.ServerBaseConfig, "Listen",
+	sb := application.NewServerBase(conf.ConfigService, "Listen",
 		perms)
 
 	server := &ConiksServer{

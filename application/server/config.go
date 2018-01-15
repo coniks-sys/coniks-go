@@ -15,7 +15,6 @@ import (
 // a TOML format configuration file.
 type Config struct {
 	*application.ConfigService
-	*application.ServerBaseConfig
 	// LoadedHistoryLength is the maximum number of
 	// snapshots kept in memory.
 	LoadedHistoryLength uint64 `toml:"loaded_history_length"`
@@ -33,7 +32,7 @@ var _ application.AppConfig = (*Config)(nil)
 func NewConfig(addrs []*Address, logConfig *application.LoggerConfig,
 	loadedHistLen uint64, policies *Policies) *Config {
 	var conf = Config{
-		ServerBaseConfig: &application.ServerBaseConfig{
+		ConfigService: &application.ConfigService{
 			Logger: logConfig,
 		},
 		LoadedHistoryLength: loadedHistLen,
@@ -49,8 +48,8 @@ func NewConfig(addrs []*Address, logConfig *application.LoggerConfig,
 // pair into the Config instance and updates the path of
 // TLS certificate files of each Address to absolute path.
 func (conf *Config) Load(file string) error {
-	conf.ConfigService = application.NewConfigService(conf)
-	if err := conf.ConfigService.Load(file); err != nil {
+	conf.ConfigService = application.NewConfigService(conf, file)
+	if err := conf.ConfigService.Load(); err != nil {
 		return err
 	}
 
@@ -74,7 +73,7 @@ func (conf *Config) Load(file string) error {
 		return fmt.Errorf("VRF key must be 64 bytes (got %d)", len(vrfKey))
 	}
 
-	conf.ConfigFilePath = file
+	conf.Path = file
 	conf.Policies.vrfKey = vrfKey
 	conf.Policies.signKey = signKey
 	// also update path for TLS cert files
@@ -90,6 +89,6 @@ func (conf *Config) Load(file string) error {
 
 // Save writes a server's configuration to the given config file.
 func (conf *Config) Save(file string) error {
-	conf.ConfigService = application.NewConfigService(conf)
-	return conf.ConfigService.Save(file)
+	conf.ConfigService = application.NewConfigService(conf, file)
+	return conf.ConfigService.Save()
 }

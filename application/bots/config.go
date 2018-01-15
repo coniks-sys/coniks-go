@@ -44,13 +44,13 @@ func NewTwitterConfig(addr, handle string, oauth TwitterOAuth) *TwitterConfig {
 // Load initializes a Twitter registration proxy configuration from the
 // corresponding config file.
 func (conf *TwitterConfig) Load(file string) error {
-	conf.ConfigService = application.NewConfigService(conf)
-	return conf.ConfigService.Load(file)
+	conf.ConfigService = application.NewConfigService(conf, file)
+	return conf.ConfigService.Load()
 }
 
 // Save writes a Twitter registration proxy configuration to the
 // given config file.
 func (conf *TwitterConfig) Save(file string) error {
-	conf.ConfigService = application.NewConfigService(conf)
-	return conf.ConfigService.Save(file)
+	conf.ConfigService = application.NewConfigService(conf, file)
+	return conf.ConfigService.Save()
 }

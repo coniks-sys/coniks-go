@@ -42,8 +42,8 @@ func NewConfig(signPubkeyPath, regAddr, serverAddr string) *Config {
 // Load initializes a client's configuration from the given file.
 // It reads the signing public-key file and parses the actual key.
 func (conf *Config) Load(file string) error {
-	conf.ConfigService = application.NewConfigService(conf)
-	if err := conf.ConfigService.Load(file); err != nil {
+	conf.ConfigService = application.NewConfigService(conf, file)
+	if err := conf.ConfigService.Load(); err != nil {
 		return err
 	}
 
@@ -59,6 +59,6 @@ func (conf *Config) Load(file string) error {
 
 // Save writes a client's configuration to the given config file.
 func (conf *Config) Save(file string) error {
-	conf.ConfigService = application.NewConfigService(conf)
-	return conf.ConfigService.Save(file)
+	conf.ConfigService = application.NewConfigService(conf, file)
+	return conf.ConfigService.Save()
 }
