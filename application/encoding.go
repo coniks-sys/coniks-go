@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 
 	"github.com/coniks-sys/coniks-go/protocol"
-	"github.com/coniks-sys/coniks-go/utils"
 )
 
 // MarshalRequest returns a JSON encoding of the client's request.
