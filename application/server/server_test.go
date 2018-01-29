@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"encoding/json"
+	"math/rand"
 	"path"
 	"syscall"
 	"testing"
@@ -80,6 +81,7 @@ func newTestServer(t *testing.T, epDeadline protocol.Timestamp, useBot bool,
 				Environment: "development",
 				Path:        path.Join(dir, "coniksserver.log"),
 			},
+			EpochDeadline: epDeadline,
 		},
 		LoadedHistoryLength: 100,
 		Addresses:           addrs,
@@ -107,10 +109,11 @@ func TestServerStartStop(t *testing.T) {
 }
 
 func TestServerReloadPoliciesWithError(t *testing.T) {
-	server, teardown := startServer(t, 1, true, "")
+	deadline := protocol.Timestamp(rand.Int())
+	server, teardown := startServer(t, deadline, true, "")
 	defer teardown()
 	syscall.Kill(syscall.Getpid(), syscall.SIGUSR2)
-	if server.dir.EpochDeadline() != 1 {
+	if server.dir.EpochDeadline() != deadline {
 		t.Fatal("Expect the server's policies not change")
 	}
 	// just to make sure the server's still running normally

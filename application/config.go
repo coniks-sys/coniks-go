@@ -54,8 +54,5 @@ func SaveConfig(file string, conf AppConfig) error {
 	if err := e.Encode(conf); err != nil {
 		return err
 	}
-	if err := utils.WriteFile(file, confBuf.Bytes(), 0644); err != nil {
-		return err
-	}
-	return nil
+	return utils.WriteFile(file, confBuf.Bytes(), 0644)
 }
