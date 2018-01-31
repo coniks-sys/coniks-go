@@ -7,6 +7,7 @@ import (
 	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/crypto/vrf"
+	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
@@ -22,6 +23,8 @@ type Config struct {
 	Policies *Policies `toml:"policies"`
 	// Addresses contains the server's connections configuration.
 	Addresses []*Address `toml:"addresses"`
+	// The server's epoch interval for updating the directory
+	EpochDeadline protocol.Timestamp `toml:"epoch_deadline"`
 }
 
 var _ application.AppConfig = (*Config)(nil)

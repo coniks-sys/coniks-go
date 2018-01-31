@@ -30,7 +30,8 @@ type Address struct {
 // at regular time intervals.
 type ConiksServer struct {
 	*application.ServerBase
-	dir *directory.ConiksDirectory
+	dir        *directory.ConiksDirectory
+	epochTimer *application.EpochTimer
 }
 
 // NewConiksServer creates a new reference implementation of
@@ -60,6 +61,7 @@ func NewConiksServer(conf *Config) *ConiksServer {
 			conf.Policies.signKey,
 			conf.LoadedHistoryLength,
 			true),
+		epochTimer: application.NewEpochTimer(conf.EpochDeadline),
 	}
 
 	return server
@@ -95,7 +97,7 @@ func (server *ConiksServer) HandleRequests(req *protocol.Request) *protocol.Resp
 // permissions.
 func (server *ConiksServer) Run(addrs []*Address) {
 	server.RunInBackground(func() {
-		server.EpochUpdate(server.dir.Update)
+		server.EpochUpdate(server.epochTimer, server.dir.Update)
 	})
 
 	hasRegistrationPerm := false

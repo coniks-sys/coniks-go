@@ -81,12 +81,12 @@ func newTestServer(t *testing.T, epDeadline protocol.Timestamp, useBot bool,
 				Environment: "development",
 				Path:        path.Join(dir, "coniksserver.log"),
 			},
-			EpochDeadline: epDeadline,
 		},
 		LoadedHistoryLength: 100,
 		Addresses:           addrs,
 		Policies: NewPolicies(epDeadline, "", "", vrfKey,
 			signKey),
+		EpochDeadline: epDeadline,
 	}
 
 	return NewConiksServer(conf), conf

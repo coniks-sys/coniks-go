@@ -15,52 +15,19 @@ import (
 	"github.com/coniks-sys/coniks-go/protocol"
 )
 
-// A ServerBaseConfig contains configuration values
-// which are read at initialization time from
-// a TOML format configuration file.
-type ServerBaseConfig struct {
-	*CommonConfig
-	EpochDeadline  protocol.Timestamp `toml:"epoch_deadline"`
-}
-
-// NewServerBaseConfig initializes a server's config file path,
-// its loader for the given config encoding, the logger configuration,
-// and its epoch deadline.
-func NewServerBaseConfig(file, encoding string, logger *LoggerConfig,
-	epDeadline protocol.Timestamp) *ServerBaseConfig {
-	return &ServerBaseConfig{
-		CommonConfig: NewCommonConfig(file, encoding, logger),
-		EpochDeadline: epDeadline,
-	}
-}
-
 // EpochTimer consists of a `time.Timer` and the epoch deadline value.
 type EpochTimer struct {
 	*time.Timer
 	duration time.Duration
 }
 
-// A ServerBase represents the base features needed to implement
-// a CONIKS key server or auditor.
-// It wraps a ConiksDirectory or AuditLog with a network layer which
-// handles requests/responses and their encoding/decoding.
-// A ServerBase also supports concurrent handling of requests.
-type ServerBase struct {
-	Verb           string
-	acceptableReqs map[*ServerAddress]map[int]bool
-
-	epochTimer *EpochTimer
-
-	logger *Logger
-	sync.RWMutex
-
-	stop          chan struct{}
-	waitStop      sync.WaitGroup
-	waitCloseConn sync.WaitGroup
-
-	configFilePath string
-	configEncoding string
-	reloadChan     chan os.Signal
+// NewEpochTimer initializes an epoch timer for running regular
+// update procedures every epoch.
+func NewEpochTimer(epDeadline protocol.Timestamp) *EpochTimer {
+	return &EpochTimer{
+		Timer:    time.NewTimer(time.Duration(epDeadline) * time.Second),
+		duration: time.Duration(epDeadline) * time.Second,
+	}
 }
 
 // A ServerAddress describes a server's connection.
@@ -81,17 +48,34 @@ type ServerAddress struct {
 	TLSKeyPath string `toml:"key,omitempty"`
 }
 
+// A ServerBase represents the base features needed to implement
+// a CONIKS key server or auditor.
+// It wraps a ConiksDirectory or AuditLog with a network layer which
+// handles requests/responses and their encoding/decoding.
+// A ServerBase also supports concurrent handling of requests.
+type ServerBase struct {
+	Verb           string
+	acceptableReqs map[*ServerAddress]map[int]bool
+
+	logger *Logger
+	sync.RWMutex
+
+	stop          chan struct{}
+	waitStop      sync.WaitGroup
+	waitCloseConn sync.WaitGroup
+
+	configFilePath string
+	configEncoding string
+	reloadChan     chan os.Signal
+}
+
 // NewServerBase creates a new generic CONIKS-ready server base.
-func NewServerBase(conf *ServerBaseConfig, listenVerb string,
+func NewServerBase(conf *CommonConfig, listenVerb string,
 	perms map[*ServerAddress]map[int]bool) *ServerBase {
 	// create server instance
 	sb := new(ServerBase)
 	sb.Verb = listenVerb
 	sb.acceptableReqs = perms
-	sb.epochTimer = &EpochTimer{
-		Timer:    time.NewTimer(time.Duration(conf.EpochDeadline) * time.Second),
-		duration: time.Duration(conf.EpochDeadline) * time.Second,
-	}
 	sb.logger = NewLogger(conf.Logger)
 	sb.stop = make(chan struct{})
 	sb.configFilePath = conf.Path
@@ -276,17 +260,17 @@ func (sb *ServerBase) RunInBackground(f func()) {
 	}()
 }
 
-// EpochUpdate runs function `f` supposed to be a CONIK's epoch update
-// procedure every epoch.
-func (sb *ServerBase) EpochUpdate(f func()) {
+// EpochUpdate runs function `f`, which is supposed to be a CONIK's update
+// procedure every epoch, following the given timer.
+func (sb *ServerBase) EpochUpdate(timer *EpochTimer, f func()) {
 	for {
 		select {
 		case <-sb.stop:
 			return
-		case <-sb.epochTimer.C:
+		case <-timer.C:
 			sb.Lock()
 			f()
-			sb.epochTimer.Reset(sb.epochTimer.duration)
+			timer.Reset(timer.duration)
 			sb.Unlock()
 		}
 	}
