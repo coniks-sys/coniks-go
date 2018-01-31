@@ -10,28 +10,26 @@ import (
 )
 
 func TestUnmarshalErrorResponse(t *testing.T) {
-	errResponse := protocol.NewErrorResponse(protocol.ErrMalformedMessage)
-	msg, err := json.Marshal(errResponse)
-	if err != nil {
-		t.Fatal(err)
-	}
-	res := UnmarshalResponse(protocol.RegistrationType, msg)
-	if res.Error != protocol.ErrMalformedMessage {
-		t.Error("Expect error", protocol.ErrMalformedMessage,
-			"got", res.Error)
-	}
-}
-
-func TestUnmarshalMalformedErrorResponse(t *testing.T) {
-	errResponse := protocol.NewErrorResponse(protocol.ReqNameNotFound)
-	msg, err := json.Marshal(errResponse)
-	if err != nil {
-		t.Fatal(err)
-	}
-	res := UnmarshalResponse(protocol.RegistrationType, msg)
-	if res.Error != protocol.ErrMalformedMessage {
-		t.Error("Expect error", protocol.ErrMalformedMessage,
-			"got", res.Error)
+	for _, tc := range []struct {
+		name string
+		err  protocol.ErrorCode
+		want protocol.ErrorCode
+	}{
+		{protocol.ErrDirectory.Error(), protocol.ErrDirectory, protocol.ErrDirectory},
+		{protocol.ErrAuditLog.Error(), protocol.ErrAuditLog, protocol.ErrAuditLog},
+		{protocol.ErrMalformedMessage.Error(), protocol.ErrMalformedMessage, protocol.ErrMalformedMessage},
+		{"Malformed Error Response", protocol.ReqNameNotFound, protocol.ErrMalformedMessage},
+	} {
+		errResponse := protocol.NewErrorResponse(tc.err)
+		msg, err := json.Marshal(errResponse)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res := UnmarshalResponse(protocol.RegistrationType, msg)
+		if got, want := res.Error, tc.want; got != want {
+			t.Error("Expect error", want,
+				"got", got)
+		}
 	}
 }
 
