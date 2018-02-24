@@ -65,10 +65,9 @@ func mkConfig(dir string) {
 		SignKeyPath:   "sign.priv",
 	}
 
-	conf := server.NewConfig(addrs, logger, 1000000, policies)
-	err := application.SaveConfig(file, conf)
+	conf := server.NewConfig(file, "toml", addrs, logger, 1000000, policies)
 
-	if err != nil {
+	if err := conf.Save(); err != nil {
 		log.Println(err)
 	}
 }
