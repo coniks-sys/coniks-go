@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 
@@ -24,7 +25,14 @@ func init() {
 
 func run(cmd *cobra.Command, args []string) {
 	confPath := cmd.Flag("config").Value.String()
-	bot, err := bots.NewTwitterBot(confPath)
+	conf := &bots.TwitterConfig{}
+	if err := conf.Load(confPath, "toml"); err != nil {
+		fmt.Println(err)
+		fmt.Print("Couldn't load the bot's config-file.")
+		os.Exit(-1)
+	}
+
+	bot, err := bots.NewTwitterBot(conf)
 	if err != nil {
 		panic(err)
 	}

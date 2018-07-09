@@ -40,7 +40,7 @@ system and may be imported individually.
 You need to have [Golang](https://golang.org/doc/install) version 1.8 or higher installed.
 If Golang is set up correctly, you can simply run:
 ```
-go get github.com/coniks-sys/coniks-go
+go get github.com/coniks-sys/coniks-go/...
 ```
 
 For usage instructions, see the documentation in their respective packages: [CONIKS-server](cli/coniksserver), a

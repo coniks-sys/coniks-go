@@ -6,17 +6,47 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/BurntSushi/toml"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
 	"github.com/coniks-sys/coniks-go/protocol"
 	"github.com/coniks-sys/coniks-go/utils"
 )
 
-// AppConfig is the generic type used to specify the configuration of
-// any kind of CONIKS application-level executable (e.g. key server,
-// client etc.).
+// AppConfig provides an abstraction of the
+// underlying encoding format for the configs.
 type AppConfig interface {
-	Load(file string) error
+	Load(file, encoding string) error
+	Save() error
+	GetPath() string
+}
+
+// CommonConfig is the generic type used to specify the configuration of
+// any kind of CONIKS application-level executable (e.g. key server,
+// client etc.). It contains some common configuration
+// values including the file path, logger configuration, and config
+// loader.
+type CommonConfig struct {
+	Path     string
+	Logger   *LoggerConfig `toml:"logger"`
+	Encoding string
+	loader   ConfigLoader
+}
+
+// NewCommonConfig initializes an application's config file path,
+// its loader for the given encoding, and the logger configuration.
+// Note: This constructor must be called in each Load() method
+// implementation of an AppConfig.
+func NewCommonConfig(file, encoding string, logger *LoggerConfig) *CommonConfig {
+	return &CommonConfig{
+		Path:     file,
+		Logger:   logger,
+		Encoding: encoding,
+		loader:   newConfigLoader(encoding),
+	}
+}
+
+// GetLoader returns the config's loader.
+func (conf *CommonConfig) GetLoader() ConfigLoader {
+	return conf.loader
 }
 
 // LoadSigningPubKey loads a public signing key at the given path
