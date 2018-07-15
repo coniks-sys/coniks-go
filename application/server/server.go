@@ -66,8 +66,10 @@ func NewConiksServer(conf *Config) *ConiksServer {
 	}
 
 	// save the initial STR to be used for initializing auditors
-	initSTRPath := utils.ResolvePath(conf.InitSTRPath,
-		conf.ConfigFilePath)
+	// FIXME: this saving should happen in protocol/ (i.e., when the
+	// server starts and updates), because eventually we'll need
+	// persistent storage.
+	initSTRPath := utils.ResolvePath(conf.InitSTRPath, conf.Path)
 	application.SaveSTR(initSTRPath, server.dir.LatestSTR())
 
 	return server
