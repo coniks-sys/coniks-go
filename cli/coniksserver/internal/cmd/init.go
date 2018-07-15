@@ -68,7 +68,6 @@ func mkConfig(dir string) {
 
 	conf := server.NewConfig(file, "toml", addrs, logger, 1000000, policies,
 		"init.str")
-	err := application.SaveConfig(file, conf)
 
 	if err := conf.Save(); err != nil {
 		log.Println(err)
