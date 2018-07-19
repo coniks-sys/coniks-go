@@ -53,7 +53,6 @@ func mkConfig(dir string) {
 			},
 		},
 	}
-
 	logger := &application.LoggerConfig{
 		EnableStacktrace: true,
 		Environment:      "development",

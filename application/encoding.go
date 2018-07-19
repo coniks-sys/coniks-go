@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 
 	"github.com/coniks-sys/coniks-go/protocol"
+	"github.com/coniks-sys/coniks-go/utils"
 )
 
 // MarshalRequest returns a JSON encoding of the client's request.
@@ -39,6 +40,8 @@ func UnmarshalRequest(msg []byte) (*protocol.Request, error) {
 		request = new(protocol.KeyLookupInEpochRequest)
 	case protocol.MonitoringType:
 		request = new(protocol.MonitoringRequest)
+	case protocol.STRType:
+		request = new(protocol.STRHistoryRequest)
 	}
 	if err := json.Unmarshal(content, &request); err != nil {
 		return nil, err
@@ -91,7 +94,7 @@ func UnmarshalResponse(t int, msg []byte) *protocol.Response {
 			Error:             res.Error,
 			DirectoryResponse: response,
 		}
-	case protocol.STRType:
+	case protocol.AuditType, protocol.STRType:
 		response := new(protocol.STRHistoryRange)
 		if err := json.Unmarshal(res.DirectoryResponse, &response); err != nil {
 			return &protocol.Response{
@@ -113,4 +116,31 @@ func malformedClientMsg(err error) *protocol.Response {
 		err = protocol.ErrMalformedMessage
 	}
 	return protocol.NewErrorResponse(protocol.ErrMalformedMessage)
+}
+
+// CreateSTRRequestMsg returns a JSON encoding of
+// a protocol.STRHistoryRequest for the given (start, end) epoch
+// range.
+func CreateSTRRequestMsg(start, end uint64) ([]byte, error) {
+	return json.Marshal(&protocol.Request{
+		Type: protocol.STRType,
+		Request: &protocol.STRHistoryRequest{
+			StartEpoch: start,
+			EndEpoch:   end,
+		},
+	})
+}
+
+// MarshalSTRToFile serializes the given STR to the given path.
+func MarshalSTRToFile(str *protocol.DirSTR, path string) error {
+	strBytes, err := json.Marshal(str)
+	if err != nil {
+		return err
+	}
+
+	if err := utils.WriteFile(path, strBytes, 0600); err != nil {
+		return err
+	}
+
+	return nil
 }
