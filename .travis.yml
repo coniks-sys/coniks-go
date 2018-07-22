@@ -4,7 +4,7 @@ language: go
 go:
   - "1.9"
   - "1.10"
-  - tip
+# Temporarily stop testing for Go tip due to unknown go fmt error - tip
 
 # TODO: Run `dep ensure` in Travis
 # see: https://github.com/coniks-sys/coniks-go/pull/201

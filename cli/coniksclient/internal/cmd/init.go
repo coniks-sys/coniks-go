@@ -21,8 +21,8 @@ func init() {
 func mkConfigOrExit(cmd *cobra.Command, args []string) {
 	dir := cmd.Flag("dir").Value.String()
 	file := path.Join(dir, "config.toml")
-
 	conf := client.NewConfig(file, "toml", "../coniksserver/sign.pub",
+		"../../keyserver/coniksserver/init.str",
 		"tcp://127.0.0.1:3000", "tcp://127.0.0.1:3000")
 
 	if err := conf.Save(); err != nil {

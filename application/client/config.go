@@ -3,6 +3,7 @@ package client
 import (
 	"github.com/coniks-sys/coniks-go/application"
 	"github.com/coniks-sys/coniks-go/crypto/sign"
+	"github.com/coniks-sys/coniks-go/protocol"
 )
 
 // Config contains the client's configuration needed to send a request to a
@@ -17,8 +18,10 @@ type Config struct {
 	*application.CommonConfig
 
 	SignPubkeyPath string `toml:"sign_pubkey_path"`
+	SigningPubKey  sign.PublicKey
 
-	SigningPubKey sign.PublicKey
+	InitSTRPath string `toml:"init_str_path"`
+	InitSTR     *protocol.DirSTR
 
 	RegAddress string `toml:"registration_address,omitempty"`
 	Address    string `toml:"address"`
@@ -30,11 +33,12 @@ var _ application.AppConfig = (*Config)(nil)
 // given file path, with the given config encoding,
 // server signing public key path, registration address, and
 // server address.
-func NewConfig(file, encoding string, signPubkeyPath, regAddr,
+func NewConfig(file, encoding, signPubkeyPath, initSTRPath, regAddr,
 	serverAddr string) *Config {
 	var conf = Config{
 		CommonConfig:   application.NewCommonConfig(file, encoding, nil),
 		SignPubkeyPath: signPubkeyPath,
+		InitSTRPath:    initSTRPath,
 		RegAddress:     regAddr,
 		Address:        serverAddr,
 	}
@@ -57,6 +61,13 @@ func (conf *Config) Load(file, encoding string) error {
 		return err
 	}
 	conf.SigningPubKey = signPubKey
+
+	// load initial STR
+	initSTR, err := application.LoadInitSTR(conf.InitSTRPath, file)
+	if err != nil {
+		return err
+	}
+	conf.InitSTR = initSTR
 
 	return nil
 }
