@@ -93,7 +93,7 @@ func SaveSTR(file string, str *protocol.DirSTR) error {
 		return err
 	}
 
-	if err := utils.WriteFile(file, strBytes, 0600); err != nil {
+	if err := ioutil.WriteFile(file, strBytes, 0600); err != nil {
 		return err
 	}
 
