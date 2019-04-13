@@ -112,6 +112,7 @@ func (server *ConiksServer) Run(addrs []*Address) {
 	for i := 0; i < len(addrs); i++ {
 		addr := addrs[i]
 		hasRegistrationPerm = hasRegistrationPerm || addr.AllowRegistration
+		server.Verb = "Listening"
 		if addr.AllowRegistration {
 			server.Verb = "Accepting registrations"
 		}

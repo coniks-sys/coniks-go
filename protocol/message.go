@@ -136,13 +136,13 @@ type Response struct {
 type DirectoryResponse interface{}
 
 // A DirectoryProof response includes a list of authentication paths
-// AP for a given username-to-key binding in the directory and a list of
-// signed tree roots STR for a range of epochs, and optionally
+// AP for a given username-to-key binding in the directory and optionally
 // a temporary binding for the given binding for a single epoch.
+// The authentication paths will be verified using the latest verified STR
+// of the Auditor (see auditor.Auditor.VerifiedSTR()).
 type DirectoryProof struct {
-	AP  []*merkletree.AuthenticationPath
-	STR []*DirSTR
-	TB  *TemporaryBinding `json:",omitempty"`
+	AP []*merkletree.AuthenticationPath
+	TB *TemporaryBinding `json:",omitempty"`
 }
 
 // An STRHistoryRange response includes a list of signed tree roots
@@ -175,14 +175,13 @@ var _ DirectoryResponse = (*STRHistoryRange)(nil)
 //
 // See directory.Register() for details on the contents of the created
 // DirectoryProof.
-func NewRegistrationProof(ap *merkletree.AuthenticationPath, str *DirSTR,
+func NewRegistrationProof(ap *merkletree.AuthenticationPath,
 	tb *TemporaryBinding, e ErrorCode) *Response {
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProof{
-			AP:  append([]*merkletree.AuthenticationPath{}, ap),
-			STR: append([]*DirSTR{}, str),
-			TB:  tb,
+			AP: append([]*merkletree.AuthenticationPath{}, ap),
+			TB: tb,
 		},
 	}
 }
@@ -197,14 +196,13 @@ func NewRegistrationProof(ap *merkletree.AuthenticationPath, str *DirSTR,
 //
 // See directory.KeyLookup() for details on the contents of the created
 // DirectoryProof.
-func NewKeyLookupProof(ap *merkletree.AuthenticationPath, str *DirSTR,
+func NewKeyLookupProof(ap *merkletree.AuthenticationPath,
 	tb *TemporaryBinding, e ErrorCode) *Response {
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProof{
-			AP:  append([]*merkletree.AuthenticationPath{}, ap),
-			STR: append([]*DirSTR{}, str),
-			TB:  tb,
+			AP: append([]*merkletree.AuthenticationPath{}, ap),
+			TB: tb,
 		},
 	}
 }
@@ -213,19 +211,17 @@ func NewKeyLookupProof(ap *merkletree.AuthenticationPath, str *DirSTR,
 // sends to a client upon a KeyLookupRequest,
 // and returns a Response containing a DirectoryProofs struct.
 // directory.KeyLookupInEpoch() passes an authentication path ap and error
-// code e according to the result of the lookup, and a list of signed
-// tree roots for the requested range of epochs str.
+// code e according to the result of the lookup.
 //
 // See directory.KeyLookupInEpoch() for details on the contents of the
 // created DirectoryProofs.
 func NewKeyLookupInEpochProof(ap *merkletree.AuthenticationPath,
-	str []*DirSTR, e ErrorCode) *Response {
+	e ErrorCode) *Response {
 	aps := append([]*merkletree.AuthenticationPath{}, ap)
 	return &Response{
 		Error: e,
 		DirectoryResponse: &DirectoryProof{
-			AP:  aps,
-			STR: str,
+			AP: aps,
 		},
 	}
 }
@@ -233,18 +229,15 @@ func NewKeyLookupInEpochProof(ap *merkletree.AuthenticationPath,
 // NewMonitoringProof creates the response message a CONIKS directory
 // sends to a client upon a MonitoringRequest,
 // and returns a Response containing a DirectoryProofs struct.
-// directory.Monitor() passes a list of authentication paths ap and a
-// list of signed tree roots for the requested range of epochs str.
+// directory.Monitor() passes a list of authentication paths ap.
 //
 // See directory.Monitor() for details on the contents of the created
 // DirectoryProofs.
-func NewMonitoringProof(ap []*merkletree.AuthenticationPath,
-	str []*DirSTR) *Response {
+func NewMonitoringProof(ap []*merkletree.AuthenticationPath) *Response {
 	return &Response{
 		Error: ReqSuccess,
 		DirectoryResponse: &DirectoryProof{
-			AP:  ap,
-			STR: str,
+			AP: ap,
 		},
 	}
 }
@@ -278,7 +271,7 @@ func (msg *Response) Validate() error {
 	}
 	switch df := msg.DirectoryResponse.(type) {
 	case *DirectoryProof:
-		if len(df.STR) == 0 || len(df.AP) == 0 {
+		if len(df.AP) == 0 {
 			return ErrMalformedMessage
 		}
 		return nil

@@ -29,7 +29,6 @@ type ConsistencyChecks struct {
 	// the auditor state stores the latest verified signed tree root
 	// as well as the server's signing key
 	*auditor.AudState
-	Bindings map[string][]byte
 
 	// extensions settings
 	useTBs bool
@@ -47,7 +46,6 @@ func New(savedSTR *protocol.DirSTR, useTBs bool, signKey sign.PublicKey) *Consis
 	a := auditor.New(signKey, savedSTR)
 	cc := &ConsistencyChecks{
 		AudState: a,
-		Bindings: make(map[string][]byte),
 		useTBs:   useTBs,
 		TBs:      nil,
 	}
@@ -86,90 +84,63 @@ func (cc *ConsistencyChecks) CheckEquivocation(msg *protocol.Response) error {
 	return cc.CheckSTRAgainstVerified(strs.STR[len(strs.STR)-1])
 }
 
-// HandleResponse verifies the directory's response for a request.
-// It first verifies the directory's returned status code of the request.
-// If the status code is not in the Errors array, it means
-// the directory has successfully handled the request.
-// The verifier will then check the consistency (i.e. binding validity
-// and non-equivocation) of the response.
-//
-// HandleResponse() will panic if it is called with an int
-// that isn't a valid/known request type.
-//
-// Note that the consistency state will be updated regardless of
+// UpdateSTR verifies the received `protocol.STRHistoryRange`
+// and update the consistency state regardless of
 // whether the checks pass / fail, since a response message contains
 // cryptographic proof of having been issued nonetheless.
-func (cc *ConsistencyChecks) HandleResponse(requestType int, msg *protocol.Response,
-	uname string, key []byte) error {
+func (cc *ConsistencyChecks) UpdateSTR(msg *protocol.Response) error {
 	if err := msg.Validate(); err != nil {
 		return err
 	}
-	switch requestType {
-	case protocol.RegistrationType, protocol.KeyLookupType, protocol.KeyLookupInEpochType, protocol.MonitoringType:
-		if _, ok := msg.DirectoryResponse.(*protocol.DirectoryProof); !ok {
-			return protocol.ErrMalformedMessage
-		}
-	default:
-		panic("[coniks] Unknown request type")
-	}
-	if err := cc.updateSTR(requestType, msg); err != nil {
-		return err
-	}
-	if err := cc.checkConsistency(requestType, msg, uname, key); err != nil {
-		return err
-	}
-	if err := cc.updateTBs(requestType, msg, uname, key); err != nil {
-		return err
-	}
-	recvKey, _ := msg.GetKey()
-	cc.Bindings[uname] = recvKey
-	return nil
-}
 
-func (cc *ConsistencyChecks) updateSTR(requestType int, msg *protocol.Response) error {
-	var str *protocol.DirSTR
-	switch requestType {
-	case protocol.RegistrationType, protocol.KeyLookupType:
-		str = msg.DirectoryResponse.(*protocol.DirectoryProof).STR[0]
-		// The initial STR is pinned in the client
-		// so cc.verifiedSTR should never be nil
-		// FIXME: use STR slice from Response msg
-		if err := cc.AuditDirectory([]*protocol.DirSTR{str}); err != nil {
-			return err
-		}
-
-	default:
-		panic("[coniks] Unknown request type")
+	var strs []*protocol.DirSTR
+	if history, ok := msg.DirectoryResponse.(*protocol.STRHistoryRange); !ok {
+		return protocol.ErrMalformedMessage
+	} else {
+		strs = history.STR
 	}
 
+	err := cc.AuditDirectory(strs)
 	// And update the saved STR
-	cc.Update(str)
-
-	return nil
-}
-
-func (cc *ConsistencyChecks) checkConsistency(requestType int, msg *protocol.Response,
-	uname string, key []byte) error {
-	var err error
-	switch requestType {
-	case protocol.RegistrationType:
-		err = cc.verifyRegistration(msg, uname, key)
-	case protocol.KeyLookupType:
-		err = cc.verifyKeyLookup(msg, uname, key)
-	default:
-		panic("[coniks] Unknown request type")
-	}
+	cc.Update(strs[len(strs)-1])
 	return err
 }
 
-func (cc *ConsistencyChecks) verifyRegistration(msg *protocol.Response,
-	uname string, key []byte) error {
-	df := msg.DirectoryResponse.(*protocol.DirectoryProof)
-	// FIXME: should explicitly validate that
-	// len(df.AP) == len(df.STR) == 1
-	ap := df.AP[0]
-	str := df.STR[0]
+// VerifyConsistency verifies the consistency of the given
+// user's profile and updates the profile data if all checks are passed.
+func (cc *ConsistencyChecks) VerifyConsistency(profile *Profile,
+	requestType int, msg *protocol.Response) error {
+	if err := msg.Validate(); err != nil {
+		return err
+	}
+	if _, ok := msg.DirectoryResponse.(*protocol.DirectoryProof); !ok {
+		return protocol.ErrMalformedMessage
+	}
 
+	switch requestType {
+	case protocol.RegistrationType:
+		if err := cc.verifyRegistration(profile, msg); err != nil {
+			return err
+		}
+	case protocol.KeyLookupInEpochType:
+		if err := cc.verifyKeyLookup(profile, msg); err != nil {
+			return err
+		}
+	default:
+		panic("[coniks] Unknown request type")
+	}
+
+	return cc.updateTBs(profile, requestType, msg)
+}
+
+func (cc *ConsistencyChecks) verifyRegistration(profile *Profile,
+	msg *protocol.Response) error {
+	df := msg.DirectoryResponse.(*protocol.DirectoryProof)
+	if len(df.AP) != 1 {
+		return protocol.ErrMalformedMessage
+	}
+
+	ap := df.AP[0]
 	proofType := ap.ProofType()
 	switch {
 	case msg.Error == protocol.ReqNameExisted && proofType == merkletree.ProofOfInclusion:
@@ -179,17 +150,17 @@ func (cc *ConsistencyChecks) verifyRegistration(msg *protocol.Response,
 		return protocol.ErrMalformedMessage
 	}
 
-	return verifyAuthPath(uname, key, ap, str)
+	return cc.verifyAuthPath(profile, ap)
 }
 
-func (cc *ConsistencyChecks) verifyKeyLookup(msg *protocol.Response,
-	uname string, key []byte) error {
+func (cc *ConsistencyChecks) verifyKeyLookup(profile *Profile,
+	msg *protocol.Response) error {
 	df := msg.DirectoryResponse.(*protocol.DirectoryProof)
-	// FIXME: should explicitly validate that
-	// len(df.AP) == len(df.STR) == 1
-	ap := df.AP[0]
-	str := df.STR[0]
+	if len(df.AP) != 1 {
+		return protocol.ErrMalformedMessage
+	}
 
+	ap := df.AP[0]
 	proofType := ap.ProofType()
 	switch {
 	case msg.Error == protocol.ReqNameNotFound && proofType == merkletree.ProofOfAbsence:
@@ -200,23 +171,25 @@ func (cc *ConsistencyChecks) verifyKeyLookup(msg *protocol.Response,
 		return protocol.ErrMalformedMessage
 	}
 
-	return verifyAuthPath(uname, key, ap, str)
+	return cc.verifyAuthPath(profile, ap)
 }
 
-func verifyAuthPath(uname string, key []byte, ap *merkletree.AuthenticationPath, str *protocol.DirSTR) error {
+func (cc *ConsistencyChecks) verifyAuthPath(profile *Profile,
+	ap *merkletree.AuthenticationPath) error {
+	str := cc.VerifiedSTR()
 	// verify VRF Index
 	vrfKey := str.Policies.VrfPublicKey
-	if !vrfKey.Verify([]byte(uname), ap.LookupIndex, ap.VrfProof) {
+	if !vrfKey.Verify([]byte(profile.UserID), ap.LookupIndex, ap.VrfProof) {
 		return protocol.CheckBadVRFProof
 	}
 
-	if key == nil {
+	if profile.ProfileData == nil {
 		// key is nil when the user does lookup for the first time.
 		// Accept the received key as TOFU
-		key = ap.Leaf.Value
+		profile.ProfileData = ap.Leaf.Value
 	}
 
-	switch err := ap.Verify([]byte(uname), key, str.TreeHash); err {
+	switch err := ap.Verify([]byte(profile.UserID), profile.ProfileData, str.TreeHash); err {
 	case merkletree.ErrBindingsDiffer:
 		return protocol.CheckBindingsDiffer
 	case merkletree.ErrUnverifiableCommitment:
@@ -232,53 +205,51 @@ func verifyAuthPath(uname string, key []byte, ap *merkletree.AuthenticationPath,
 	}
 }
 
-func (cc *ConsistencyChecks) updateTBs(requestType int, msg *protocol.Response,
-	uname string, key []byte) error {
+func (cc *ConsistencyChecks) updateTBs(profile *Profile,
+	requestType int, msg *protocol.Response) error {
 	if !cc.useTBs {
 		return nil
 	}
+
+	df := msg.DirectoryResponse.(*protocol.DirectoryProof)
+	ap := df.AP[0]
 	switch requestType {
 	case protocol.RegistrationType:
-		df := msg.DirectoryResponse.(*protocol.DirectoryProof)
-		if df.AP[0].ProofType() == merkletree.ProofOfAbsence {
-			if err := cc.verifyReturnedPromise(df, key); err != nil {
+		if ap.ProofType() == merkletree.ProofOfAbsence {
+			if err := cc.verifyReturnedPromise(profile, df); err != nil {
 				return err
 			}
-			cc.TBs[uname] = df.TB
 		}
-		return nil
-
-	case protocol.KeyLookupType:
-		df := msg.DirectoryResponse.(*protocol.DirectoryProof)
-		ap := df.AP[0]
-		str := df.STR[0]
-		proofType := ap.ProofType()
+	case protocol.KeyLookupInEpochType:
 		switch {
-		case msg.Error == protocol.ReqSuccess && proofType == merkletree.ProofOfInclusion:
-			if err := cc.verifyFulfilledPromise(uname, str, ap); err != nil {
+		case msg.Error == protocol.ReqSuccess &&
+			ap.ProofType() == merkletree.ProofOfInclusion:
+			if err := cc.verifyFulfilledPromise(profile, df); err != nil {
 				return err
 			}
-			delete(cc.TBs, uname)
+			delete(cc.TBs, profile.UserID)
+			return nil
 
-		case msg.Error == protocol.ReqSuccess && proofType == merkletree.ProofOfAbsence:
-			if err := cc.verifyReturnedPromise(df, key); err != nil {
+		case msg.Error == protocol.ReqSuccess &&
+			ap.ProofType() == merkletree.ProofOfAbsence:
+			if err := cc.verifyReturnedPromise(profile, df); err != nil {
 				return err
 			}
-			cc.TBs[uname] = df.TB
 		}
-
-	default:
-		panic("[coniks] Unknown request type")
 	}
+
+	cc.TBs[profile.UserID] = df.TB
+	profile.ProfileData = ap.Leaf.Value
 	return nil
 }
 
 // verifyFulfilledPromise verifies issued TBs were inserted
 // in the directory as promised.
-func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string, str *protocol.DirSTR,
-	ap *merkletree.AuthenticationPath) error {
+func (cc *ConsistencyChecks) verifyFulfilledPromise(profile *Profile,
+	df *protocol.DirectoryProof) error {
+	ap := df.AP[0]
 	// FIXME: Which epoch did this lookup happen in?
-	if tb, ok := cc.TBs[uname]; ok {
+	if tb, ok := cc.TBs[profile.UserID]; ok {
 		if !bytes.Equal(ap.LookupIndex, tb.Index) ||
 			!bytes.Equal(ap.Leaf.Value, tb.Value) {
 			return protocol.CheckBrokenPromise
@@ -297,11 +268,11 @@ func (cc *ConsistencyChecks) verifyFulfilledPromise(uname string, str *protocol.
 // 	If the request is a key lookup, and
 // 	- the request is successful, then the directory should return a promise for the lookup binding.
 // These above checks should be performed before calling this method.
-func (cc *ConsistencyChecks) verifyReturnedPromise(df *protocol.DirectoryProof,
-	key []byte) error {
+func (cc *ConsistencyChecks) verifyReturnedPromise(profile *Profile,
+	df *protocol.DirectoryProof) error {
 	ap := df.AP[0]
-	str := df.STR[0]
 	tb := df.TB
+	str := cc.VerifiedSTR()
 
 	if tb == nil {
 		return protocol.CheckBadPromise
@@ -318,7 +289,8 @@ func (cc *ConsistencyChecks) verifyReturnedPromise(df *protocol.DirectoryProof,
 
 	// key could be nil if we have no information about
 	// the existed binding (TOFU).
-	if key != nil && !bytes.Equal(tb.Value, key) {
+	if profile.ProfileData != nil &&
+		!bytes.Equal(tb.Value, profile.ProfileData) {
 		return protocol.CheckBindingsDiffer
 	}
 	return nil

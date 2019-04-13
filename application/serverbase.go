@@ -92,10 +92,11 @@ func NewServerBase(conf *CommonConfig, listenVerb string,
 // SIGUSR2 signal.
 func (sb *ServerBase) ListenAndHandle(addr *ServerAddress,
 	reqHandler func(req *protocol.Request) *protocol.Response) {
+	sb.logger.Info(sb.Verb, "address", addr.Address)
+
 	ln, tlsConfig := addr.resolveAndListen()
 	sb.waitStop.Add(1)
 	go func() {
-		sb.logger.Info(sb.Verb, "address", addr.Address)
 		sb.acceptRequests(addr, ln, tlsConfig, reqHandler)
 		sb.waitStop.Done()
 	}()
